@@ -1,34 +1,47 @@
 import React, { useState, useMemo, useEffect } from 'react';
 
 // ============================================================================
-// KONSTANTEN & DEMO-DATEN
+// KONSTANTEN & STAMMDATEN
 // ============================================================================
 const WEEKDAYS = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
-const DAY_SLOTS = ['Mittag', 'Nachmittag', 'Abend'];
-const PLAY_STYLES = ['Allround', 'Offensiv / Topspin', 'Abwehr / Schnitt', 'Konter / Block'];
+const TIME_SLOTS = ['Mittag', 'Nachmittag', 'Abend'];
+const PLAY_STYLES = [
+  'Allround',
+  'Offensiv / Topspin',
+  'Defensiv / Abwehr',
+  'Block & Konter',
+  'Noppen / Material',
+];
 const CHECKIN_MOODS = [
   'Ligaspiel gesucht 🏓',
-  'Offen für Liga & Training',
-  'Nur Training / Einspielen',
-  'Spontanes Match bis 21:00',
+  'Freies Training / Sparring 🔥',
+  'Offen für alles 🤝',
+  'Nur kurzes Einspielen ⚡',
+];
+const MEETUP_MODES = [
+  'Freies Spiel / Sparring',
+  'Ligaspiel',
+  'Doppel (2 vs 2)',
+  'Technik / Einspielen',
 ];
 
 const INITIAL_MEMBERS = {
   m1: {
     id: 'm1',
-    nickname: 'SpinMaster',
-    firstName: 'Lukas',
+    playMode: 'league',
+    nickname: 'TopspinTobi',
+    firstName: 'Tobias',
     lastName: 'Meier',
     pin: '1111',
-    whatsapp: '079 269 66 89',
-    language: 'DE',
+    whatsapp: '+41 79 312 44 10',
+    language: 'Deutsch',
     style: 'Offensiv / Topspin',
-    bio: 'Vorhand-Topspin, meistens ab 18:30 in der Halle.',
+    bio: 'Vorhand-Topspin aus der Halbdistanz. Immer bereit für ein spontanes Match!',
     status: 'Dabei',
     nextMonthOptIn: true,
     usualDays: ['Di', 'Do'],
     usualSlots: ['Abend'],
-    annualPoints: 142,
+    annualPoints: 148,
     seasonTitles: 2,
     avatarBg: 'from-emerald-500 to-teal-700',
     checkedInUntil: Date.now() + 95 * 60 * 1000,
@@ -36,79 +49,83 @@ const INITIAL_MEMBERS = {
   },
   m2: {
     id: 'm2',
-    nickname: 'BlockQueen',
-    firstName: 'Elena',
-    lastName: 'Keller',
+    playMode: 'league',
+    nickname: 'SpinDoctor',
+    firstName: 'Lukas',
+    lastName: 'Weber',
     pin: '2222',
-    whatsapp: '078 412 33 10',
-    language: 'Beides',
-    style: 'Konter / Block',
-    bio: 'Schnelles Blockspiel am Tisch, flexibel unter der Woche.',
+    whatsapp: '+41 78 654 19 82',
+    language: 'Deutsch / English',
+    style: 'Allround',
+    bio: 'Konstantes Block- und Platzierungsspiel. Spiele gerne abends ab 18:30.',
     status: 'Dabei',
     nextMonthOptIn: true,
     usualDays: ['Mo', 'Mi', 'Fr'],
     usualSlots: ['Abend'],
-    annualPoints: 136,
+    annualPoints: 141,
     seasonTitles: 1,
     avatarBg: 'from-sky-500 to-indigo-700',
-    checkedInUntil: Date.now() + 65 * 60 * 1000,
-    checkInMood: 'Offen für Liga & Training',
+    checkedInUntil: Date.now() + 60 * 60 * 1000,
+    checkInMood: 'Freies Training / Sparring 🔥',
   },
   m3: {
     id: 'm3',
-    nickname: 'ChopKing',
-    firstName: 'Marco',
-    lastName: 'Brunner',
+    playMode: 'league',
+    nickname: 'ChopperNina',
+    firstName: 'Nina',
+    lastName: 'Keller',
     pin: '3333',
-    whatsapp: '076 555 19 04',
-    language: 'DE',
-    style: 'Abwehr / Schnitt',
-    bio: 'Unterschnitt-Abwehr & Geduldsspiel.',
+    whatsapp: '+41 76 411 90 23',
+    language: 'Deutsch',
+    style: 'Defensiv / Abwehr',
+    bio: 'Lange Abwehr mit Unterschnitt und plötzlichen Kontern.',
     status: 'Dabei',
     nextMonthOptIn: true,
     usualDays: ['Di', 'Fr'],
-    usualSlots: ['Abend'],
-    annualPoints: 124,
-    seasonTitles: 0,
-    avatarBg: 'from-amber-500 to-orange-700',
+    usualSlots: ['Nachmittag', 'Abend'],
+    annualPoints: 136,
+    seasonTitles: 1,
+    avatarBg: 'from-purple-500 to-fuchsia-700',
     checkedInUntil: null,
     checkInMood: '',
   },
   m4: {
     id: 'm4',
-    nickname: 'FlashDrive',
-    firstName: 'David',
-    lastName: 'Hofmann',
+    playMode: 'league',
+    nickname: 'PingKing',
+    firstName: 'Marco',
+    lastName: 'Brunner',
     pin: '4444',
-    whatsapp: '079 810 44 21',
-    language: 'EN',
-    style: 'Offensiv / Topspin',
-    bio: 'Always up for fast 5-set matches!',
+    whatsapp: '+41 79 880 12 55',
+    language: 'Deutsch / English',
+    style: 'Block & Konter',
+    bio: 'Schnelles Tischnah-Spiel. Suche meistens Dienstag oder Donnerstag Gegner.',
     status: 'Dabei',
-    nextMonthOptIn: true,
-    usualDays: ['Mo', 'Do'],
-    usualSlots: ['Abend'],
-    annualPoints: 118,
+    nextMonthOptIn: false,
+    usualDays: ['Do', 'Sa'],
+    usualSlots: ['Mittag', 'Abend'],
+    annualPoints: 122,
     seasonTitles: 0,
-    avatarBg: 'from-purple-500 to-fuchsia-700',
+    avatarBg: 'from-amber-500 to-orange-700',
     checkedInUntil: null,
     checkInMood: '',
   },
   m5: {
     id: 'm5',
-    nickname: 'NetEdge',
-    firstName: 'Nina',
-    lastName: 'Steiner',
+    playMode: 'league',
+    nickname: 'BackhandBen',
+    firstName: 'Benjamin',
+    lastName: 'Frei',
     pin: '5555',
-    whatsapp: '077 320 98 12',
-    language: 'DE',
-    style: 'Allround',
-    bio: 'Sicheres Allroundspiel, gerne auch am Wochenende.',
+    whatsapp: '+41 77 209 34 71',
+    language: 'Deutsch',
+    style: 'Offensiv / Topspin',
+    bio: 'Rückhand-Flip & schnelle Eröffnungen.',
     status: 'Dabei',
     nextMonthOptIn: true,
-    usualDays: ['Mi', 'Sa'],
-    usualSlots: ['Nachmittag', 'Abend'],
-    annualPoints: 109,
+    usualDays: ['Mo', 'Do'],
+    usualSlots: ['Abend'],
+    annualPoints: 115,
     seasonTitles: 0,
     avatarBg: 'from-rose-500 to-pink-700',
     checkedInUntil: null,
@@ -116,19 +133,20 @@ const INITIAL_MEMBERS = {
   },
   m6: {
     id: 'm6',
-    nickname: 'RallyAce',
-    firstName: 'Tobias',
-    lastName: 'Weber',
+    playMode: 'league',
+    nickname: 'SliceSarah',
+    firstName: 'Sarah',
+    lastName: 'Steiner',
     pin: '6666',
-    whatsapp: '079 601 77 50',
-    language: 'DE',
+    whatsapp: '+41 79 512 67 04',
+    language: 'Deutsch / English',
     style: 'Allround',
-    bio: 'Aufsteiger in der 2. Liga.',
+    bio: 'Ziel für diesen Monat: Aufstieg in die 1. Liga!',
     status: 'Dabei',
     nextMonthOptIn: true,
-    usualDays: ['Di', 'Do'],
+    usualDays: ['Mi', 'Fr'],
     usualSlots: ['Abend'],
-    annualPoints: 96,
+    annualPoints: 109,
     seasonTitles: 0,
     avatarBg: 'from-cyan-500 to-blue-700',
     checkedInUntil: null,
@@ -136,19 +154,20 @@ const INITIAL_MEMBERS = {
   },
   m7: {
     id: 'm7',
-    nickname: 'TopspinTom',
-    firstName: 'Thomas',
-    lastName: 'Frei',
+    playMode: 'league',
+    nickname: 'RocketRemo',
+    firstName: 'Remo',
+    lastName: 'Hofmann',
     pin: '7777',
-    whatsapp: '078 902 11 38',
-    language: 'Beides',
+    whatsapp: '+41 78 903 11 48',
+    language: 'Deutsch',
     style: 'Offensiv / Topspin',
-    bio: 'Beidseitiger Topspin.',
+    bio: 'Vollgas ab dem ersten Aufschlag.',
     status: 'Dabei',
     nextMonthOptIn: true,
-    usualDays: ['Mo', 'Mi'],
+    usualDays: ['Di', 'Mi'],
     usualSlots: ['Abend'],
-    annualPoints: 88,
+    annualPoints: 98,
     seasonTitles: 0,
     avatarBg: 'from-lime-500 to-emerald-700',
     checkedInUntil: null,
@@ -156,54 +175,35 @@ const INITIAL_MEMBERS = {
   },
   m8: {
     id: 'm8',
-    nickname: 'ServePro',
-    firstName: 'Jonas',
+    playMode: 'league',
+    nickname: 'WallWalter',
+    firstName: 'Walter',
     lastName: 'Baumann',
     pin: '8888',
-    whatsapp: '076 340 82 91',
-    language: 'DE',
-    style: 'Konter / Block',
-    bio: 'Gefährliche Aufschläge & kurzer Rückschlag.',
+    whatsapp: '+41 79 440 78 19',
+    language: 'Deutsch',
+    style: 'Noppen / Material',
+    bio: 'Störspiel am Tisch – Geduld zahlt sich aus.',
     status: 'Dabei',
-    nextMonthOptIn: false,
-    usualDays: ['Fr'],
-    usualSlots: ['Abend'],
-    annualPoints: 82,
+    nextMonthOptIn: true,
+    usualDays: ['Mo', 'Fr'],
+    usualSlots: ['Nachmittag', 'Abend'],
+    annualPoints: 91,
     seasonTitles: 0,
-    avatarBg: 'from-indigo-500 to-violet-700',
-    checkedInUntil: null,
-    checkInMood: '',
-  },
-  m9: {
-    id: 'm9',
-    nickname: 'LoopStar',
-    firstName: 'Sarah',
-    lastName: 'Brunner',
-    pin: '9999',
-    whatsapp: '079 445 60 17',
-    language: 'DE',
-    style: 'Allround',
-    bio: 'Aktuell in Trainingspause.',
-    status: 'Pausiert',
-    nextMonthOptIn: false,
-    usualDays: ['Do'],
-    usualSlots: ['Abend'],
-    annualPoints: 74,
-    seasonTitles: 0,
-    avatarBg: 'from-slate-500 to-slate-700',
+    avatarBg: 'from-violet-500 to-purple-700',
     checkedInUntil: null,
     checkInMood: '',
   },
 };
 
-function createRoundRobinMatches(seasonId, leagueLevel, playerIds) {
+function createRoundRobinMatches(seasonId, level, playerIds) {
   const matches = [];
   for (let i = 0; i < playerIds.length; i++) {
     for (let j = i + 1; j < playerIds.length; j++) {
       matches.push({
-        id: `${seasonId}_L${leagueLevel}_${playerIds[i]}_${playerIds[j]}`,
+        id: `${seasonId}_L${level}_${playerIds[i]}_${playerIds[j]}`,
         seasonId,
-        leagueLevel,
+        leagueLevel: level,
         player1Id: playerIds[i],
         player2Id: playerIds[j],
         setsP1: null,
@@ -226,16 +226,106 @@ const INITIAL_SEASONS = [
         name: '1. Liga',
         playerIds: ['m1', 'm2', 'm3', 'm4', 'm5'],
         matches: [
-          { id: '2026-11_L1_m1_m2', seasonId: '2026-11', leagueLevel: 1, player1Id: 'm1', player2Id: 'm2', setsP1: 3, setsP2: 2, playedAt: '2026-11-05' },
-          { id: '2026-11_L1_m1_m3', seasonId: '2026-11', leagueLevel: 1, player1Id: 'm1', player2Id: 'm3', setsP1: 3, setsP2: 1, playedAt: '2026-11-09' },
-          { id: '2026-11_L1_m1_m4', seasonId: '2026-11', leagueLevel: 1, player1Id: 'm1', player2Id: 'm4', setsP1: null, setsP2: null, playedAt: null },
-          { id: '2026-11_L1_m1_m5', seasonId: '2026-11', leagueLevel: 1, player1Id: 'm1', player2Id: 'm5', setsP1: null, setsP2: null, playedAt: null },
-          { id: '2026-11_L1_m2_m3', seasonId: '2026-11', leagueLevel: 1, player1Id: 'm2', player2Id: 'm3', setsP1: 3, setsP2: 0, playedAt: '2026-11-11' },
-          { id: '2026-11_L1_m2_m4', seasonId: '2026-11', leagueLevel: 1, player1Id: 'm2', player2Id: 'm4', setsP1: 3, setsP2: 1, playedAt: '2026-11-14' },
-          { id: '2026-11_L1_m2_m5', seasonId: '2026-11', leagueLevel: 1, player1Id: 'm2', player2Id: 'm5', setsP1: null, setsP2: null, playedAt: null },
-          { id: '2026-11_L1_m3_m4', seasonId: '2026-11', leagueLevel: 1, player1Id: 'm3', player2Id: 'm4', setsP1: 2, setsP2: 3, playedAt: '2026-11-16' },
-          { id: '2026-11_L1_m3_m5', seasonId: '2026-11', leagueLevel: 1, player1Id: 'm3', player2Id: 'm5', setsP1: null, setsP2: null, playedAt: null },
-          { id: '2026-11_L1_m4_m5', seasonId: '2026-11', leagueLevel: 1, player1Id: 'm4', player2Id: 'm5', setsP1: 3, setsP2: 1, playedAt: '2026-11-18' },
+          {
+            id: '2026-11_L1_m1_m2',
+            seasonId: '2026-11',
+            leagueLevel: 1,
+            player1Id: 'm1',
+            player2Id: 'm2',
+            setsP1: 3,
+            setsP2: 1,
+            playedAt: '2026-11-05',
+          },
+          {
+            id: '2026-11_L1_m1_m3',
+            seasonId: '2026-11',
+            leagueLevel: 1,
+            player1Id: 'm1',
+            player2Id: 'm3',
+            setsP1: 3,
+            setsP2: 2,
+            playedAt: '2026-11-09',
+          },
+          {
+            id: '2026-11_L1_m1_m4',
+            seasonId: '2026-11',
+            leagueLevel: 1,
+            player1Id: 'm1',
+            player2Id: 'm4',
+            setsP1: null,
+            setsP2: null,
+            playedAt: null,
+          },
+          {
+            id: '2026-11_L1_m1_m5',
+            seasonId: '2026-11',
+            leagueLevel: 1,
+            player1Id: 'm1',
+            player2Id: 'm5',
+            setsP1: null,
+            setsP2: null,
+            playedAt: null,
+          },
+          {
+            id: '2026-11_L1_m2_m3',
+            seasonId: '2026-11',
+            leagueLevel: 1,
+            player1Id: 'm2',
+            player2Id: 'm3',
+            setsP1: 3,
+            setsP2: 0,
+            playedAt: '2026-11-11',
+          },
+          {
+            id: '2026-11_L1_m2_m4',
+            seasonId: '2026-11',
+            leagueLevel: 1,
+            player1Id: 'm2',
+            player2Id: 'm4',
+            setsP1: 3,
+            setsP2: 1,
+            playedAt: '2026-11-14',
+          },
+          {
+            id: '2026-11_L1_m2_m5',
+            seasonId: '2026-11',
+            leagueLevel: 1,
+            player1Id: 'm2',
+            player2Id: 'm5',
+            setsP1: null,
+            setsP2: null,
+            playedAt: null,
+          },
+          {
+            id: '2026-11_L1_m3_m4',
+            seasonId: '2026-11',
+            leagueLevel: 1,
+            player1Id: 'm3',
+            player2Id: 'm4',
+            setsP1: 3,
+            setsP2: 1,
+            playedAt: '2026-11-16',
+          },
+          {
+            id: '2026-11_L1_m3_m5',
+            seasonId: '2026-11',
+            leagueLevel: 1,
+            player1Id: 'm3',
+            player2Id: 'm5',
+            setsP1: null,
+            setsP2: null,
+            playedAt: null,
+          },
+          {
+            id: '2026-11_L1_m4_m5',
+            seasonId: '2026-11',
+            leagueLevel: 1,
+            player1Id: 'm4',
+            player2Id: 'm5',
+            setsP1: 2,
+            setsP2: 3,
+            playedAt: '2026-11-18',
+          },
         ],
       },
       {
@@ -243,265 +333,311 @@ const INITIAL_SEASONS = [
         name: '2. Liga',
         playerIds: ['m6', 'm7', 'm8'],
         matches: [
-          { id: '2026-11_L2_m6_m7', seasonId: '2026-11', leagueLevel: 2, player1Id: 'm6', player2Id: 'm7', setsP1: 3, setsP2: 2, playedAt: '2026-11-10' },
-          { id: '2026-11_L2_m6_m8', seasonId: '2026-11', leagueLevel: 2, player1Id: 'm6', player2Id: 'm8', setsP1: null, setsP2: null, playedAt: null },
-          { id: '2026-11_L2_m7_m8', seasonId: '2026-11', leagueLevel: 2, player1Id: 'm7', player2Id: 'm8', setsP1: 3, setsP2: 1, playedAt: '2026-11-15' },
+          {
+            id: '2026-11_L2_m6_m7',
+            seasonId: '2026-11',
+            leagueLevel: 2,
+            player1Id: 'm6',
+            player2Id: 'm7',
+            setsP1: 3,
+            setsP2: 1,
+            playedAt: '2026-11-12',
+          },
+          {
+            id: '2026-11_L2_m6_m8',
+            seasonId: '2026-11',
+            leagueLevel: 2,
+            player1Id: 'm6',
+            player2Id: 'm8',
+            setsP1: null,
+            setsP2: null,
+            playedAt: null,
+          },
+          {
+            id: '2026-11_L2_m7_m8',
+            seasonId: '2026-11',
+            leagueLevel: 2,
+            player1Id: 'm7',
+            player2Id: 'm8',
+            setsP1: 3,
+            setsP2: 2,
+            playedAt: '2026-11-19',
+          },
         ],
       },
     ],
   },
 ];
 
+const INITIAL_MEETUP_POSTS = [
+  {
+    id: 'post_1',
+    authorId: 'm3',
+    whenText: 'Morgen Di · ab 18:30',
+    mode: 'Freies Spiel / Sparring',
+    note: 'Suche jemanden für 1h Topspin-Block-Training und ein paar lockere Sätze.',
+    joinedIds: ['m6'],
+    createdAt: Date.now() - 3600 * 1000,
+  },
+  {
+    id: 'post_2',
+    authorId: 'm7',
+    whenText: 'Donnerstag · 19:00',
+    mode: 'Doppel (2 vs 2)',
+    note: 'Wir sind schon zu zweit – noch 2 Leute für ein schnelles Doppel gesucht!',
+    joinedIds: ['m2'],
+    createdAt: Date.now() - 7200 * 1000,
+  },
+];
+
+const INITIAL_HALL_ANNOUNCEMENTS = [
+  {
+    id: 'ann_1',
+    memberId: 'm4',
+    dayLabel: 'Morgen',
+    timeText: '17:30',
+    note: 'Bis ca. 20:00 in der Halle – offen für Liga oder Sparring!',
+    meTooIds: ['m1'],
+    createdAt: Date.now() - 1800 * 1000,
+  },
+  {
+    id: 'ann_2',
+    memberId: 'm6',
+    dayLabel: 'Mi',
+    timeText: '18:15',
+    note: 'Suche noch 1–2 Sätze zum Einspielen.',
+    meTooIds: [],
+    createdAt: Date.now() - 5400 * 1000,
+  },
+];
+
 // ============================================================================
 // HILFSFUNKTIONEN
 // ============================================================================
-function isMemberCheckedIn(member, nowTick) {
+function isMemberCheckedIn(member, nowTick = Date.now()) {
   if (!member || !member.checkedInUntil) return false;
-  return Number(member.checkedInUntil) > nowTick;
+  return member.checkedInUntil > nowTick;
 }
 
-function formatRemainingTime(untilMs, nowTick) {
-  const diffMin = Math.max(1, Math.round((Number(untilMs) - nowTick) / 60000));
-  if (diffMin >= 60) {
-    const h = Math.floor(diffMin / 60);
-    const m = diffMin % 60;
+function formatRemainingTime(untilMs, nowTick = Date.now()) {
+  const diff = Math.max(0, untilMs - nowTick);
+  const mins = Math.ceil(diff / 60000);
+  if (mins >= 60) {
+    const h = Math.floor(mins / 60);
+    const m = mins % 60;
     return m > 0 ? `${h}h ${m}m` : `${h}h`;
   }
-  return `${diffMin}m`;
+  return `${mins} Min.`;
 }
 
-function buildWhatsAppUrl(rawNumber, text) {
-  if (!rawNumber) return '';
-  let digits = String(rawNumber).replace(/[^\d+]/g, '');
+function buildWhatsAppUrl(phone, text) {
+  if (!phone) return '';
+  const digits = String(phone).replace(/[^\d]/g, '');
   if (!digits) return '';
-  if (digits.startsWith('+')) digits = digits.slice(1);
-  else if (digits.startsWith('00')) digits = digits.slice(2);
-  else if (digits.startsWith('0')) digits = `41${digits.slice(1)}`;
-  const encoded = text ? `?text=${encodeURIComponent(text)}` : '';
-  return `https://wa.me/${digits}${encoded}`;
+  return `https://wa.me/${digits}?text=${encodeURIComponent(text || '')}`;
+}
+
+function isConnectOnlyMember(member, activeSeason = null) {
+  if (!member) return false;
+  if (member.playMode === 'connect') return true;
+  if (member.playMode === 'league') return false;
+  const inAnyGroup = (activeSeason?.groups || []).some(g =>
+    g.playerIds.includes(member.id)
+  );
+  return !inAnyGroup && member.status === 'Pausiert' && !member.nextMonthOptIn;
+}
+
+function getNextMonthInfo(seasonId) {
+  const monthNames = [
+    'Januar', 'Februar', 'März', 'April', 'Mai', 'Juni',
+    'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember',
+  ];
+  const [yrStr, moStr] = String(seasonId || '2026-11').split('-');
+  let yr = Number(yrStr) || 2026;
+  let mo = (Number(moStr) || 11) + 1;
+  if (mo > 12) {
+    mo = 1;
+    yr += 1;
+  }
+  const monthName = monthNames[mo - 1];
+  return {
+    id: `${yr}-${String(mo).padStart(2, '0')}`,
+    monthName,
+    label: `${monthName} ${yr}`,
+  };
 }
 
 function computeGroupStandings(group, membersMap) {
   const stats = {};
-  group.playerIds.forEach(pid => {
+  (group?.playerIds || []).forEach(pid => {
     stats[pid] = {
       playerId: pid,
       member: membersMap[pid],
       played: 0,
-      wins: 0,
-      losses: 0,
+      won: 0,
+      lost: 0,
       setsWon: 0,
       setsLost: 0,
       points: 0,
     };
   });
 
-  group.matches.forEach(m => {
+  (group?.matches || []).forEach(m => {
     if (m.setsP1 === null || m.setsP2 === null) return;
-    const s1 = stats[m.player1Id];
-    const s2 = stats[m.player2Id];
-    if (!s1 || !s2) return;
+    const p1 = stats[m.player1Id];
+    const p2 = stats[m.player2Id];
+    if (!p1 || !p2) return;
 
-    s1.played += 1;
-    s2.played += 1;
-    s1.setsWon += m.setsP1;
-    s1.setsLost += m.setsP2;
-    s2.setsWon += m.setsP2;
-    s2.setsLost += m.setsP1;
+    p1.played += 1;
+    p2.played += 1;
+    p1.setsWon += m.setsP1;
+    p1.setsLost += m.setsP2;
+    p2.setsWon += m.setsP2;
+    p2.setsLost += m.setsP1;
 
     if (m.setsP1 > m.setsP2) {
-      s1.wins += 1;
-      s1.points += 3;
-      s2.losses += 1;
-      s2.points += 1;
-    } else {
-      s2.wins += 1;
-      s2.points += 3;
-      s1.losses += 1;
-      s1.points += 1;
+      p1.won += 1;
+      p1.points += 3;
+      p2.lost += 1;
+      p2.points += m.setsP2 >= 2 ? 1 : 0;
+    } else if (m.setsP2 > m.setsP1) {
+      p2.won += 1;
+      p2.points += 3;
+      p1.lost += 1;
+      p1.points += m.setsP1 >= 2 ? 1 : 0;
     }
   });
 
   return Object.values(stats)
-    .filter(item => item.member)
+    .filter(s => Boolean(s.member))
     .sort((a, b) => {
       if (b.points !== a.points) return b.points - a.points;
       const diffA = a.setsWon - a.setsLost;
       const diffB = b.setsWon - b.setsLost;
       if (diffB !== diffA) return diffB - diffA;
-      return b.setsWon - a.setsWon;
+      if (b.setsWon !== a.setsWon) return b.setsWon - a.setsWon;
+      return (b.member?.annualPoints || 0) - (a.member?.annualPoints || 0);
     });
 }
 
 // ============================================================================
-// MINIMALISTISCHE INLINE-SVG ICONS
+// MINIMALISTISCHE INLINE-SVG-ICONS
 // ============================================================================
-function KlIcon({ children, className = 'w-4 h-4' }) {
+function KlHomeIcon({ className = 'w-4 h-4' }) {
   return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-    >
-      {children}
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" className={className}>
+      <path d="M3 10.5L12 3l9 7.5" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M5 9.5V20h14V9.5" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
 
-function KlHomeIcon({ className }) {
+function KlTrophyIcon({ className = 'w-4 h-4' }) {
   return (
-    <KlIcon className={className}>
-      <path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1V9.5z" />
-    </KlIcon>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" className={className}>
+      <path d="M8 4h8v6a4 4 0 01-8 0V4z" strokeLinejoin="round" />
+      <path d="M8 6H5a2 2 0 00-2 2v1a3 3 0 003 3h2M16 6h3a2 2 0 012 2v1a3 3 0 01-3 3h-2" strokeLinecap="round" />
+      <path d="M12 14v5M8 20h8" strokeLinecap="round" />
+    </svg>
   );
 }
 
-function KlTrophyIcon({ className }) {
+function KlHandshakeIcon({ className = 'w-4 h-4' }) {
   return (
-    <KlIcon className={className}>
-      <path d="M6 9H4a2 2 0 0 1-2-2V5h4" />
-      <path d="M18 9h2a2 2 0 0 0 2-2V5h-4" />
-      <path d="M6 4h12v6a6 6 0 0 1-12 0V4z" />
-      <path d="M12 16v4" />
-      <path d="M8 20h8" />
-    </KlIcon>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" className={className}>
+      <path d="M11 17l-4-4 5-5 4 4" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M3 11l4-4 3 3M21 11l-4-4-3 3M8 14l4 4 5-5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
   );
 }
 
-function KlMapPinIcon({ className }) {
+function KlCalendarIcon({ className = 'w-4 h-4' }) {
   return (
-    <KlIcon className={className}>
-      <path d="M12 21s-6-5.3-6-10a6 6 0 1 1 12 0c0 4.7-6 10-6 10z" />
-      <circle cx="12" cy="11" r="2.2" />
-    </KlIcon>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" className={className}>
+      <rect x="3" y="5" width="18" height="16" rx="3" />
+      <path d="M8 3v4M16 3v4M3 10h18" strokeLinecap="round" />
+    </svg>
   );
 }
 
-function KlCalendarIcon({ className }) {
+function KlHistoryIcon({ className = 'w-4 h-4' }) {
   return (
-    <KlIcon className={className}>
-      <rect x="3" y="4" width="18" height="17" rx="2" />
-      <path d="M8 2v4M16 2v4M3 10h18" />
-    </KlIcon>
-  );
-}
-
-function KlHistoryIcon({ className }) {
-  return (
-    <KlIcon className={className}>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" className={className}>
       <circle cx="12" cy="12" r="9" />
-      <path d="M12 7v5l3 2" />
-    </KlIcon>
+      <path d="M12 7v5l3 2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
   );
 }
 
-function KlAwardIcon({ className }) {
+function KlAwardIcon({ className = 'w-4 h-4' }) {
   return (
-    <KlIcon className={className}>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" className={className}>
       <circle cx="12" cy="8" r="5" />
-      <path d="M8.5 13l-1.5 8 5-3 5 3-1.5-8" />
-    </KlIcon>
+      <path d="M8.5 12.5L7 21l5-3 5 3-1.5-8.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
   );
 }
 
-function KlUsersIcon({ className }) {
+function KlUsersIcon({ className = 'w-4 h-4' }) {
   return (
-    <KlIcon className={className}>
-      <circle cx="9" cy="7" r="3" />
-      <path d="M3 20v-1a5 5 0 0 1 10 0v1" />
-      <circle cx="17" cy="8" r="2.5" />
-      <path d="M16 20v-1a4 4 0 0 1 5-3.8" />
-    </KlIcon>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" className={className}>
+      <circle cx="9" cy="8" r="3.5" />
+      <path d="M3 19c0-3 2.7-5 6-5s6 2 6 5" strokeLinecap="round" />
+      <circle cx="17" cy="9" r="2.5" />
+      <path d="M16.5 14.2c2.4.4 4.5 2 4.5 4.8" strokeLinecap="round" />
+    </svg>
   );
 }
 
-function KlUserPlusIcon({ className }) {
+function KlMapPinIcon({ className = 'w-4 h-4' }) {
   return (
-    <KlIcon className={className}>
-      <circle cx="9" cy="7" r="3.5" />
-      <path d="M2 20v-1a6 6 0 0 1 12 0v1" />
-      <path d="M19 8v6M16 11h6" />
-    </KlIcon>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" className={className}>
+      <path d="M12 21s7-5.7 7-11a7 7 0 10-14 0c0 5.3 7 11 7 11z" strokeLinejoin="round" />
+      <circle cx="12" cy="10" r="2.5" />
+    </svg>
   );
 }
 
-function KlSearchIcon({ className }) {
+function KlLockIcon({ className = 'w-4 h-4' }) {
   return (
-    <KlIcon className={className}>
-      <circle cx="11" cy="11" r="7" />
-      <path d="M20 20l-3.5-3.5" />
-    </KlIcon>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" className={className}>
+      <rect x="4" y="11" width="16" height="10" rx="2.5" />
+      <path d="M8 11V7a4 4 0 018 0v4" strokeLinecap="round" />
+    </svg>
   );
 }
 
-function KlMessageIcon({ className }) {
+function KlChevronDownIcon({ className = 'w-4 h-4' }) {
   return (
-    <KlIcon className={className}>
-      <path d="M21 11.5a8.5 8.5 0 0 1-12.4 7.5L3 20l1.2-5.2A8.5 8.5 0 1 1 21 11.5z" />
-    </KlIcon>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" className={className}>
+      <path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
   );
 }
 
-function KlShieldIcon({ className }) {
+function KlMessageIcon({ className = 'w-4 h-4' }) {
   return (
-    <KlIcon className={className}>
-      <path d="M12 3l7 3v6c0 4.5-3 7.8-7 9-4-1.2-7-4.5-7-9V6l7-3z" />
-    </KlIcon>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" className={className}>
+      <path d="M21 11.5a8.5 8.5 0 01-12.4 7.5L3 20.5l1.5-5.3A8.5 8.5 0 1121 11.5z" strokeLinejoin="round" />
+    </svg>
   );
 }
 
-function KlTrashIcon({ className }) {
+function KlTrashIcon({ className = 'w-4 h-4' }) {
   return (
-    <KlIcon className={className}>
-      <path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14" />
-    </KlIcon>
-  );
-}
-
-function KlXIcon({ className }) {
-  return (
-    <KlIcon className={className}>
-      <path d="M18 6L6 18M6 6l12 12" />
-    </KlIcon>
-  );
-}
-
-function KlEditIcon({ className }) {
-  return (
-    <KlIcon className={className}>
-      <path d="M12 20h9" />
-      <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
-    </KlIcon>
-  );
-}
-
-function KlChevronDownIcon({ className }) {
-  return (
-    <KlIcon className={className}>
-      <path d="M6 9l6 6 6-6" />
-    </KlIcon>
-  );
-}
-
-function KlLockIcon({ className }) {
-  return (
-    <KlIcon className={className}>
-      <rect x="4" y="11" width="16" height="10" rx="2" />
-      <path d="M8 11V7a4 4 0 0 1 8 0v4" />
-    </KlIcon>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" className={className}>
+      <path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
   );
 }
 
 // ============================================================================
-// HOME TAB (MOBILE-FIRST MINIMALISTISCH)
+// HOME TAB (LEAGUE ÜBERSICHT)
 // ============================================================================
 function HomeTab({
   membersMap,
   activeSeason,
+  nextMonthInfo,
   currentUser,
   nowTick,
   liveCount,
@@ -515,147 +651,59 @@ function HomeTab({
   onOpenAddMember,
   onNavigateTab,
 }) {
-  const activeEligibleMembers = useMemo(
-    () => Object.values(membersMap).filter(m => m.status === 'Dabei'),
-    [membersMap]
-  );
-
-  const openFeedbackMembers = useMemo(
-    () =>
-      Object.values(membersMap).filter(
-        m => m.status === 'Offen' || (m.status === 'Dabei' && !m.nextMonthOptIn)
-      ),
-    [membersMap]
-  );
-
-  const confirmedNextMonthCount = useMemo(
-    () =>
-      Object.values(membersMap).filter(
-        m => m.status === 'Dabei' && m.nextMonthOptIn
-      ).length,
-    [membersMap]
-  );
-
-  const seasonMatchStats = useMemo(() => {
-    if (!activeSeason) return { total: 0, played: 0 };
-    let total = 0;
-    let played = 0;
-    activeSeason.groups.forEach(g => {
-      g.matches.forEach(m => {
-        total += 1;
-        if (m.setsP1 !== null && m.setsP2 !== null) played += 1;
-      });
-    });
-    return { total, played };
-  }, [activeSeason]);
-
-  const myGroup = useMemo(() => {
+  const userGroup = useMemo(() => {
     if (!currentUser || !activeSeason) return null;
     return (
       activeSeason.groups.find(g => g.playerIds.includes(currentUser.id)) || null
     );
   }, [currentUser, activeSeason]);
 
-  const myOpenMatches = useMemo(() => {
-    if (!currentUser || !myGroup) return [];
-    return myGroup.matches.filter(
+  const userOpenMatches = useMemo(() => {
+    if (!currentUser || !userGroup) return [];
+    return userGroup.matches.filter(
       m =>
         (m.player1Id === currentUser.id || m.player2Id === currentUser.id) &&
         (m.setsP1 === null || m.setsP2 === null)
     );
-  }, [currentUser, myGroup]);
+  }, [currentUser, userGroup]);
 
-  const isUserLive = isMemberCheckedIn(currentUser, nowTick);
+  const isLive = isMemberCheckedIn(currentUser, nowTick);
+
+  const monthEndEligible = useMemo(
+    () =>
+      Object.values(membersMap).filter(
+        m => m.status === 'Dabei' && m.nextMonthOptIn
+      ),
+    [membersMap]
+  );
 
   return (
     <div className="space-y-4">
-      {/* MINIMALISTISCHER HERO & 4 KOMPAKTE METRIKEN */}
-      <section className="rounded-3xl bg-[#12151C] border border-white/[0.07] p-4 sm:p-5 space-y-4">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <p className="text-[11px] font-bold uppercase tracking-widest text-[#34D399]">
-              {activeSeason?.label}
-            </p>
-            <h1 className="text-xl sm:text-2xl font-black tracking-tight text-white mt-0.5">
-              KONGLeague <span className="text-slate-500 font-semibold text-base">by pingkong</span>
-            </h1>
-          </div>
-
-          <button
-            type="button"
-            onClick={onOpenAddMember}
-            className="min-h-[40px] px-3.5 rounded-2xl bg-[#10B981] active:scale-[0.98] text-slate-950 text-xs font-black inline-flex items-center gap-1.5 shrink-0 cursor-pointer"
-          >
-            <KlUserPlusIcon className="w-4 h-4" />
-            <span>NEW PLAYER</span>
-          </button>
-        </div>
-
-        <div className="grid grid-cols-4 gap-2">
-          <button
-            type="button"
-            onClick={() => onNavigateTab('players')}
-            className="p-2.5 rounded-2xl bg-[#090B0F] border border-white/[0.06] text-center active:scale-[0.98] cursor-pointer"
-          >
-            <p className="text-base sm:text-lg font-black text-white">
-              {activeEligibleMembers.length}
-            </p>
-            <p className="text-[10px] font-semibold text-slate-400">Spieler</p>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => onNavigateTab('leagues')}
-            className="p-2.5 rounded-2xl bg-[#090B0F] border border-white/[0.06] text-center active:scale-[0.98] cursor-pointer"
-          >
-            <p className="text-base sm:text-lg font-black text-white">
-              {activeSeason?.groups.length || 0}
-            </p>
-            <p className="text-[10px] font-semibold text-slate-400">Ligen</p>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => onNavigateTab('recent')}
-            className="p-2.5 rounded-2xl bg-[#090B0F] border border-white/[0.06] text-center active:scale-[0.98] cursor-pointer"
-          >
-            <p className="text-base sm:text-lg font-black text-white">
-              {seasonMatchStats.played}/{seasonMatchStats.total}
-            </p>
-            <p className="text-[10px] font-semibold text-slate-400">Spiele</p>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => onNavigateTab('hall')}
-            className="p-2.5 rounded-2xl bg-[#090B0F] border border-[#10B981]/30 text-center active:scale-[0.98] cursor-pointer"
-          >
-            <p className="text-base sm:text-lg font-black text-[#34D399]">
-              {liveCount}
-            </p>
-            <p className="text-[10px] font-semibold text-[#34D399]">LIVE</p>
-          </button>
-        </div>
-      </section>
-
-      {/* SPIELER-COCKPIT ODER SCHNELLAUSWAHL */}
+      {/* SPIELER-COCKPIT */}
       {!currentUser ? (
-        <section className="rounded-3xl bg-[#12151C] border border-white/[0.07] p-4 sm:p-5 space-y-3">
-          <div className="flex items-center justify-between">
+        <section className="rounded-3xl bg-[#12151C] border border-white/[0.08] p-4 sm:p-5 space-y-3">
+          <div className="flex items-center justify-between gap-2">
             <div>
-              <h2 className="text-sm font-black text-white">Profil wählen</h2>
+              <h1 className="text-lg font-black text-white">Willkommen im Club</h1>
               <p className="text-xs text-slate-400">
-                Tippe auf deinen Nickname (PIN-geschützt)
+                Wähle dein Spielerprofil oder registriere dich neu.
               </p>
             </div>
+            <button
+              type="button"
+              onClick={onOpenAddMember}
+              className="min-h-[40px] px-3.5 rounded-2xl bg-[#10B981] text-slate-950 text-xs font-black shrink-0 cursor-pointer"
+            >
+              + NEW PLAYER
+            </button>
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-1.5">
             {Object.values(membersMap).map(m => (
               <button
                 key={m.id}
                 type="button"
                 onClick={() => onRequestSelectUser(m.id)}
-                className="min-h-[40px] px-3.5 rounded-2xl bg-[#090B0F] border border-white/10 hover:border-[#10B981] text-xs font-black text-white cursor-pointer"
+                className="min-h-[38px] px-3 rounded-xl bg-[#090B0F] border border-white/10 text-xs font-bold text-white cursor-pointer"
               >
                 {m.nickname}
               </button>
@@ -663,32 +711,25 @@ function HomeTab({
           </div>
         </section>
       ) : (
-        <section className="rounded-3xl bg-[#12151C] border border-white/[0.07] p-4 sm:p-5 space-y-4">
-          {currentUser.status === 'Offen' && (
-            <div className="p-3 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-xs text-amber-200">
-              Profil <strong>{currentUser.nickname}</strong> wartet noch auf Freigabe im Admin-Bereich.
-            </div>
-          )}
-
-          {/* PROFILZEILE */}
+        <section className="rounded-3xl bg-[#12151C] border border-white/[0.08] p-4 sm:p-5 space-y-3.5">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-3 min-w-0">
               <div
-                className={`w-11 h-11 rounded-2xl bg-gradient-to-br ${currentUser.avatarBg} flex items-center justify-center text-white font-black text-sm shrink-0`}
+                className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${currentUser.avatarBg} flex items-center justify-center text-white font-black text-sm shrink-0`}
               >
                 {currentUser.nickname.slice(0, 2).toUpperCase()}
               </div>
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
-                  <h2 className="text-base font-black text-white truncate">
+                  <h1 className="text-lg font-black text-white truncate">
                     {currentUser.nickname}
-                  </h2>
-                  <span className="px-2 py-0.5 rounded-lg bg-white/[0.06] text-[10px] font-bold text-slate-300 shrink-0">
-                    {myGroup ? myGroup.name : currentUser.status}
+                  </h1>
+                  <span className="px-2 py-0.5 rounded-lg bg-[#10B981]/15 text-[#34D399] text-[10px] font-black shrink-0">
+                    {userGroup ? userGroup.name : currentUser.status}
                   </span>
                 </div>
                 <p className="text-xs text-slate-400 truncate">
-                  {currentUser.annualPoints} Pkt · {currentUser.style}
+                  {currentUser.annualPoints} Jahrespunkte · {activeSeason?.label}
                 </p>
               </div>
             </div>
@@ -696,293 +737,262 @@ function HomeTab({
             <button
               type="button"
               onClick={() => onOpenProfile(currentUser.id, true)}
-              className="min-h-[38px] px-3 rounded-xl bg-white/[0.06] hover:bg-white/10 text-xs font-bold text-slate-200 shrink-0 cursor-pointer"
+              className="min-h-[38px] px-3 rounded-xl bg-[#090B0F] border border-white/10 text-xs font-bold text-slate-200 shrink-0 cursor-pointer"
             >
               Stammdaten
             </button>
           </div>
 
-          {/* PROMINENTER FOLGEMONAT TOGGLE */}
-          {currentUser.status === 'Dabei' && (
-            <div className="p-3 rounded-2xl bg-[#090B0F] border border-white/[0.06] flex items-center justify-between gap-3">
-              <div className="min-w-0">
-                <p className="text-xs font-black text-white">Folgemonat</p>
-                <p className="text-[11px] text-slate-400 truncate">
-                  {currentUser.nextMonthOptIn
-                    ? 'Du bist nächste Runde dabei'
-                    : 'Nächste Runde pausiert'}
+          {/* QUICK ACTIONS: FOLGEMONAT & LIVE */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={onToggleNextMonth}
+              className={`min-h-[44px] px-3.5 rounded-2xl border text-left flex items-center justify-between gap-2 cursor-pointer ${
+                currentUser.nextMonthOptIn
+                  ? 'bg-[#10B981]/15 border-[#10B981]/40 text-[#34D399]'
+                  : 'bg-[#090B0F] border-white/10 text-slate-300'
+              }`}
+            >
+              <div>
+                <p className="text-[10px] uppercase tracking-wider font-bold opacity-80">
+                  {nextMonthInfo.label}
+                </p>
+                <p className="text-xs font-black">
+                  {currentUser.nextMonthOptIn ? 'Dabei ✓' : 'Pause (Tippen für Dabei)'}
                 </p>
               </div>
-              <div className="grid grid-cols-2 gap-1.5 w-44 shrink-0">
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (!currentUser.nextMonthOptIn) onToggleNextMonth();
-                  }}
-                  className={`min-h-[38px] rounded-xl text-xs font-black transition cursor-pointer ${
-                    currentUser.nextMonthOptIn
-                      ? 'bg-[#10B981] text-slate-950'
-                      : 'bg-[#12151C] text-slate-400'
-                  }`}
-                >
-                  Dabei
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (currentUser.nextMonthOptIn) onToggleNextMonth();
-                  }}
-                  className={`min-h-[38px] rounded-xl text-xs font-black transition cursor-pointer ${
-                    !currentUser.nextMonthOptIn
-                      ? 'bg-amber-500 text-slate-950'
-                      : 'bg-[#12151C] text-slate-400'
-                  }`}
-                >
-                  Pause
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* SCHNELL-CHECK-IN / CHECK-OUT */}
-          {isUserLive ? (
-            <button
-              type="button"
-              onClick={() => onCheckOut(currentUser.id)}
-              className="w-full min-h-[44px] rounded-2xl bg-rose-500/15 border border-rose-500/35 text-rose-200 text-xs font-black flex items-center justify-center gap-2 cursor-pointer"
-            >
-              <span className="w-2 h-2 rounded-full bg-rose-400 animate-pulse" />
-              <span>
-                LIVE vor Ort ({formatRemainingTime(currentUser.checkedInUntil, nowTick)}) · CHECK-OUT
+              <span className="text-xs font-black">
+                {currentUser.nextMonthOptIn ? 'AKTIV' : 'OFF'}
               </span>
             </button>
-          ) : (
-            <button
-              type="button"
-              onClick={() => onCheckIn(currentUser.id, 120, CHECKIN_MOODS[0])}
-              className="w-full min-h-[44px] rounded-2xl bg-[#10B981]/12 hover:bg-[#10B981]/20 border border-[#10B981]/30 text-[#34D399] text-xs font-black cursor-pointer"
-            >
-              + Jetzt in der Halle einchecken (2h)
-            </button>
-          )}
 
-          {/* OFFENE LIGASPIELE */}
-          {myGroup && (
-            <div className="space-y-2 pt-1">
-              <div className="flex items-center justify-between">
-                <h3 className="text-[11px] font-black uppercase tracking-wider text-slate-400">
-                  Deine offenen Spiele ({myOpenMatches.length})
-                </h3>
-                <button
-                  type="button"
-                  onClick={() => onNavigateTab('leagues')}
-                  className="text-xs font-bold text-[#34D399] cursor-pointer"
-                >
-                  Tabelle →
-                </button>
-              </div>
-
-              {myOpenMatches.length === 0 ? (
-                <div className="p-3 rounded-2xl bg-[#090B0F] text-xs text-slate-400">
-                  Alle Pflichtspiele in {myGroup.name} erledigt.
+            {isLive ? (
+              <button
+                type="button"
+                onClick={() => onCheckOut(currentUser.id)}
+                className="min-h-[44px] px-3.5 rounded-2xl bg-rose-500/15 border border-rose-500/40 text-rose-300 flex items-center justify-between gap-2 cursor-pointer"
+              >
+                <div className="text-left">
+                  <p className="text-[10px] uppercase tracking-wider font-bold">
+                    LIVE in der Halle
+                  </p>
+                  <p className="text-xs font-black">
+                    Noch {formatRemainingTime(currentUser.checkedInUntil, nowTick)}
+                  </p>
                 </div>
-              ) : (
-                <div className="space-y-2">
-                  {myOpenMatches.map(match => {
-                    const oppId =
-                      match.player1Id === currentUser.id
-                        ? match.player2Id
-                        : match.player1Id;
-                    const opp = membersMap[oppId];
-                    if (!opp) return null;
-                    const waUrl = buildWhatsAppUrl(
-                      opp.whatsapp,
-                      `Hoi ${opp.nickname}, wann wollen wir unser PINGKONG-Ligaspiel in ${myGroup.name} spielen?`
-                    );
-
-                    return (
-                      <div
-                        key={match.id}
-                        className="p-3 rounded-2xl bg-[#090B0F] border border-white/[0.06] flex items-center justify-between gap-2"
-                      >
-                        <button
-                          type="button"
-                          onClick={() => onOpenProfile(opp.id)}
-                          className="text-left min-w-0 cursor-pointer"
-                        >
-                          <p className="text-xs font-black text-white truncate">
-                            vs. {opp.nickname}
-                          </p>
-                          <p className="text-[11px] text-slate-400 truncate">
-                            Hallentage: {opp.usualDays?.join(', ') || '–'}
-                          </p>
-                        </button>
-                        <div className="flex items-center gap-2 shrink-0">
-                          {waUrl && (
-                            <a
-                              href={waUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="w-9 h-9 rounded-xl bg-[#10B981]/15 text-[#34D399] flex items-center justify-center"
-                              title={`WhatsApp an ${opp.nickname}`}
-                            >
-                              <KlMessageIcon className="w-4 h-4" />
-                            </a>
-                          )}
-                          <button
-                            type="button"
-                            onClick={() => onOpenResultModal(match)}
-                            className="min-h-[36px] px-3 rounded-xl bg-[#10B981] text-slate-950 text-xs font-black cursor-pointer"
-                          >
-                            Resultat
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  })}
+                <span className="text-xs font-black">CHECK-OUT</span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() =>
+                  onCheckIn(currentUser.id, 120, 'Ligaspiel gesucht 🏓')
+                }
+                className="min-h-[44px] px-3.5 rounded-2xl bg-[#090B0F] border border-white/10 text-slate-200 flex items-center justify-between gap-2 cursor-pointer"
+              >
+                <div className="text-left">
+                  <p className="text-[10px] uppercase tracking-wider font-bold text-slate-400">
+                    Hallen-Status ({liveCount} LIVE)
+                  </p>
+                  <p className="text-xs font-black text-white">
+                    Jetzt 2h einchecken
+                  </p>
                 </div>
-              )}
-            </div>
-          )}
+                <span className="text-xs font-black text-[#34D399]">CHECK-IN</span>
+              </button>
+            )}
+          </div>
         </section>
       )}
 
-      {/* MONATSENDE-CHECK (AB DEM 26. ODER MANUELL IM ADMIN-BEREICH) */}
+      {/* MONATSENDE-CHECK (AB DEM 26. AUTOMATISCH ODER MANUELL IM ADMIN) */}
       {showMonthEndCheck && (
-        <section className="rounded-3xl bg-[#12151C] border border-amber-500/35 p-4 sm:p-5 space-y-3">
+        <section className="rounded-3xl bg-amber-500/10 border border-amber-400/35 p-4 sm:p-5 space-y-2.5">
           <div className="flex items-center justify-between gap-2">
-            <div>
-              <h2 className="text-sm font-black text-white">
-                Monatsende-Check ({activeSeason?.shortLabel})
-              </h2>
-              <p className="text-[11px] text-slate-400">
-                Offene Rückmeldungen & Pflichtspiele vor Abschluss
-              </p>
-            </div>
-            <span className="px-2.5 py-1 rounded-full bg-[#10B981]/15 text-[#34D399] text-[11px] font-black">
-              {confirmedNextMonthCount} Zusagen
+            <h2 className="text-sm font-black text-amber-300">
+              Monatsabschluss · Kader für {nextMonthInfo.label}
+            </h2>
+            <span className="px-2.5 py-0.5 rounded-full bg-amber-400/20 text-amber-200 text-[11px] font-black">
+              {monthEndEligible.length} dabei
             </span>
           </div>
-
-          <div className="space-y-2 text-xs">
-            <div className="p-3 rounded-2xl bg-[#090B0F] space-y-2">
-              <p className="font-bold text-slate-300">
-                Pausiert / Offen ({openFeedbackMembers.length})
-              </p>
-              <div className="flex flex-wrap gap-1.5">
-                {openFeedbackMembers.map(m => (
-                  <button
-                    key={m.id}
-                    type="button"
-                    onClick={() => onOpenProfile(m.id)}
-                    className="px-2.5 py-1 rounded-lg bg-amber-500/15 text-amber-300 text-[11px] font-bold cursor-pointer"
-                  >
-                    {m.nickname} ({m.status === 'Offen' ? 'Offen' : 'Pause'})
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="p-3 rounded-2xl bg-[#090B0F] space-y-1.5">
-              <div className="flex justify-between text-[11px] font-bold text-slate-300">
-                <span>Pflichtspiel-Fortschritt</span>
-                <span className="text-[#34D399]">
-                  {seasonMatchStats.total > 0
-                    ? Math.round(
-                        (seasonMatchStats.played / seasonMatchStats.total) * 100
-                      )
-                    : 0}
-                  %
-                </span>
-              </div>
-              <div className="h-1.5 rounded-full bg-white/10 overflow-hidden">
-                <div
-                  className="h-full bg-[#10B981]"
-                  style={{
-                    width: `${
-                      seasonMatchStats.total > 0
-                        ? (seasonMatchStats.played / seasonMatchStats.total) * 100
-                        : 0
-                    }%`,
-                  }}
-                />
-              </div>
-            </div>
-          </div>
+          <p className="text-xs text-slate-300">
+            Bitte prüfe jetzt deinen Status für {nextMonthInfo.label}, damit die neuen
+            Ligagruppen pünktlich eingeteilt werden können.
+          </p>
+          <button
+            type="button"
+            onClick={() => onNavigateTab('nextmonth')}
+            className="min-h-[38px] px-3.5 rounded-xl bg-amber-400 text-slate-950 text-xs font-black cursor-pointer"
+          >
+            Kader {nextMonthInfo.monthName} öffnen
+          </button>
         </section>
       )}
 
-      {/* KOMPAKTE TABELLEN-VORSCHAU */}
-      {activeSeason && (
-        <section className="space-y-2.5">
-          <div className="flex items-center justify-between px-1">
-            <h2 className="text-xs font-black uppercase tracking-wider text-slate-400">
-              Tabellen · {activeSeason.shortLabel}
+      {/* OFFENE EIGENE PFLICHTSPIELE */}
+      {currentUser && userGroup && (
+        <section className="rounded-3xl bg-[#12151C] border border-white/[0.08] p-4 sm:p-5 space-y-3">
+          <div className="flex items-center justify-between">
+            <h2 className="text-base font-black text-white">
+              Deine offenen Spiele ({userOpenMatches.length})
             </h2>
             <button
               type="button"
               onClick={() => onNavigateTab('leagues')}
-              className="text-xs font-bold text-[#34D399] cursor-pointer"
+              className="text-xs font-black text-[#34D399] cursor-pointer"
             >
-              Alle Details →
+              Alle Ligen →
             </button>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {activeSeason.groups.map(group => {
-              const standings = computeGroupStandings(group, membersMap);
-              return (
-                <div
-                  key={group.level}
-                  className="rounded-3xl bg-[#12151C] border border-white/[0.07] p-4 space-y-2"
-                >
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-sm font-black text-[#34D399]">
-                      {group.name}
-                    </h3>
-                    <span className="text-[11px] text-slate-500">
-                      {standings.length} Spieler
-                    </span>
-                  </div>
-                  <div className="space-y-1">
-                    {standings.map((row, idx) => (
-                      <button
-                        key={row.playerId}
-                        type="button"
-                        onClick={() => onOpenProfile(row.playerId)}
-                        className="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-[#090B0F] hover:bg-white/[0.04] text-xs cursor-pointer"
+          {userOpenMatches.length === 0 ? (
+            <p className="text-xs text-slate-400">
+              Alle deine Pflichtspiele in {activeSeason?.label} sind bereits gespielt!
+            </p>
+          ) : (
+            <div className="space-y-2">
+              {userOpenMatches.map(match => {
+                const oppId =
+                  match.player1Id === currentUser.id
+                    ? match.player2Id
+                    : match.player1Id;
+                const opp = membersMap[oppId];
+                if (!opp) return null;
+                const waUrl = buildWhatsAppUrl(
+                  opp.whatsapp,
+                  `Hoi ${opp.nickname}, wann wollen wir unser ${userGroup.name}-Spiel (${activeSeason?.label}) spielen?`
+                );
+
+                return (
+                  <div
+                    key={match.id}
+                    className="p-3 rounded-2xl bg-[#090B0F] border border-white/[0.06] flex items-center justify-between gap-2"
+                  >
+                    <button
+                      type="button"
+                      onClick={() => onOpenProfile(opp.id)}
+                      className="flex items-center gap-2.5 min-w-0 text-left cursor-pointer"
+                    >
+                      <div
+                        className={`w-9 h-9 rounded-xl bg-gradient-to-br ${opp.avatarBg} flex items-center justify-center text-white font-black text-xs shrink-0`}
                       >
-                        <div className="flex items-center gap-2.5 min-w-0">
-                          <span className="font-black text-slate-500 w-4">
-                            {idx + 1}
-                          </span>
-                          <span className="font-bold text-white truncate">
-                            {row.member.nickname}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-3 shrink-0 text-[11px]">
-                          <span className="text-slate-400">
-                            {row.setsWon}:{row.setsLost}
-                          </span>
-                          <span className="font-black text-[#34D399]">
-                            {row.points} Pkt
-                          </span>
-                        </div>
+                        {opp.nickname.slice(0, 2).toUpperCase()}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-xs font-black text-white truncate">
+                          vs. {opp.nickname}
+                        </p>
+                        <p className="text-[11px] text-slate-400 truncate">
+                          {(opp.usualDays || []).join(', ') || 'Flexibel'}
+                        </p>
+                      </div>
+                    </button>
+
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      {waUrl && (
+                        <a
+                          href={waUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="w-9 h-9 rounded-xl bg-[#25D366] text-slate-950 flex items-center justify-center"
+                          title={`WhatsApp an ${opp.nickname}`}
+                        >
+                          <KlMessageIcon className="w-4 h-4" />
+                        </a>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => onOpenResultModal(match)}
+                        className="min-h-[36px] px-3 rounded-xl bg-[#10B981] text-slate-950 text-xs font-black cursor-pointer"
+                      >
+                        Resultat
                       </button>
-                    ))}
+                    </div>
                   </div>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+          )}
         </section>
       )}
+
+      {/* AKTUELLE LIGEN-ÜBERSICHT */}
+      <section className="space-y-3">
+        <div className="flex items-center justify-between px-1">
+          <h2 className="text-sm font-black uppercase tracking-wider text-slate-400">
+            Tabellen · {activeSeason?.label}
+          </h2>
+          <button
+            type="button"
+            onClick={() => onNavigateTab('board')}
+            className="text-xs font-black text-sky-400 cursor-pointer"
+          >
+            Zur Pinnwand →
+          </button>
+        </div>
+
+        {(activeSeason?.groups || []).map(group => {
+          const standings = computeGroupStandings(group, membersMap);
+          return (
+            <div
+              key={group.level}
+              className="rounded-3xl bg-[#12151C] border border-white/[0.08] p-4 space-y-2.5"
+            >
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-black text-white">{group.name}</h3>
+                <span className="text-[11px] text-slate-400">
+                  {standings.length} Spieler
+                </span>
+              </div>
+
+              <div className="divide-y divide-white/[0.06]">
+                {standings.map((row, idx) => (
+                  <div
+                    key={row.playerId}
+                    className="py-2 flex items-center justify-between gap-2 text-xs"
+                  >
+                    <button
+                      type="button"
+                      onClick={() => onOpenProfile(row.playerId)}
+                      className="flex items-center gap-2.5 min-w-0 text-left cursor-pointer"
+                    >
+                      <span
+                        className={`w-5 h-5 rounded-md flex items-center justify-center text-[11px] font-black shrink-0 ${
+                          idx === 0
+                            ? 'bg-[#10B981]/20 text-[#34D399]'
+                            : 'bg-white/[0.06] text-slate-300'
+                        }`}
+                      >
+                        {idx + 1}
+                      </span>
+                      <span className="font-bold text-white truncate">
+                        {row.member.nickname}
+                      </span>
+                    </button>
+                    <div className="flex items-center gap-3 text-[11px] shrink-0">
+                      <span className="text-slate-400">{row.played} Sp.</span>
+                      <span className="text-slate-300">
+                        {row.setsWon}:{row.setsLost}
+                      </span>
+                      <span className="font-black text-[#34D399] w-8 text-right">
+                        {row.points} P
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+      </section>
     </div>
   );
 }
 
 // ============================================================================
-// LIGA TAB
+// LEAGUES TAB (ALLE LIGEN & SPIELPLÄNE)
 // ============================================================================
 function LeaguesTab({
   membersMap,
@@ -995,130 +1005,127 @@ function LeaguesTab({
 }) {
   return (
     <div className="space-y-4">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-        <div>
-          <h2 className="text-lg font-black text-white">Ligen & Tabellen</h2>
-          <p className="text-xs text-slate-400">
-            Hinweis: Die Gruppengrösse kann je nach Teilnehmerzahl variieren (z. B. 4er-, 5er- oder 6er-Gruppen).
-          </p>
+      <section className="rounded-3xl bg-[#12151C] border border-white/[0.08] p-4 sm:p-5 space-y-2.5">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h2 className="text-lg font-black text-white">Monatsligen</h2>
+            <p className="text-xs text-slate-400">
+              Hinweis: Die Gruppengrösse kann je nach Anzahl aktiver Teilnehmer pro
+              Monat variieren (z. B. 4er-, 5er- oder 6er-Gruppen).
+            </p>
+          </div>
+          <select
+            value={activeSeason?.id || ''}
+            onChange={e => onSelectSeason(e.target.value)}
+            className="min-h-[40px] px-3 rounded-xl bg-[#090B0F] border border-white/10 text-xs font-black text-white"
+          >
+            {seasons.map(s => (
+              <option key={s.id} value={s.id}>
+                {s.label}
+              </option>
+            ))}
+          </select>
         </div>
+      </section>
 
-        <div className="flex gap-1.5 overflow-x-auto pb-1">
-          {seasons.map(s => (
-            <button
-              key={s.id}
-              type="button"
-              onClick={() => onSelectSeason(s.id)}
-              className={`min-h-[36px] px-3 rounded-xl text-xs font-black shrink-0 cursor-pointer ${
-                activeSeason?.id === s.id
-                  ? 'bg-[#10B981] text-slate-950'
-                  : 'bg-[#12151C] border border-white/[0.07] text-slate-300'
-              }`}
-            >
-              {s.shortLabel}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {activeSeason?.groups.map(group => {
+      {(activeSeason?.groups || []).map(group => {
         const standings = computeGroupStandings(group, membersMap);
         return (
           <section
             key={group.level}
-            className="rounded-3xl bg-[#12151C] border border-white/[0.07] p-4 sm:p-5 space-y-4"
+            className="rounded-3xl bg-[#12151C] border border-white/[0.08] p-4 sm:p-5 space-y-4"
           >
             <div className="flex items-center justify-between">
-              <h3 className="text-base font-black text-[#34D399]">{group.name}</h3>
-              <span className="text-xs text-slate-400">
-                {standings.length} Teilnehmer
+              <h3 className="text-base font-black text-white">{group.name}</h3>
+              <span className="px-2.5 py-1 rounded-full bg-white/[0.06] text-[11px] font-bold text-slate-300">
+                {group.playerIds.length}er-Gruppe
               </span>
             </div>
 
-            <div className="overflow-x-auto -mx-1 px-1">
-              <table className="w-full text-left text-xs">
+            {/* TABELLE */}
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs">
                 <thead>
-                  <tr className="text-slate-500 border-b border-white/[0.07]">
-                    <th className="py-2 pr-2">#</th>
-                    <th className="py-2 pr-2">Spieler</th>
-                    <th className="py-2 px-1.5 text-center">Sp.</th>
-                    <th className="py-2 px-1.5 text-center">S:N</th>
-                    <th className="py-2 px-1.5 text-center">Sätze</th>
-                    <th className="py-2 pl-2 text-right">Pkt</th>
+                  <tr className="text-[11px] text-slate-400 border-b border-white/[0.07]">
+                    <th className="py-2 text-left font-bold">#</th>
+                    <th className="py-2 text-left font-bold">Spieler</th>
+                    <th className="py-2 text-center font-bold">Sp</th>
+                    <th className="py-2 text-center font-bold">Sätze</th>
+                    <th className="py-2 text-right font-bold">Pkt</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/[0.05]">
-                  {standings.map((row, idx) => {
-                    const isMe = currentUser?.id === row.playerId;
-                    return (
-                      <tr
-                        key={row.playerId}
-                        className={isMe ? 'bg-[#10B981]/10' : ''}
-                      >
-                        <td className="py-2.5 pr-2 font-black text-slate-500">
-                          {idx + 1}
-                        </td>
-                        <td className="py-2.5 pr-2">
-                          <button
-                            type="button"
-                            onClick={() => onOpenProfile(row.playerId)}
-                            className="font-bold text-white hover:text-[#34D399] cursor-pointer"
-                          >
-                            {row.member.nickname}
-                          </button>
-                        </td>
-                        <td className="py-2.5 px-1.5 text-center text-slate-300">
-                          {row.played}
-                        </td>
-                        <td className="py-2.5 px-1.5 text-center text-slate-300">
-                          {row.wins}:{row.losses}
-                        </td>
-                        <td className="py-2.5 px-1.5 text-center text-slate-300">
-                          {row.setsWon}:{row.setsLost}
-                        </td>
-                        <td className="py-2.5 pl-2 text-right font-black text-[#34D399]">
-                          {row.points}
-                        </td>
-                      </tr>
-                    );
-                  })}
+                  {standings.map((row, idx) => (
+                    <tr key={row.playerId}>
+                      <td className="py-2.5 font-black text-slate-300">
+                        {idx + 1}
+                      </td>
+                      <td className="py-2.5">
+                        <button
+                          type="button"
+                          onClick={() => onOpenProfile(row.playerId)}
+                          className="font-bold text-white hover:text-[#34D399] cursor-pointer"
+                        >
+                          {row.member.nickname}
+                        </button>
+                      </td>
+                      <td className="py-2.5 text-center text-slate-400">
+                        {row.played}
+                      </td>
+                      <td className="py-2.5 text-center text-slate-300">
+                        {row.setsWon}:{row.setsLost}
+                      </td>
+                      <td className="py-2.5 text-right font-black text-[#34D399]">
+                        {row.points}
+                      </td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>
 
+            {/* BEGEGNUNGEN */}
             <div className="space-y-2 pt-2 border-t border-white/[0.07]">
               <p className="text-[11px] font-black uppercase tracking-wider text-slate-400">
                 Begegnungen
               </p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {group.matches.map(match => {
-                  const p1 = membersMap[match.player1Id];
-                  const p2 = membersMap[match.player2Id];
-                  if (!p1 || !p2) return null;
-                  const played = match.setsP1 !== null && match.setsP2 !== null;
-                  return (
-                    <div
-                      key={match.id}
-                      className="p-2.5 rounded-2xl bg-[#090B0F] border border-white/[0.06] flex items-center justify-between gap-2 text-xs"
-                    >
-                      <span className="font-bold text-white truncate">
-                        {p1.nickname} vs. {p2.nickname}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => onOpenResultModal(match)}
-                        className={`min-h-[32px] px-2.5 rounded-xl text-[11px] font-black shrink-0 cursor-pointer ${
-                          played
-                            ? 'bg-white/[0.07] text-[#34D399]'
-                            : 'bg-[#10B981] text-slate-950'
-                        }`}
-                      >
-                        {played ? `${match.setsP1}:${match.setsP2}` : 'Eintragen'}
-                      </button>
+              {group.matches.map(match => {
+                const p1 = membersMap[match.player1Id];
+                const p2 = membersMap[match.player2Id];
+                if (!p1 || !p2) return null;
+                const isPlayed = match.setsP1 !== null && match.setsP2 !== null;
+                const isMyMatch =
+                  currentUser &&
+                  (currentUser.id === p1.id || currentUser.id === p2.id);
+
+                return (
+                  <div
+                    key={match.id}
+                    className={`p-3 rounded-2xl border flex items-center justify-between gap-2 text-xs ${
+                      isMyMatch
+                        ? 'bg-[#090B0F] border-[#10B981]/30'
+                        : 'bg-[#090B0F] border-white/[0.05]'
+                    }`}
+                  >
+                    <div className="min-w-0 truncate">
+                      <span className="font-bold text-white">{p1.nickname}</span>
+                      <span className="text-slate-500 mx-1.5">vs</span>
+                      <span className="font-bold text-white">{p2.nickname}</span>
                     </div>
-                  );
-                })}
-              </div>
+                    <button
+                      type="button"
+                      onClick={() => onOpenResultModal(match)}
+                      className={`min-h-[34px] px-3 rounded-xl font-black shrink-0 cursor-pointer ${
+                        isPlayed
+                          ? 'bg-white/[0.07] text-slate-200'
+                          : 'bg-[#10B981] text-slate-950'
+                      }`}
+                    >
+                      {isPlayed ? `${match.setsP1} : ${match.setsP2}` : 'Eintragen'}
+                    </button>
+                  </div>
+                );
+              })}
             </div>
           </section>
         );
@@ -1128,7 +1135,400 @@ function LeaguesTab({
 }
 
 // ============================================================================
-// LIVE HALLEN TAB
+// NEXT MONTH TAB (FOLGEMONAT-KADER)
+// ============================================================================
+function NextMonthTab({
+  membersMap,
+  activeSeason,
+  nextMonthInfo,
+  currentUser,
+  onToggleNextMonth,
+  onOpenProfile,
+}) {
+  const confirmed = useMemo(
+    () =>
+      Object.values(membersMap)
+        .filter(m => m.status === 'Dabei' && m.nextMonthOptIn)
+        .sort((a, b) => b.annualPoints - a.annualPoints),
+    [membersMap]
+  );
+
+  const paused = useMemo(
+    () =>
+      Object.values(membersMap).filter(
+        m => m.status !== 'Dabei' || !m.nextMonthOptIn
+      ),
+    [membersMap]
+  );
+
+  return (
+    <div className="space-y-4">
+      <section className="rounded-3xl bg-[#12151C] border border-white/[0.08] p-4 sm:p-5 space-y-3">
+        <div className="flex items-center justify-between gap-2">
+          <div>
+            <h2 className="text-lg font-black text-white">{nextMonthInfo.label}</h2>
+            <p className="text-xs text-slate-400">
+              {confirmed.length} Spieler sind für {nextMonthInfo.monthName} angemeldet
+            </p>
+          </div>
+          {currentUser && (
+            <button
+              type="button"
+              onClick={onToggleNextMonth}
+              className={`min-h-[40px] px-3.5 rounded-2xl text-xs font-black cursor-pointer ${
+                currentUser.nextMonthOptIn
+                  ? 'bg-[#10B981] text-slate-950'
+                  : 'bg-[#090B0F] border border-white/10 text-slate-200'
+              }`}
+            >
+              {currentUser.nextMonthOptIn ? 'Ich bin dabei ✓' : 'Jetzt zusagen'}
+            </button>
+          )}
+        </div>
+      </section>
+
+      <section className="rounded-3xl bg-[#12151C] border border-white/[0.08] p-4 sm:p-5 space-y-2.5">
+        <h3 className="text-xs font-black uppercase tracking-wider text-[#34D399]">
+          Dabei in {nextMonthInfo.monthName} ({confirmed.length})
+        </h3>
+        {confirmed.length === 0 ? (
+          <p className="text-xs text-slate-400">Noch keine Zusagen vorhanden.</p>
+        ) : (
+          <div className="divide-y divide-white/[0.06]">
+            {confirmed.map((m, idx) => {
+              const currentGroup = activeSeason?.groups.find(g =>
+                g.playerIds.includes(m.id)
+              );
+              return (
+                <div
+                  key={m.id}
+                  className="py-2.5 flex items-center justify-between gap-2 text-xs"
+                >
+                  <button
+                    type="button"
+                    onClick={() => onOpenProfile(m.id)}
+                    className="flex items-center gap-2.5 text-left cursor-pointer"
+                  >
+                    <span className="text-slate-500 font-black w-5">{idx + 1}.</span>
+                    <span className="font-bold text-white">{m.nickname}</span>
+                  </button>
+                  <span className="text-[11px] text-slate-400">
+                    {currentGroup ? `Aktuell ${currentGroup.name}` : 'Neueinsteiger'}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </section>
+
+      <section className="rounded-3xl bg-[#12151C] border border-white/[0.08] p-4 sm:p-5 space-y-2">
+        <h3 className="text-xs font-black uppercase tracking-wider text-slate-400">
+          Pause / Nur CONNECT ({paused.length})
+        </h3>
+        <div className="flex flex-wrap gap-1.5">
+          {paused.map(m => (
+            <button
+              key={m.id}
+              type="button"
+              onClick={() => onOpenProfile(m.id)}
+              className="px-3 py-1.5 rounded-xl bg-[#090B0F] text-xs text-slate-400 cursor-pointer"
+            >
+              {m.nickname}
+            </button>
+          ))}
+        </div>
+      </section>
+    </div>
+  );
+}
+
+// ============================================================================
+// RECENT MATCHES TAB (LETZTE RESULTATE)
+// ============================================================================
+function RecentMatchesTab({
+  membersMap,
+  seasons,
+  activeSeason,
+  onSelectSeason,
+  onOpenProfile,
+}) {
+  const playedMatches = useMemo(() => {
+    const list = [];
+    (activeSeason?.groups || []).forEach(g => {
+      g.matches.forEach(m => {
+        if (m.setsP1 !== null && m.setsP2 !== null) {
+          list.push({ ...m, groupName: g.name });
+        }
+      });
+    });
+    return list.sort((a, b) =>
+      String(b.playedAt || '').localeCompare(String(a.playedAt || ''))
+    );
+  }, [activeSeason]);
+
+  return (
+    <div className="space-y-4">
+      <section className="rounded-3xl bg-[#12151C] border border-white/[0.08] p-4 sm:p-5 flex items-center justify-between gap-2">
+        <div>
+          <h2 className="text-lg font-black text-white">Gespielte Matches</h2>
+          <p className="text-xs text-slate-400">
+            {playedMatches.length} Resultate in {activeSeason?.label}
+          </p>
+        </div>
+        <select
+          value={activeSeason?.id || ''}
+          onChange={e => onSelectSeason(e.target.value)}
+          className="min-h-[40px] px-3 rounded-xl bg-[#090B0F] border border-white/10 text-xs font-black text-white"
+        >
+          {seasons.map(s => (
+            <option key={s.id} value={s.id}>
+              {s.label}
+            </option>
+          ))}
+        </select>
+      </section>
+
+      {playedMatches.length === 0 ? (
+        <div className="rounded-3xl bg-[#12151C] border border-white/[0.08] p-5 text-xs text-slate-400">
+          In diesem Monat wurden noch keine Resultate eingetragen.
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {playedMatches.map(m => {
+            const p1 = membersMap[m.player1Id];
+            const p2 = membersMap[m.player2Id];
+            if (!p1 || !p2) return null;
+            return (
+              <div
+                key={m.id}
+                className="p-3.5 rounded-2xl bg-[#12151C] border border-white/[0.07] flex items-center justify-between gap-2 text-xs"
+              >
+                <div className="min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => onOpenProfile(p1.id)}
+                      className={`font-black cursor-pointer ${
+                        m.setsP1 > m.setsP2 ? 'text-[#34D399]' : 'text-white'
+                      }`}
+                    >
+                      {p1.nickname}
+                    </button>
+                    <span className="text-slate-500">vs</span>
+                    <button
+                      type="button"
+                      onClick={() => onOpenProfile(p2.id)}
+                      className={`font-black cursor-pointer ${
+                        m.setsP2 > m.setsP1 ? 'text-[#34D399]' : 'text-white'
+                      }`}
+                    >
+                      {p2.nickname}
+                    </button>
+                  </div>
+                  <p className="text-[11px] text-slate-400">
+                    {m.groupName} · {m.playedAt}
+                  </p>
+                </div>
+                <span className="px-3 py-1.5 rounded-xl bg-[#090B0F] font-black text-white shrink-0">
+                  {m.setsP1} : {m.setsP2}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ============================================================================
+// ANNUAL RANKING TAB (JAHRESRANGLISTE)
+// ============================================================================
+function AnnualRankingTab({ membersMap, currentUser, onOpenProfile }) {
+  const ranked = useMemo(
+    () =>
+      Object.values(membersMap).sort((a, b) => b.annualPoints - a.annualPoints),
+    [membersMap]
+  );
+
+  return (
+    <div className="space-y-4">
+      <section className="rounded-3xl bg-[#12151C] border border-white/[0.08] p-4 sm:p-5">
+        <h2 className="text-lg font-black text-white">Jahresrangliste</h2>
+        <p className="text-xs text-slate-400">
+          Gesamtpunkte über alle gespielten Monatsligen
+        </p>
+      </section>
+
+      <div className="rounded-3xl bg-[#12151C] border border-white/[0.08] divide-y divide-white/[0.06] overflow-hidden">
+        {ranked.map((m, idx) => {
+          const isMe = currentUser?.id === m.id;
+          return (
+            <button
+              key={m.id}
+              type="button"
+              onClick={() => onOpenProfile(m.id)}
+              className={`w-full p-3.5 flex items-center justify-between gap-3 text-left cursor-pointer ${
+                isMe ? 'bg-[#10B981]/10' : ''
+              }`}
+            >
+              <div className="flex items-center gap-3 min-w-0">
+                <span
+                  className={`w-7 h-7 rounded-xl flex items-center justify-center text-xs font-black shrink-0 ${
+                    idx === 0
+                      ? 'bg-amber-400 text-slate-950'
+                      : idx === 1
+                      ? 'bg-slate-300 text-slate-950'
+                      : idx === 2
+                      ? 'bg-amber-700 text-white'
+                      : 'bg-[#090B0F] text-slate-400'
+                  }`}
+                >
+                  {idx + 1}
+                </span>
+                <div className="min-w-0">
+                  <p className="text-sm font-black text-white truncate">
+                    {m.nickname}
+                  </p>
+                  <p className="text-[11px] text-slate-400 truncate">
+                    {m.style} · {m.seasonTitles}× Monatssieger
+                  </p>
+                </div>
+              </div>
+              <span className="text-sm font-black text-[#34D399] shrink-0">
+                {m.annualPoints} Pkt
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ============================================================================
+// PLAYERS TAB (CLUB-SPIELER VERZEICHNIS)
+// ============================================================================
+function PlayersTab({
+  membersMap,
+  activeSeason,
+  nowTick,
+  onOpenProfile,
+  onOpenAddMember,
+}) {
+  const [query, setQuery] = useState('');
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return Object.values(membersMap).filter(m => {
+      if (!q) return true;
+      return (
+        m.nickname.toLowerCase().includes(q) ||
+        `${m.firstName} ${m.lastName}`.toLowerCase().includes(q) ||
+        (m.style || '').toLowerCase().includes(q)
+      );
+    });
+  }, [membersMap, query]);
+
+  return (
+    <div className="space-y-4">
+      <section className="rounded-3xl bg-[#12151C] border border-white/[0.08] p-4 sm:p-5 space-y-3">
+        <div className="flex items-center justify-between gap-2">
+          <div>
+            <h2 className="text-lg font-black text-white">
+              Club-Spieler ({Object.keys(membersMap).length})
+            </h2>
+            <p className="text-xs text-slate-400">
+              Alle Mitglieder inklusive direktem WhatsApp-Kontakt
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onOpenAddMember}
+            className="min-h-[40px] px-3.5 rounded-2xl bg-[#10B981] text-slate-950 text-xs font-black shrink-0 cursor-pointer"
+          >
+            + NEW PLAYER
+          </button>
+        </div>
+
+        <input
+          type="text"
+          value={query}
+          onChange={e => setQuery(e.target.value)}
+          placeholder="Nach Nickname, Name oder Spielstil suchen..."
+          className="w-full min-h-[42px] px-3.5 rounded-2xl bg-[#090B0F] border border-white/10 text-xs text-white"
+        />
+      </section>
+
+      <div className="space-y-2.5">
+        {filtered.map(member => {
+          const group = activeSeason?.groups.find(g =>
+            g.playerIds.includes(member.id)
+          );
+          const isLive = isMemberCheckedIn(member, nowTick);
+          const waUrl = buildWhatsAppUrl(
+            member.whatsapp,
+            `Hoi ${member.nickname}, wollen wir mal im Club zusammen Tischtennis spielen?`
+          );
+
+          return (
+            <div
+              key={member.id}
+              className="p-4 rounded-3xl bg-[#12151C] border border-white/[0.07] flex items-center justify-between gap-3"
+            >
+              <button
+                type="button"
+                onClick={() => onOpenProfile(member.id)}
+                className="flex items-center gap-3 text-left min-w-0 cursor-pointer"
+              >
+                <div
+                  className={`w-11 h-11 rounded-2xl bg-gradient-to-br ${member.avatarBg} flex items-center justify-center text-white font-black text-xs shrink-0 relative`}
+                >
+                  {member.nickname.slice(0, 2).toUpperCase()}
+                  {isLive && (
+                    <span className="w-2.5 h-2.5 rounded-full bg-[#10B981] ring-2 ring-[#12151C] absolute -bottom-0.5 -right-0.5" />
+                  )}
+                </div>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <p className="text-sm font-black text-white truncate">
+                      {member.nickname}
+                    </p>
+                    <span className="px-2 py-0.5 rounded bg-white/[0.07] text-[10px] font-bold text-slate-300 shrink-0">
+                      {group ? group.name : 'CONNECT'}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-400 truncate">
+                    {member.style} · {member.language}
+                  </p>
+                  <p className="text-[11px] text-slate-500 truncate">
+                    Hallentage: {(member.usualDays || []).join(', ') || 'Flexibel'}
+                  </p>
+                </div>
+              </button>
+
+              {waUrl && (
+                <a
+                  href={waUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-10 h-10 rounded-2xl bg-[#25D366] text-slate-950 flex items-center justify-center shrink-0"
+                  title={`WhatsApp an ${member.nickname}`}
+                >
+                  <KlMessageIcon className="w-4 h-4" />
+                </a>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ============================================================================
+// HALL LIVE TAB (JETZT LIVE VOR ORT)
 // ============================================================================
 function HallLiveTab({
   membersMap,
@@ -1143,33 +1543,34 @@ function HallLiveTab({
   const [minutes, setMinutes] = useState(120);
   const [mood, setMood] = useState(CHECKIN_MOODS[0]);
 
-  const checkedInPlayers = useMemo(
+  const liveMembers = useMemo(
     () =>
       Object.values(membersMap).filter(m => isMemberCheckedIn(m, nowTick)),
     [membersMap, nowTick]
   );
 
-  const isCurrentLive = isMemberCheckedIn(currentUser, nowTick);
+  const isLive = isMemberCheckedIn(currentUser, nowTick);
 
   return (
     <div className="space-y-4">
-      <section className="rounded-3xl bg-[#12151C] border border-white/[0.07] p-4 sm:p-5 space-y-4">
+      {/* JETZT LIVE VOR ORT */}
+      <section className="rounded-3xl bg-[#12151C] border border-white/[0.07] p-4 sm:p-5 space-y-3.5">
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-lg font-black text-white">LIVE in der Halle</h2>
             <p className="text-xs text-slate-400">
-              Wer ist gerade vor Ort eingecheckt?
+              {liveMembers.length} Spieler aktuell vor Ort eingecheckt
             </p>
           </div>
           <span className="px-3 py-1 rounded-full bg-[#10B981]/15 text-[#34D399] text-xs font-black">
-            {checkedInPlayers.length} live
+            {liveMembers.length} LIVE
           </span>
         </div>
 
         {!currentUser ? (
-          <div className="p-3.5 rounded-2xl bg-[#090B0F] space-y-2.5">
+          <div className="p-3 rounded-2xl bg-[#090B0F] space-y-2">
             <p className="text-xs text-slate-300">
-              Wähle zuerst dein Profil zum Einchecken:
+              Wähle dein Profil, um dich live einzuchecken:
             </p>
             <div className="flex flex-wrap gap-1.5">
               {Object.values(membersMap).map(m => (
@@ -1184,34 +1585,34 @@ function HallLiveTab({
               ))}
             </div>
           </div>
-        ) : isCurrentLive ? (
-          <div className="p-3.5 rounded-2xl bg-[#090B0F] border border-[#10B981]/35 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        ) : isLive ? (
+          <div className="p-3.5 rounded-2xl bg-[#090B0F] border border-[#10B981]/35 flex items-center justify-between gap-3">
             <div>
               <p className="text-xs font-black text-[#34D399]">
-                Du bist eingecheckt ({currentUser.nickname}) · noch{' '}
+                Du bist eingecheckt · noch{' '}
                 {formatRemainingTime(currentUser.checkedInUntil, nowTick)}
               </p>
-              <p className="text-xs text-slate-400 mt-0.5">
+              <p className="text-[11px] text-slate-400">
                 {currentUser.checkInMood || CHECKIN_MOODS[0]}
               </p>
             </div>
             <button
               type="button"
               onClick={() => onCheckOut(currentUser.id)}
-              className="min-h-[42px] px-4 rounded-xl bg-rose-500 text-white text-xs font-black cursor-pointer"
+              className="min-h-[38px] px-3.5 rounded-xl bg-rose-500 text-white text-xs font-black shrink-0 cursor-pointer"
             >
               CHECK-OUT
             </button>
           </div>
         ) : (
-          <div className="p-3.5 rounded-2xl bg-[#090B0F] space-y-3">
+          <div className="p-3.5 rounded-2xl bg-[#090B0F] space-y-2.5">
             <div className="grid grid-cols-4 gap-1.5">
               {[60, 90, 120, 180].map(m => (
                 <button
                   key={m}
                   type="button"
                   onClick={() => setMinutes(m)}
-                  className={`min-h-[40px] rounded-xl text-xs font-black cursor-pointer ${
+                  className={`min-h-[36px] rounded-xl text-xs font-black cursor-pointer ${
                     minutes === m
                       ? 'bg-[#10B981] text-slate-950'
                       : 'bg-[#12151C] text-slate-300'
@@ -1221,374 +1622,90 @@ function HallLiveTab({
                 </button>
               ))}
             </div>
-
-            <select
-              value={mood}
-              onChange={e => setMood(e.target.value)}
-              className="w-full min-h-[42px] px-3 rounded-xl bg-[#12151C] border border-white/10 text-xs font-bold text-white"
-            >
-              {CHECKIN_MOODS.map(item => (
-                <option key={item} value={item}>
-                  {item}
-                </option>
-              ))}
-            </select>
-
-            <button
-              type="button"
-              onClick={() => onCheckIn(currentUser.id, minutes, mood)}
-              className="w-full min-h-[44px] rounded-2xl bg-[#10B981] text-slate-950 text-xs font-black cursor-pointer"
-            >
-              Jetzt einchecken
-            </button>
-          </div>
-        )}
-
-        {/* LISTE DER ANWESENDEN SPIELER */}
-        <div className="space-y-2 pt-1">
-          <h3 className="text-[11px] font-black uppercase tracking-wider text-slate-400">
-            Anwesende Spieler ({checkedInPlayers.length})
-          </h3>
-          {checkedInPlayers.length === 0 ? (
-            <div className="p-4 rounded-2xl bg-[#090B0F] text-xs text-slate-400">
-              Aktuell ist niemand eingecheckt.
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {checkedInPlayers.map(player => {
-                const playerGroup = activeSeason?.groups.find(g =>
-                  g.playerIds.includes(player.id)
-                );
-                const isMe = currentUser?.id === player.id;
-                const waUrl = buildWhatsAppUrl(
-                  player.whatsapp,
-                  `Hoi ${player.nickname}, ich sehe du bist gerade in der Halle – wollen wir ein Match spielen?`
-                );
-
-                return (
-                  <div
-                    key={player.id}
-                    className={`p-3.5 rounded-2xl bg-[#090B0F] border flex items-center justify-between gap-3 ${
-                      isMe ? 'border-[#10B981]' : 'border-white/[0.07]'
-                    }`}
-                  >
-                    <button
-                      type="button"
-                      onClick={() => onOpenProfile(player.id)}
-                      className="flex items-center gap-3 min-w-0 text-left cursor-pointer"
-                    >
-                      <div
-                        className={`w-10 h-10 rounded-xl bg-gradient-to-br ${player.avatarBg} flex items-center justify-center text-white font-black text-xs shrink-0`}
-                      >
-                        {player.nickname.slice(0, 2).toUpperCase()}
-                      </div>
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-1.5">
-                          <p className="text-sm font-black text-white truncate">
-                            {player.nickname}
-                          </p>
-                          {playerGroup && (
-                            <span className="px-1.5 py-0.5 rounded bg-white/[0.07] text-[10px] font-bold text-slate-300 shrink-0">
-                              {playerGroup.name}
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-xs font-semibold text-[#34D399] truncate">
-                          {player.checkInMood || CHECKIN_MOODS[0]}
-                        </p>
-                        <p className="text-[11px] text-slate-400">
-                          Noch {formatRemainingTime(player.checkedInUntil, nowTick)} vor Ort
-                        </p>
-                      </div>
-                    </button>
-
-                    <div className="flex items-center gap-2 shrink-0">
-                      {!isMe && waUrl && (
-                        <a
-                          href={waUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="w-9 h-9 rounded-xl bg-[#10B981]/15 text-[#34D399] flex items-center justify-center"
-                          title={`WhatsApp an ${player.nickname}`}
-                        >
-                          <KlMessageIcon className="w-4 h-4" />
-                        </a>
-                      )}
-                      <span className="w-2.5 h-2.5 rounded-full bg-[#10B981] animate-pulse" />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      </section>
-    </div>
-  );
-}
-
-// ============================================================================
-// FOLGEMONAT TAB
-// ============================================================================
-function NextMonthTab({
-  membersMap,
-  activeSeason,
-  currentUser,
-  onToggleNextMonth,
-  onOpenProfile,
-}) {
-  const allMembers = useMemo(() => Object.values(membersMap), [membersMap]);
-
-  const confirmedMembers = useMemo(
-    () =>
-      allMembers
-        .filter(m => m.status === 'Dabei' && m.nextMonthOptIn)
-        .sort((a, b) => b.annualPoints - a.annualPoints),
-    [allMembers]
-  );
-
-  const pausedMembers = useMemo(
-    () =>
-      allMembers.filter(
-        m => m.status === 'Pausiert' || (m.status === 'Dabei' && !m.nextMonthOptIn)
-      ),
-    [allMembers]
-  );
-
-  const pendingMembers = useMemo(
-    () => allMembers.filter(m => m.status === 'Offen'),
-    [allMembers]
-  );
-
-  return (
-    <div className="space-y-4">
-      <section className="rounded-3xl bg-[#12151C] border border-white/[0.07] p-4 sm:p-5 space-y-4">
-        <div className="flex items-center justify-between gap-2">
-          <div>
-            <h2 className="text-lg font-black text-white">Folgemonat</h2>
-            <p className="text-xs text-slate-400">
-              Teilnehmer nach {activeSeason?.shortLabel}
-            </p>
-          </div>
-          <div className="flex gap-1.5">
-            <span className="px-2.5 py-1 rounded-full bg-[#10B981]/15 text-[#34D399] text-xs font-black">
-              {confirmedMembers.length} Dabei
-            </span>
-            <span className="px-2.5 py-1 rounded-full bg-amber-500/15 text-amber-300 text-xs font-black">
-              {pausedMembers.length} Pause
-            </span>
-          </div>
-        </div>
-
-        {currentUser && currentUser.status === 'Dabei' && (
-          <div className="p-3.5 rounded-2xl bg-[#090B0F] border border-[#10B981]/30 flex items-center justify-between gap-3">
-            <div className="min-w-0">
-              <p className="text-xs font-black text-white truncate">
-                Dein Status ({currentUser.nickname})
-              </p>
-              <p className="text-[11px] text-slate-400">
-                {currentUser.nextMonthOptIn ? 'Dabei' : 'Pause'}
-              </p>
-            </div>
-            <div className="grid grid-cols-2 gap-1.5 w-44 shrink-0">
+            <div className="flex flex-col sm:flex-row gap-2">
+              <select
+                value={mood}
+                onChange={e => setMood(e.target.value)}
+                className="flex-1 min-h-[40px] px-3 rounded-xl bg-[#12151C] border border-white/10 text-xs font-bold text-white"
+              >
+                {CHECKIN_MOODS.map(item => (
+                  <option key={item} value={item}>
+                    {item}
+                  </option>
+                ))}
+              </select>
               <button
                 type="button"
-                onClick={() => {
-                  if (!currentUser.nextMonthOptIn) onToggleNextMonth();
-                }}
-                className={`min-h-[38px] rounded-xl text-xs font-black cursor-pointer ${
-                  currentUser.nextMonthOptIn
-                    ? 'bg-[#10B981] text-slate-950'
-                    : 'bg-[#12151C] text-slate-400'
-                }`}
+                onClick={() => onCheckIn(currentUser.id, minutes, mood)}
+                className="min-h-[40px] px-4 rounded-xl bg-[#10B981] text-slate-950 text-xs font-black shrink-0 cursor-pointer"
               >
-                Dabei
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  if (currentUser.nextMonthOptIn) onToggleNextMonth();
-                }}
-                className={`min-h-[38px] rounded-xl text-xs font-black cursor-pointer ${
-                  !currentUser.nextMonthOptIn
-                    ? 'bg-amber-500 text-slate-950'
-                    : 'bg-[#12151C] text-slate-400'
-                }`}
-              >
-                Pause
+                Jetzt einchecken
               </button>
             </div>
-          </div>
-        )}
-
-        <div className="space-y-2">
-          <h3 className="text-[11px] font-black uppercase tracking-wider text-[#34D399]">
-            Dabei ({confirmedMembers.length})
-          </h3>
-          <div className="space-y-1.5">
-            {confirmedMembers.map((m, i) => (
-              <button
-                key={m.id}
-                type="button"
-                onClick={() => onOpenProfile(m.id)}
-                className="w-full flex items-center justify-between p-3 rounded-2xl bg-[#090B0F] text-left cursor-pointer"
-              >
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <span className="text-xs font-black text-slate-500 w-5">
-                    {i + 1}
-                  </span>
-                  <span className="text-xs font-black text-white truncate">
-                    {m.nickname}
-                  </span>
-                </div>
-                <span className="px-2 py-0.5 rounded-lg bg-[#10B981]/15 text-[#34D399] text-[10px] font-black">
-                  Dabei
-                </span>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {pausedMembers.length > 0 && (
-          <div className="space-y-1.5 pt-1">
-            <h3 className="text-[11px] font-black uppercase tracking-wider text-amber-300">
-              Pause ({pausedMembers.length})
-            </h3>
-            {pausedMembers.map(m => (
-              <button
-                key={m.id}
-                type="button"
-                onClick={() => onOpenProfile(m.id)}
-                className="w-full flex items-center justify-between p-3 rounded-2xl bg-[#090B0F] text-left cursor-pointer"
-              >
-                <span className="text-xs font-bold text-slate-300 truncate">
-                  {m.nickname}
-                </span>
-                <span className="px-2 py-0.5 rounded-lg bg-amber-500/15 text-amber-300 text-[10px] font-black">
-                  Pause
-                </span>
-              </button>
-            ))}
-          </div>
-        )}
-
-        {pendingMembers.length > 0 && (
-          <div className="space-y-1.5 pt-1">
-            <h3 className="text-[11px] font-black uppercase tracking-wider text-slate-400">
-              Offen · Admin-Freigabe ({pendingMembers.length})
-            </h3>
-            {pendingMembers.map(m => (
-              <div
-                key={m.id}
-                className="flex items-center justify-between p-3 rounded-2xl bg-[#090B0F]"
-              >
-                <span className="text-xs font-bold text-slate-300 truncate">
-                  {m.nickname}
-                </span>
-                <span className="px-2 py-0.5 rounded-lg bg-white/10 text-slate-300 text-[10px] font-black">
-                  Offen
-                </span>
-              </div>
-            ))}
           </div>
         )}
       </section>
-    </div>
-  );
-}
 
-// ============================================================================
-// LETZTE SPIELE TAB
-// ============================================================================
-function RecentMatchesTab({
-  membersMap,
-  seasons,
-  activeSeason,
-  onSelectSeason,
-  onOpenProfile,
-}) {
-  const playedMatches = useMemo(() => {
-    if (!activeSeason) return [];
-    const list = [];
-    activeSeason.groups.forEach(group => {
-      group.matches.forEach(m => {
-        if (m.setsP1 !== null && m.setsP2 !== null) {
-          list.push({ ...m, groupName: group.name });
-        }
-      });
-    });
-    return list.sort((a, b) => (b.playedAt || '').localeCompare(a.playedAt || ''));
-  }, [activeSeason]);
-
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between gap-2">
-        <h2 className="text-lg font-black text-white">Gespielte Matches</h2>
-        <div className="flex gap-1.5">
-          {seasons.map(s => (
-            <button
-              key={s.id}
-              type="button"
-              onClick={() => onSelectSeason(s.id)}
-              className={`min-h-[34px] px-3 rounded-xl text-xs font-black cursor-pointer ${
-                activeSeason?.id === s.id
-                  ? 'bg-[#10B981] text-slate-950'
-                  : 'bg-[#12151C] text-slate-300'
-              }`}
-            >
-              {s.shortLabel}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {playedMatches.length === 0 ? (
-        <div className="rounded-3xl bg-[#12151C] p-5 text-xs text-slate-400">
-          Noch keine Resultate eingetragen.
+      {liveMembers.length === 0 ? (
+        <div className="rounded-3xl bg-[#12151C] border border-white/[0.07] p-4 text-xs text-slate-400">
+          Aktuell ist niemand live vor Ort eingecheckt.
         </div>
       ) : (
-        <div className="space-y-2">
-          {playedMatches.map(match => {
-            const p1 = membersMap[match.player1Id];
-            const p2 = membersMap[match.player2Id];
-            if (!p1 || !p2) return null;
-            const p1Won = match.setsP1 > match.setsP2;
+        <div className="space-y-2.5">
+          {liveMembers.map(member => {
+            const group = activeSeason?.groups.find(g =>
+              g.playerIds.includes(member.id)
+            );
+            const waUrl = buildWhatsAppUrl(
+              member.whatsapp,
+              `Hoi ${member.nickname}, ich sehe du bist gerade in der Halle – wollen wir zusammen spielen?`
+            );
 
             return (
               <div
-                key={match.id}
-                className="rounded-2xl bg-[#12151C] border border-white/[0.07] p-3.5 flex items-center justify-between gap-3"
+                key={member.id}
+                className="rounded-3xl bg-[#12151C] border border-[#10B981]/30 p-4 flex items-center justify-between gap-3"
               >
-                <div className="min-w-0">
-                  <p className="text-[11px] text-slate-400">
-                    <span className="font-bold text-[#34D399]">{match.groupName}</span>
-                    {match.playedAt ? ` · ${match.playedAt}` : ''}
-                  </p>
-                  <div className="flex items-center gap-1.5 text-sm mt-0.5">
-                    <button
-                      type="button"
-                      onClick={() => onOpenProfile(p1.id)}
-                      className={`font-black truncate cursor-pointer ${
-                        p1Won ? 'text-white' : 'text-slate-400'
-                      }`}
-                    >
-                      {p1.nickname}
-                    </button>
-                    <span className="text-slate-600">vs</span>
-                    <button
-                      type="button"
-                      onClick={() => onOpenProfile(p2.id)}
-                      className={`font-black truncate cursor-pointer ${
-                        !p1Won ? 'text-white' : 'text-slate-400'
-                      }`}
-                    >
-                      {p2.nickname}
-                    </button>
+                <button
+                  type="button"
+                  onClick={() => onOpenProfile(member.id)}
+                  className="flex items-center gap-3 text-left min-w-0 cursor-pointer"
+                >
+                  <div
+                    className={`w-11 h-11 rounded-2xl bg-gradient-to-br ${member.avatarBg} flex items-center justify-center text-white font-black text-xs shrink-0 relative`}
+                  >
+                    {member.nickname.slice(0, 2).toUpperCase()}
+                    <span className="w-2.5 h-2.5 rounded-full bg-[#10B981] ring-2 ring-[#12151C] absolute -bottom-0.5 -right-0.5" />
                   </div>
-                </div>
-                <span className="px-3 py-1.5 rounded-xl bg-[#090B0F] text-sm font-black text-[#34D399] shrink-0">
-                  {match.setsP1}:{match.setsP2}
-                </span>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <p className="text-sm font-black text-white truncate">
+                        {member.nickname}
+                      </p>
+                      <span className="px-2 py-0.5 rounded bg-white/[0.07] text-[10px] font-bold text-slate-300 shrink-0">
+                        {group ? group.name : member.status}
+                      </span>
+                    </div>
+                    <p className="text-xs font-bold text-[#34D399] truncate">
+                      {member.checkInMood || CHECKIN_MOODS[0]}
+                    </p>
+                    <p className="text-[11px] text-slate-400">
+                      Noch {formatRemainingTime(member.checkedInUntil, nowTick)} vor Ort
+                    </p>
+                  </div>
+                </button>
+
+                {waUrl && currentUser?.id !== member.id && (
+                  <a
+                    href={waUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-10 h-10 rounded-2xl bg-[#10B981] text-slate-950 flex items-center justify-center shrink-0"
+                    title={`WhatsApp an ${member.nickname}`}
+                  >
+                    <KlMessageIcon className="w-4 h-4" />
+                  </a>
+                )}
               </div>
             );
           })}
@@ -1599,178 +1716,787 @@ function RecentMatchesTab({
 }
 
 // ============================================================================
-// JAHRESRANGLISTE TAB
+// VORANKÜNDIGUNGEN TAB ("BIN DA AM...")
 // ============================================================================
-function AnnualRankingTab({ membersMap, currentUser, onOpenProfile }) {
-  const rankedMembers = useMemo(
-    () =>
-      Object.values(membersMap)
-        .filter(m => m.status !== 'Gesperrt')
-        .sort((a, b) => b.annualPoints - a.annualPoints),
-    [membersMap]
-  );
-
-  return (
-    <div className="space-y-4">
-      <div>
-        <h2 className="text-lg font-black text-white">Jahresrangliste 2026</h2>
-        <p className="text-xs text-slate-400">Gesamtwertung aller Monatsrunden</p>
-      </div>
-
-      <div className="space-y-2">
-        {rankedMembers.map((member, index) => {
-          const isMe = currentUser?.id === member.id;
-          return (
-            <button
-              key={member.id}
-              type="button"
-              onClick={() => onOpenProfile(member.id)}
-              className={`w-full flex items-center justify-between gap-3 p-3.5 rounded-2xl border text-left cursor-pointer ${
-                isMe
-                  ? 'bg-[#10B981]/12 border-[#10B981]/40'
-                  : 'bg-[#12151C] border-white/[0.07]'
-              }`}
-            >
-              <div className="flex items-center gap-3 min-w-0">
-                <span
-                  className={`w-7 h-7 rounded-xl flex items-center justify-center text-xs font-black shrink-0 ${
-                    index === 0
-                      ? 'bg-amber-400 text-slate-950'
-                      : index === 1
-                      ? 'bg-slate-300 text-slate-950'
-                      : index === 2
-                      ? 'bg-amber-700 text-white'
-                      : 'bg-[#090B0F] text-slate-400'
-                  }`}
-                >
-                  {index + 1}
-                </span>
-                <div className="min-w-0">
-                  <p className="text-sm font-black text-white truncate">
-                    {member.nickname}
-                  </p>
-                  <p className="text-[11px] text-slate-400 truncate">
-                    {member.style}
-                  </p>
-                </div>
-              </div>
-              <div className="text-right shrink-0">
-                <p className="text-sm font-black text-[#34D399]">
-                  {member.annualPoints} Pkt
-                </p>
-                {member.seasonTitles > 0 && (
-                  <p className="text-[10px] font-bold text-amber-300">
-                    {member.seasonTitles}× Titel
-                  </p>
-                )}
-              </div>
-            </button>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-// ============================================================================
-// SPIELER VERZEICHNIS TAB
-// ============================================================================
-function PlayersTab({
+function AnnouncementsTab({
   membersMap,
   activeSeason,
-  nowTick,
+  currentUser,
+  announcements,
+  onRequestSelectUser,
+  onSaveAnnouncement,
+  onDeleteAnnouncement,
+  onToggleAnnouncementMeToo,
   onOpenProfile,
-  onOpenAddMember,
 }) {
-  const [search, setSearch] = useState('');
+  const myAnnouncement = useMemo(
+    () =>
+      currentUser
+        ? announcements.find(a => a.memberId === currentUser.id) || null
+        : null,
+    [announcements, currentUser]
+  );
 
-  const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    return Object.values(membersMap).filter(m => {
-      if (!q) return true;
-      return (
-        m.nickname.toLowerCase().includes(q) ||
-        `${m.firstName} ${m.lastName}`.toLowerCase().includes(q) ||
-        m.style.toLowerCase().includes(q)
-      );
+  const [showAnnounceForm, setShowAnnounceForm] = useState(false);
+  const [annDay, setAnnDay] = useState('Morgen');
+  const [annTime, setAnnTime] = useState('17:30');
+  const [annNote, setAnnNote] = useState('Offen für Liga & Training');
+
+  const openEditAnnouncement = () => {
+    if (myAnnouncement) {
+      setAnnDay(myAnnouncement.dayLabel);
+      setAnnTime(myAnnouncement.timeText);
+      setAnnNote(myAnnouncement.note || '');
+    } else {
+      setAnnDay('Morgen');
+      setAnnTime('17:30');
+      setAnnNote('Offen für Liga & Training');
+    }
+    setShowAnnounceForm(true);
+  };
+
+  const handleSaveAnn = e => {
+    e.preventDefault();
+    if (!currentUser || !annTime.trim()) return;
+    onSaveAnnouncement(currentUser.id, {
+      dayLabel: annDay,
+      timeText: annTime.trim(),
+      note: annNote.trim(),
     });
-  }, [membersMap, search]);
+    setShowAnnounceForm(false);
+  };
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between gap-2">
-        <h2 className="text-lg font-black text-white">
-          Spieler ({Object.keys(membersMap).length})
-        </h2>
-        <button
-          type="button"
-          onClick={onOpenAddMember}
-          className="min-h-[38px] px-3.5 rounded-xl bg-[#10B981] text-slate-950 text-xs font-black inline-flex items-center gap-1.5 cursor-pointer"
-        >
-          <KlUserPlusIcon className="w-4 h-4" />
-          <span>NEW PLAYER</span>
-        </button>
-      </div>
-
-      <div className="relative">
-        <KlSearchIcon className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
-        <input
-          type="text"
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          placeholder="Spieler suchen..."
-          className="w-full min-h-[44px] pl-10 pr-4 rounded-2xl bg-[#12151C] border border-white/[0.07] text-sm text-white placeholder-slate-500 focus:outline-none focus:border-[#10B981]"
-        />
-      </div>
-
-      <div className="space-y-2">
-        {filtered.map(member => {
-          const group = activeSeason?.groups.find(g =>
-            g.playerIds.includes(member.id)
-          );
-          const live = isMemberCheckedIn(member, nowTick);
-
-          return (
+      <section className="rounded-3xl bg-[#12151C] border border-sky-400/25 p-4 sm:p-5 space-y-3.5">
+        <div className="flex items-center justify-between gap-2">
+          <div>
+            <h2 className="text-lg font-black text-white">
+              Vorankündigungen ({announcements.length})
+            </h2>
+            <p className="text-xs text-slate-400">
+              Kurz Bescheid geben, wann du in die Halle kommst
+            </p>
+          </div>
+          {currentUser && !showAnnounceForm && (
             <button
-              key={member.id}
               type="button"
-              onClick={() => onOpenProfile(member.id)}
-              className="w-full p-3.5 rounded-2xl bg-[#12151C] border border-white/[0.07] text-left flex items-center justify-between gap-3 cursor-pointer"
+              onClick={openEditAnnouncement}
+              className="min-h-[40px] px-3.5 rounded-2xl bg-sky-400 text-slate-950 text-xs font-black shrink-0 cursor-pointer"
             >
-              <div className="flex items-center gap-3 min-w-0">
-                <div
-                  className={`w-10 h-10 rounded-xl bg-gradient-to-br ${member.avatarBg} flex items-center justify-center text-white font-black text-xs shrink-0`}
-                >
-                  {member.nickname.slice(0, 2).toUpperCase()}
-                </div>
-                <div className="min-w-0">
-                  <div className="flex items-center gap-1.5">
-                    <p className="text-sm font-black text-white truncate">
-                      {member.nickname}
-                    </p>
-                    {live && (
-                      <span className="w-2 h-2 rounded-full bg-[#10B981] shrink-0" />
-                    )}
-                  </div>
-                  <p className="text-[11px] text-slate-400 truncate">
-                    {member.language} · {member.style} · Hallentage:{' '}
-                    {member.usualDays?.join(', ') || '–'}
-                  </p>
-                </div>
-              </div>
-              <span className="px-2.5 py-1 rounded-lg bg-[#090B0F] text-[11px] font-black text-slate-300 shrink-0">
-                {group ? group.name : member.status}
-              </span>
+              {myAnnouncement ? 'Anpassen' : '+ Bin da am...'}
             </button>
-          );
-        })}
-      </div>
+          )}
+        </div>
+
+        {!currentUser && (
+          <div className="p-3 rounded-2xl bg-[#090B0F] space-y-2">
+            <p className="text-xs text-slate-300">
+              Wähle dein Profil, um dich voranzukündigen:
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              {Object.values(membersMap).map(m => (
+                <button
+                  key={m.id}
+                  type="button"
+                  onClick={() => onRequestSelectUser(m.id)}
+                  className="min-h-[36px] px-3 rounded-xl bg-[#12151C] border border-white/10 text-xs font-bold text-white cursor-pointer"
+                >
+                  {m.nickname}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* EIGENE AKTIVE VORANKÜNDIGUNG */}
+        {currentUser && myAnnouncement && !showAnnounceForm && (
+          <div className="p-3 rounded-2xl bg-sky-400/10 border border-sky-400/30 flex items-center justify-between gap-2">
+            <div className="min-w-0">
+              <p className="text-xs font-black text-sky-300">
+                Deine Ankündigung: {myAnnouncement.dayLabel} ab {myAnnouncement.timeText}
+              </p>
+              {myAnnouncement.note && (
+                <p className="text-[11px] text-slate-300 truncate">
+                  {myAnnouncement.note}
+                </p>
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={() => onDeleteAnnouncement(currentUser.id)}
+              className="w-8 h-8 rounded-xl bg-rose-500/15 text-rose-300 flex items-center justify-center shrink-0 cursor-pointer"
+              title="Vorankündigung entfernen"
+            >
+              <KlTrashIcon className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        )}
+
+        {/* FORMULAR FÜR VORANKÜNDIGUNG */}
+        {currentUser && showAnnounceForm && (
+          <form
+            onSubmit={handleSaveAnn}
+            className="p-3.5 rounded-2xl bg-[#090B0F] border border-sky-400/35 space-y-3"
+          >
+            <div>
+              <label className="block text-[11px] font-bold text-slate-400 mb-1.5">
+                Welcher Tag?
+              </label>
+              <div className="flex flex-wrap gap-1.5">
+                {['Heute', 'Morgen', ...WEEKDAYS].map(day => (
+                  <button
+                    key={day}
+                    type="button"
+                    onClick={() => setAnnDay(day)}
+                    className={`min-h-[34px] px-3 rounded-xl text-xs font-black cursor-pointer ${
+                      annDay === day
+                        ? 'bg-sky-400 text-slate-950'
+                        : 'bg-[#12151C] text-slate-300'
+                    }`}
+                  >
+                    {day}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              <div>
+                <label className="block text-[11px] font-bold text-slate-400 mb-1">
+                  Ab welcher Uhrzeit? *
+                </label>
+                <input
+                  type="time"
+                  required
+                  value={annTime}
+                  onChange={e => setAnnTime(e.target.value)}
+                  className="w-full min-h-[42px] px-3 rounded-xl bg-[#12151C] border border-white/10 text-xs font-bold text-white"
+                />
+              </div>
+              <div>
+                <label className="block text-[11px] font-bold text-slate-400 mb-1">
+                  Hinweis (optional)
+                </label>
+                <input
+                  type="text"
+                  value={annNote}
+                  onChange={e => setAnnNote(e.target.value)}
+                  placeholder="z.B. Bis ca. 20:00 da"
+                  className="w-full min-h-[42px] px-3 rounded-xl bg-[#12151C] border border-white/10 text-xs text-white"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setShowAnnounceForm(false)}
+                className="flex-1 min-h-[42px] rounded-2xl bg-white/5 text-xs font-bold text-slate-300 cursor-pointer"
+              >
+                Abbrechen
+              </button>
+              <button
+                type="submit"
+                className="flex-1 min-h-[42px] rounded-2xl bg-sky-400 text-slate-950 text-xs font-black cursor-pointer"
+              >
+                Vorankündigen
+              </button>
+            </div>
+          </form>
+        )}
+      </section>
+
+      {/* LISTE ALLER VORANKÜNDIGUNGEN */}
+      {announcements.length === 0 ? (
+        <div className="rounded-3xl bg-[#12151C] border border-white/[0.07] p-5 text-xs text-slate-400">
+          Noch keine Vorankündigungen eingetragen.
+        </div>
+      ) : (
+        <div className="space-y-2.5">
+          {announcements.map(ann => {
+            const member = membersMap[ann.memberId];
+            if (!member) return null;
+            const group = activeSeason?.groups.find(g =>
+              g.playerIds.includes(member.id)
+            );
+            const isMe = currentUser?.id === member.id;
+            const hasMeToo = currentUser
+              ? (ann.meTooIds || []).includes(currentUser.id)
+              : false;
+            const waUrl = buildWhatsAppUrl(
+              member.whatsapp,
+              `Hoi ${member.nickname}, ich habe gesehen du bist ${ann.dayLabel} ab ${ann.timeText} in der Halle – ich komme auch!`
+            );
+
+            return (
+              <div
+                key={ann.id}
+                className="p-4 rounded-3xl bg-[#12151C] border border-white/[0.07] space-y-2.5"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <button
+                    type="button"
+                    onClick={() => onOpenProfile(member.id)}
+                    className="flex items-center gap-2.5 text-left min-w-0 cursor-pointer"
+                  >
+                    <div
+                      className={`w-11 h-11 rounded-2xl bg-gradient-to-br ${member.avatarBg} flex items-center justify-center text-white font-black text-xs shrink-0`}
+                    >
+                      {member.nickname.slice(0, 2).toUpperCase()}
+                    </div>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <p className="text-sm font-black text-white truncate">
+                          {member.nickname}
+                        </p>
+                        <span className="px-2 py-0.5 rounded bg-white/[0.07] text-[10px] font-bold text-slate-300 shrink-0">
+                          {group ? group.name : 'Clubspieler'}
+                        </span>
+                      </div>
+                      <p className="text-xs font-black text-sky-300">
+                        {ann.dayLabel} · ab {ann.timeText} Uhr
+                      </p>
+                      {ann.note && (
+                        <p className="text-[11px] text-slate-400 truncate">
+                          {ann.note}
+                        </p>
+                      )}
+                    </div>
+                  </button>
+
+                  {!isMe && (
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      {currentUser && (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            onToggleAnnouncementMeToo(ann.id, currentUser.id)
+                          }
+                          className={`min-h-[38px] px-3 rounded-xl text-xs font-black cursor-pointer ${
+                            hasMeToo
+                              ? 'bg-sky-400 text-slate-950'
+                              : 'bg-[#090B0F] border border-white/10 text-slate-200'
+                          }`}
+                        >
+                          {hasMeToo ? 'Komme auch ✓' : '+ Komme auch'}
+                        </button>
+                      )}
+                      {waUrl && (
+                        <a
+                          href={waUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="w-10 h-10 rounded-xl bg-[#25D366] text-slate-950 flex items-center justify-center"
+                          title={`WhatsApp an ${member.nickname}`}
+                        >
+                          <KlMessageIcon className="w-4 h-4" />
+                        </a>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {(ann.meTooIds || []).length > 0 && (
+                  <div className="flex flex-wrap items-center gap-1.5 text-[11px] pt-1.5 border-t border-white/[0.06]">
+                    <span className="text-slate-400 font-bold">Kommen auch:</span>
+                    {ann.meTooIds.map(pid => {
+                      const m = membersMap[pid];
+                      if (!m) return null;
+                      return (
+                        <span
+                          key={pid}
+                          className="px-2 py-0.5 rounded-lg bg-sky-400/15 text-sky-300 font-black"
+                        >
+                          {m.nickname}
+                        </span>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
 
 // ============================================================================
-// ADMIN TAB
+// HALL SCHEDULE TAB (WER IST WANN IN DER HALLE?)
+// ============================================================================
+function HallScheduleTab({
+  membersMap,
+  activeSeason,
+  currentUser,
+  nowTick,
+  onToggleUserDay,
+  onOpenProfile,
+}) {
+  const todayIndex = (new Date(nowTick).getDay() + 6) % 7;
+  const [selectedDay, setSelectedDay] = useState(WEEKDAYS[todayIndex] || 'Di');
+
+  const dayPlayers = useMemo(
+    () =>
+      Object.values(membersMap).filter(m =>
+        (m.usualDays || []).includes(selectedDay)
+      ),
+    [membersMap, selectedDay]
+  );
+
+  return (
+    <div className="space-y-4">
+      <section className="rounded-3xl bg-[#12151C] border border-white/[0.08] p-4 sm:p-5 space-y-3.5">
+        <div>
+          <h2 className="text-lg font-black text-white">
+            Wer ist wann in der Halle?
+          </h2>
+          <p className="text-xs text-slate-400">
+            Wähle einen Wochentag, um regelmässige Hallenspieler zu finden
+          </p>
+        </div>
+
+        {/* WOCHENTAGS-FILTER */}
+        <div className="grid grid-cols-7 gap-1.5">
+          {WEEKDAYS.map(day => {
+            const count = Object.values(membersMap).filter(m =>
+              (m.usualDays || []).includes(day)
+            ).length;
+            const active = selectedDay === day;
+            return (
+              <button
+                key={day}
+                type="button"
+                onClick={() => setSelectedDay(day)}
+                className={`min-h-[48px] rounded-2xl flex flex-col items-center justify-center gap-0.5 cursor-pointer ${
+                  active
+                    ? 'bg-sky-400 text-slate-950 font-black'
+                    : 'bg-[#090B0F] text-slate-300 font-bold'
+                }`}
+              >
+                <span className="text-xs">{day}</span>
+                <span
+                  className={`text-[10px] ${
+                    active ? 'text-slate-900' : 'text-slate-500'
+                  }`}
+                >
+                  {count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* EIGENE HALLENTAGE SCHNELL PFLEGEN */}
+        {currentUser && (
+          <div className="p-3 rounded-2xl bg-[#090B0F] space-y-2">
+            <div className="flex items-center justify-between">
+              <p className="text-[11px] font-bold text-slate-400">
+                Deine Hallentage ({currentUser.nickname}):
+              </p>
+              <button
+                type="button"
+                onClick={() => onOpenProfile(currentUser.id, true)}
+                className="text-[11px] font-black text-sky-400 cursor-pointer"
+              >
+                Zeiten bearbeiten
+              </button>
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {WEEKDAYS.map(day => {
+                const mine = (currentUser.usualDays || []).includes(day);
+                return (
+                  <button
+                    key={day}
+                    type="button"
+                    onClick={() => onToggleUserDay(currentUser.id, day)}
+                    className={`min-h-[32px] px-3 rounded-xl text-xs font-black cursor-pointer ${
+                      mine
+                        ? 'bg-sky-400 text-slate-950'
+                        : 'bg-[#12151C] text-slate-400'
+                    }`}
+                  >
+                    {day}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </section>
+
+      {dayPlayers.length === 0 ? (
+        <div className="rounded-3xl bg-[#12151C] border border-white/[0.07] p-5 text-xs text-slate-400">
+          Am {selectedDay} hat noch niemand einen fixen Hallentag eingetragen.
+        </div>
+      ) : (
+        <div className="space-y-2.5">
+          {dayPlayers.map(member => {
+            const group = activeSeason?.groups.find(g =>
+              g.playerIds.includes(member.id)
+            );
+            const waUrl = buildWhatsAppUrl(
+              member.whatsapp,
+              `Hoi ${member.nickname}, ich habe gesehen du bist am ${selectedDay} oft in der Halle – wollen wir zusammen spielen?`
+            );
+
+            return (
+              <div
+                key={member.id}
+                className="p-4 rounded-3xl bg-[#12151C] border border-white/[0.07] flex items-center justify-between gap-3"
+              >
+                <button
+                  type="button"
+                  onClick={() => onOpenProfile(member.id)}
+                  className="flex items-center gap-3 text-left min-w-0 cursor-pointer"
+                >
+                  <div
+                    className={`w-11 h-11 rounded-2xl bg-gradient-to-br ${member.avatarBg} flex items-center justify-center text-white font-black text-xs shrink-0`}
+                  >
+                    {member.nickname.slice(0, 2).toUpperCase()}
+                  </div>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <p className="text-sm font-black text-white truncate">
+                        {member.nickname}
+                      </p>
+                      <span className="px-2 py-0.5 rounded bg-white/[0.07] text-[10px] font-bold text-slate-300 shrink-0">
+                        {group ? group.name : 'Clubspieler'}
+                      </span>
+                    </div>
+                    <p className="text-xs text-sky-300 font-bold truncate">
+                      {(member.usualSlots || []).join(' & ') || 'Nach Absprache'}
+                    </p>
+                    <p className="text-[11px] text-slate-400 truncate">
+                      {member.style} · {member.language}
+                    </p>
+                  </div>
+                </button>
+
+                {waUrl && currentUser?.id !== member.id && (
+                  <a
+                    href={waUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-10 h-10 rounded-2xl bg-[#25D366] text-slate-950 flex items-center justify-center shrink-0"
+                    title={`WhatsApp an ${member.nickname}`}
+                  >
+                    <KlMessageIcon className="w-4 h-4" />
+                  </a>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ============================================================================
+// MEETUP BOARD TAB (SPIELPARTNER PINNWAND)
+// ============================================================================
+function MeetupBoardTab({
+  posts,
+  membersMap,
+  activeSeason,
+  currentUser,
+  onRequestSelectUser,
+  onCreatePost,
+  onToggleJoinPost,
+  onDeletePost,
+  onOpenProfile,
+}) {
+  const [showForm, setShowForm] = useState(false);
+  const [whenText, setWhenText] = useState('');
+  const [mode, setMode] = useState(MEETUP_MODES[0]);
+  const [note, setNote] = useState('');
+
+  const handleSubmit = e => {
+    e.preventDefault();
+    if (!currentUser || !whenText.trim()) return;
+    onCreatePost({
+      authorId: currentUser.id,
+      whenText: whenText.trim(),
+      mode,
+      note: note.trim(),
+    });
+    setWhenText('');
+    setNote('');
+    setShowForm(false);
+  };
+
+  return (
+    <div className="space-y-4">
+      <section className="rounded-3xl bg-[#12151C] border border-sky-400/25 p-4 sm:p-5 space-y-3.5">
+        <div className="flex items-center justify-between gap-2">
+          <div>
+            <h2 className="text-lg font-black text-white">Pinnwand</h2>
+            <p className="text-xs text-slate-400">
+              Sessions für Training, Sparring, Doppel oder Ligaspiele posten
+            </p>
+          </div>
+          {currentUser && !showForm && (
+            <button
+              type="button"
+              onClick={() => setShowForm(true)}
+              className="min-h-[40px] px-3.5 rounded-2xl bg-sky-400 text-slate-950 text-xs font-black shrink-0 cursor-pointer"
+            >
+              + Session
+            </button>
+          )}
+        </div>
+
+        {!currentUser && (
+          <div className="p-3 rounded-2xl bg-[#090B0F] space-y-2">
+            <p className="text-xs text-slate-300">
+              Wähle dein Profil, um eine Session zu posten oder zuzusagen:
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              {Object.values(membersMap).map(m => (
+                <button
+                  key={m.id}
+                  type="button"
+                  onClick={() => onRequestSelectUser(m.id)}
+                  className="min-h-[36px] px-3 rounded-xl bg-[#12151C] border border-white/10 text-xs font-bold text-white cursor-pointer"
+                >
+                  {m.nickname}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {currentUser && showForm && (
+          <form
+            onSubmit={handleSubmit}
+            className="p-3.5 rounded-2xl bg-[#090B0F] border border-sky-400/35 space-y-3"
+          >
+            <div>
+              <label className="block text-[11px] font-bold text-slate-400 mb-1">
+                Wann? (Tag & Uhrzeit) *
+              </label>
+              <input
+                type="text"
+                required
+                value={whenText}
+                onChange={e => setWhenText(e.target.value)}
+                placeholder="z.B. Freitag · 18:30 – 20:30"
+                className="w-full min-h-[42px] px-3 rounded-xl bg-[#12151C] border border-white/10 text-xs text-white"
+              />
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-bold text-slate-400 mb-1">
+                Modus
+              </label>
+              <select
+                value={mode}
+                onChange={e => setMode(e.target.value)}
+                className="w-full min-h-[42px] px-3 rounded-xl bg-[#12151C] border border-white/10 text-xs font-bold text-white"
+              >
+                {MEETUP_MODES.map(m => (
+                  <option key={m} value={m}>
+                    {m}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-bold text-slate-400 mb-1">
+                Kurze Info (optional)
+              </label>
+              <input
+                type="text"
+                value={note}
+                onChange={e => setNote(e.target.value)}
+                placeholder="z.B. Gerne Balleimer oder 3 Gewinnsätze"
+                className="w-full min-h-[42px] px-3 rounded-xl bg-[#12151C] border border-white/10 text-xs text-white"
+              />
+            </div>
+
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setShowForm(false)}
+                className="flex-1 min-h-[42px] rounded-2xl bg-white/5 text-xs font-bold text-slate-300 cursor-pointer"
+              >
+                Abbrechen
+              </button>
+              <button
+                type="submit"
+                className="flex-1 min-h-[42px] rounded-2xl bg-sky-400 text-slate-950 text-xs font-black cursor-pointer"
+              >
+                Session posten
+              </button>
+            </div>
+          </form>
+        )}
+      </section>
+
+      {posts.length === 0 ? (
+        <div className="rounded-3xl bg-[#12151C] border border-white/[0.07] p-5 text-xs text-slate-400">
+          Aktuell keine offenen Sessions auf der Pinnwand.
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {posts.map(post => {
+            const author = membersMap[post.authorId];
+            if (!author) return null;
+            const group = activeSeason?.groups.find(g =>
+              g.playerIds.includes(author.id)
+            );
+            const isAuthor = currentUser?.id === author.id;
+            const isJoined = currentUser
+              ? post.joinedIds.includes(currentUser.id)
+              : false;
+            const isSingles = !post.mode.toLowerCase().includes('doppel');
+            const maxPlayers = isSingles ? 1 : 3;
+            const isLocked = post.joinedIds.length >= maxPlayers;
+
+            const waUrl = buildWhatsAppUrl(
+              author.whatsapp,
+              `Hoi ${author.nickname}, wegen deiner Session auf der Pinnwand (${post.whenText} · ${post.mode}): Bist du noch frei?`
+            );
+
+            return (
+              <div
+                key={post.id}
+                className={`p-4 rounded-3xl bg-[#12151C] border space-y-3 ${
+                  isLocked ? 'border-amber-400/30' : 'border-white/[0.08]'
+                }`}
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <button
+                    type="button"
+                    onClick={() => onOpenProfile(author.id)}
+                    className="flex items-center gap-2.5 text-left min-w-0 cursor-pointer"
+                  >
+                    <div
+                      className={`w-10 h-10 rounded-2xl bg-gradient-to-br ${author.avatarBg} flex items-center justify-center text-white font-black text-xs shrink-0`}
+                    >
+                      {author.nickname.slice(0, 2).toUpperCase()}
+                    </div>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <p className="text-sm font-black text-white truncate">
+                          {author.nickname}
+                        </p>
+                        <span className="px-2 py-0.5 rounded bg-white/[0.07] text-[10px] font-bold text-slate-300 shrink-0">
+                          {group ? group.name : 'Clubspieler'}
+                        </span>
+                      </div>
+                      <p className="text-xs font-black text-sky-300">
+                        {post.whenText}
+                      </p>
+                    </div>
+                  </button>
+
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    {isLocked && (
+                      <span className="px-2.5 py-1 rounded-full bg-amber-400/15 text-amber-300 text-[10px] font-black">
+                        Besetzt
+                      </span>
+                    )}
+                    {isAuthor && (
+                      <button
+                        type="button"
+                        onClick={() => onDeletePost(post.id)}
+                        className="w-8 h-8 rounded-xl bg-rose-500/15 text-rose-300 flex items-center justify-center cursor-pointer"
+                        title="Session löschen"
+                      >
+                        <KlTrashIcon className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <span className="inline-block px-2.5 py-0.5 rounded-lg bg-sky-400/15 text-sky-300 text-[11px] font-black">
+                    {post.mode}
+                  </span>
+                  {post.note && (
+                    <p className="text-xs text-slate-300 leading-relaxed">
+                      {post.note}
+                    </p>
+                  )}
+                </div>
+
+                {post.joinedIds.length > 0 && (
+                  <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
+                    <span className="text-slate-400 font-bold">Dabei:</span>
+                    {post.joinedIds.map(pid => {
+                      const m = membersMap[pid];
+                      if (!m) return null;
+                      return (
+                        <span
+                          key={pid}
+                          className="px-2 py-0.5 rounded-lg bg-[#10B981]/15 text-[#34D399] font-black"
+                        >
+                          {m.nickname}
+                        </span>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {!isAuthor && (
+                  <div className="grid grid-cols-2 gap-2 pt-1">
+                    {currentUser ? (
+                      <button
+                        type="button"
+                        disabled={isLocked && !isJoined}
+                        onClick={() => onToggleJoinPost(post.id, currentUser.id)}
+                        className={`min-h-[42px] px-3 rounded-2xl text-xs font-black cursor-pointer ${
+                          isJoined
+                            ? 'bg-[#10B981] text-slate-950'
+                            : isLocked
+                            ? 'bg-white/[0.04] text-slate-500 cursor-not-allowed'
+                            : 'bg-[#090B0F] border border-white/10 text-white'
+                        }`}
+                      >
+                        {isJoined
+                          ? 'Bin dabei ✓'
+                          : isLocked
+                          ? 'Gesperrt'
+                          : 'Bin dabei'}
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => onRequestSelectUser(author.id)}
+                        className="min-h-[42px] px-3 rounded-2xl bg-[#090B0F] border border-white/10 text-xs font-bold text-slate-300 cursor-pointer"
+                      >
+                        Profil wählen
+                      </button>
+                    )}
+
+                    {waUrl && (
+                      <a
+                        href={waUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="min-h-[42px] px-3 rounded-2xl bg-[#25D366] text-slate-950 text-xs font-black inline-flex items-center justify-center gap-1.5"
+                      >
+                        <KlMessageIcon className="w-4 h-4" />
+                        <span>WhatsApp</span>
+                      </a>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ============================================================================
+// ADMIN TAB (FREIGABEN, LIGEN, MONATSWECHSEL, PIN)
 // ============================================================================
 function AdminTab({
   membersMap,
@@ -1795,9 +2521,9 @@ function AdminTab({
 }) {
   const [adminPin, setAdminPin] = useState(() => {
     try {
-      return window.localStorage?.getItem('kongleague_admin_pin') || '1234';
+      return localStorage.getItem('kongleague_admin_pin') || '9999';
     } catch {
-      return '1234';
+      return '9999';
     }
   });
   const [unlocked, setUnlocked] = useState(false);
@@ -1805,30 +2531,34 @@ function AdminTab({
   const [pinError, setPinError] = useState('');
   const [newPinInput, setNewPinInput] = useState('');
   const [pinSavedMsg, setPinSavedMsg] = useState('');
-  const [adminFeedback, setAdminFeedback] = useState('');
-  const [confirmDeleteSeasonId, setConfirmDeleteSeasonId] = useState(null);
+  const [adminBanner, setAdminBanner] = useState('');
+  const [manageSeasonId, setManageSeasonId] = useState(
+    activeSeason?.id || seasons[0]?.id || ''
+  );
   const [confirmDeleteMemberId, setConfirmDeleteMemberId] = useState(null);
+  const [addLeagueChoice, setAddLeagueChoice] = useState({});
 
   useEffect(() => {
     try {
-      window.localStorage?.setItem('kongleague_admin_pin', adminPin);
+      localStorage.setItem('kongleague_admin_pin', adminPin);
     } catch {
-      // ignore
+      // Storage ggf. in Sandbox eingeschränkt
     }
   }, [adminPin]);
 
   const handleUnlock = e => {
     e.preventDefault();
-    let currentStoredPin = adminPin;
+    let storedPin = adminPin;
     try {
-      const fromStorage = window.localStorage?.getItem('kongleague_admin_pin');
-      if (fromStorage) currentStoredPin = fromStorage;
+      const fromStorage = localStorage.getItem('kongleague_admin_pin');
+      if (fromStorage) storedPin = fromStorage;
     } catch {
       // ignore
     }
-    if (pinInput.trim() === currentStoredPin) {
+    if (pinInput.trim() === storedPin) {
       setUnlocked(true);
       setPinError('');
+      setPinInput('');
     } else {
       setPinError('Falscher Admin-PIN.');
     }
@@ -1843,59 +2573,43 @@ function AdminTab({
     }
     setAdminPin(cleaned);
     try {
-      window.localStorage?.setItem('kongleague_admin_pin', cleaned);
+      localStorage.setItem('kongleague_admin_pin', cleaned);
     } catch {
       // ignore
     }
     setNewPinInput('');
     setPinSavedMsg(`Neuer Admin-PIN (${cleaned}) gespeichert!`);
-    setAdminFeedback(`Admin-PIN auf "${cleaned}" überschrieben.`);
+    setAdminBanner(`Admin-PIN erfolgreich auf ${cleaned} überschrieben.`);
   };
-
-  const allMembers = useMemo(() => Object.values(membersMap), [membersMap]);
-  const pendingApprovalMembers = useMemo(
-    () => allMembers.filter(m => m.status === 'Offen'),
-    [allMembers]
-  );
-
-  const unassignedActiveMembers = useMemo(() => {
-    if (!activeSeason) return [];
-    const assignedIds = new Set(
-      activeSeason.groups.flatMap(g => g.playerIds)
-    );
-    return allMembers.filter(
-      m => m.status === 'Dabei' && !assignedIds.has(m.id)
-    );
-  }, [allMembers, activeSeason]);
-
-  const [selectedUnassignedId, setSelectedUnassignedId] = useState('');
-  const [selectedTargetLevel, setSelectedTargetLevel] = useState(1);
 
   if (!unlocked) {
     return (
-      <section className="max-w-sm mx-auto rounded-3xl bg-[#12151C] border border-white/[0.07] p-5 space-y-4">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-[#10B981]/15 text-[#34D399] flex items-center justify-center">
-            <KlShieldIcon className="w-5 h-5" />
+      <section className="rounded-3xl bg-[#12151C] border border-amber-400/30 p-5 space-y-4 max-w-md mx-auto">
+        <div className="flex items-center gap-2.5">
+          <div className="w-10 h-10 rounded-2xl bg-amber-400/20 text-amber-300 flex items-center justify-center">
+            <KlLockIcon className="w-5 h-5" />
           </div>
           <div>
             <h2 className="text-base font-black text-white">Admin-Bereich</h2>
-            <p className="text-xs text-slate-400">Standard-PIN: 1234</p>
+            <p className="text-xs text-slate-400">
+              Standard-PIN: <span className="font-black text-amber-300">{adminPin}</span>
+            </p>
           </div>
         </div>
 
         <form onSubmit={handleUnlock} className="space-y-3">
           <input
             type="password"
+            inputMode="numeric"
             value={pinInput}
             onChange={e => setPinInput(e.target.value)}
-            placeholder="Admin-PIN"
-            className="w-full min-h-[44px] px-4 rounded-2xl bg-[#090B0F] border border-white/10 text-sm text-white focus:outline-none focus:border-[#10B981]"
+            placeholder="Admin-PIN eingeben"
+            className="w-full min-h-[44px] px-3.5 rounded-2xl bg-[#090B0F] border border-white/10 text-sm text-white"
           />
-          {pinError && <p className="text-xs font-bold text-rose-400">{pinError}</p>}
+          {pinError && <p className="text-xs text-rose-400 font-bold">{pinError}</p>}
           <button
             type="submit"
-            className="w-full min-h-[44px] rounded-2xl bg-[#10B981] text-slate-950 text-xs font-black cursor-pointer"
+            className="w-full min-h-[44px] rounded-2xl bg-amber-400 text-slate-950 text-xs font-black cursor-pointer"
           >
             Entsperren
           </button>
@@ -1904,107 +2618,96 @@ function AdminTab({
     );
   }
 
+  const managedSeason =
+    seasons.find(s => s.id === manageSeasonId) || activeSeason || seasons[0];
+  const pendingMembers = Object.values(membersMap).filter(
+    m => m.status === 'Offen'
+  );
+  const unassignedActiveMembers = Object.values(membersMap).filter(m => {
+    if (m.status !== 'Dabei') return false;
+    return !(managedSeason?.groups || []).some(g =>
+      g.playerIds.includes(m.id)
+    );
+  });
+
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h2 className="text-lg font-black text-white">Admin</h2>
-        <button
-          type="button"
-          onClick={() => setUnlocked(false)}
-          className="min-h-[34px] px-3 rounded-xl bg-[#12151C] text-xs font-bold text-slate-300 cursor-pointer"
-        >
-          Sperren
-        </button>
-      </div>
-
-      {adminFeedback && (
-        <div className="p-3 rounded-2xl bg-[#10B981]/15 border border-[#10B981]/35 text-xs font-bold text-[#34D399] flex items-center justify-between">
-          <span>{adminFeedback}</span>
+      {adminBanner && (
+        <div className="p-3.5 rounded-2xl bg-[#10B981]/15 border border-[#10B981]/40 text-xs font-bold text-[#34D399] flex items-center justify-between gap-2">
+          <span>{adminBanner}</span>
           <button
             type="button"
-            onClick={() => setAdminFeedback('')}
-            className="cursor-pointer"
+            onClick={() => setAdminBanner('')}
+            className="text-xs font-black cursor-pointer"
           >
             ✕
           </button>
         </div>
       )}
 
-      {/* NEUE PROFILE FREIGEBEN */}
-      <section className="rounded-3xl bg-[#12151C] border border-amber-500/35 p-4 space-y-3">
+      {/* NEUE ANMELDUNGEN & DIREKTEINSTIEG */}
+      <section className="rounded-3xl bg-[#12151C] border border-white/[0.08] p-4 sm:p-5 space-y-3">
         <div className="flex items-center justify-between gap-2">
-          <h3 className="text-sm font-black text-white">
-            Freigaben ({pendingApprovalMembers.length})
-          </h3>
+          <h2 className="text-base font-black text-white">
+            Freigaben ({pendingMembers.length})
+          </h2>
           <button
             type="button"
             onClick={onToggleDirectEntry}
-            className={`min-h-[32px] px-3 rounded-full text-[11px] font-black cursor-pointer ${
+            className={`min-h-[34px] px-3 rounded-xl text-[11px] font-black cursor-pointer ${
               allowDirectEntry
                 ? 'bg-[#10B981]/20 text-[#34D399]'
-                : 'bg-[#090B0F] text-slate-400'
+                : 'bg-white/10 text-slate-300'
             }`}
           >
             Direkteinstieg: {allowDirectEntry ? 'AN' : 'AUS'}
           </button>
         </div>
 
-        {pendingApprovalMembers.length === 0 ? (
-          <p className="text-xs text-slate-400">Keine offenen Neuanmeldungen.</p>
+        {pendingMembers.length === 0 ? (
+          <p className="text-xs text-slate-400">
+            Keine offenen Registrierungen vorhanden.
+          </p>
         ) : (
           <div className="space-y-2">
-            {pendingApprovalMembers.map(member => (
+            {pendingMembers.map(m => (
               <div
-                key={member.id}
-                className="p-3 rounded-2xl bg-[#090B0F] space-y-2.5"
+                key={m.id}
+                className="p-3 rounded-2xl bg-[#090B0F] border border-white/[0.06] flex flex-wrap items-center justify-between gap-2"
               >
                 <div>
-                  <p className="text-sm font-black text-white">
-                    {member.nickname}{' '}
-                    <span className="text-xs font-normal text-slate-400">
-                      ({member.firstName} {member.lastName})
-                    </span>
+                  <p className="text-xs font-black text-white">
+                    {m.nickname} ({m.firstName} {m.lastName})
                   </p>
                   <p className="text-[11px] text-slate-400">
-                    {member.whatsapp || 'Kein WhatsApp'} · {member.language} ·
-                    Folgemonat: {member.nextMonthOptIn ? 'Dabei' : 'Warten'}
+                    {m.whatsapp || 'Kein WhatsApp'} · {m.language}
                   </p>
                 </div>
-
-                <div className="flex flex-wrap gap-1.5">
+                <div className="flex items-center gap-1.5">
                   <button
                     type="button"
                     onClick={() => {
-                      onApproveMember(member.id);
-                      setAdminFeedback(`${member.nickname} freigegeben.`);
+                      onApproveMember(m.id);
+                      setAdminBanner(`${m.nickname} freigegeben.`);
                     }}
-                    className="min-h-[36px] px-3 rounded-xl bg-[#10B981] text-slate-950 text-xs font-black cursor-pointer"
+                    className="min-h-[34px] px-3 rounded-xl bg-white/10 text-white text-xs font-black cursor-pointer"
                   >
                     Freigeben
                   </button>
-
                   {allowDirectEntry && (
                     <button
                       type="button"
                       onClick={() => {
-                        onDirectEntryMember(member.id);
-                        setAdminFeedback(
-                          `${member.nickname} freigegeben & direkt eingeteilt.`
+                        onDirectEntryMember(m.id);
+                        setAdminBanner(
+                          `${m.nickname} freigegeben & direkt in die Liga eingeteilt.`
                         );
                       }}
-                      className="min-h-[36px] px-3 rounded-xl bg-sky-500 text-slate-950 text-xs font-black cursor-pointer"
+                      className="min-h-[34px] px-3 rounded-xl bg-[#10B981] text-slate-950 text-xs font-black cursor-pointer"
                     >
                       + Direkteinstieg
                     </button>
                   )}
-
-                  <button
-                    type="button"
-                    onClick={() => onDeleteMember(member.id)}
-                    className="min-h-[36px] px-3 rounded-xl bg-rose-500/20 text-rose-200 text-xs font-black cursor-pointer"
-                  >
-                    Ablehnen
-                  </button>
                 </div>
               </div>
             ))}
@@ -2012,332 +2715,298 @@ function AdminTab({
         )}
       </section>
 
-      {/* MONATSABSCHLUSS-CHECK */}
-      <section className="rounded-3xl bg-[#12151C] border border-white/[0.07] p-4 space-y-2.5">
-        <h3 className="text-sm font-black text-white">Monatsabschluss auf Home</h3>
-        <div className="grid grid-cols-3 gap-1.5">
-          {[
-            { id: 'auto', label: 'Auto (ab 26.)' },
-            { id: 'show', label: 'Einblenden' },
-            { id: 'hide', label: 'Ausblenden' },
-          ].map(opt => (
-            <button
-              key={opt.id}
-              type="button"
-              onClick={() => onChangeMonthEndMode(opt.id)}
-              className={`min-h-[38px] px-2 rounded-xl text-xs font-black cursor-pointer ${
-                monthEndMode === opt.id
-                  ? 'bg-[#10B981] text-slate-950'
-                  : 'bg-[#090B0F] text-slate-300'
-              }`}
-            >
-              {opt.label}
-            </button>
-          ))}
-        </div>
-      </section>
+      {/* MONATSWECHSEL & MONATSABSCHLUSS-CHECK */}
+      <section className="rounded-3xl bg-[#12151C] border border-white/[0.08] p-4 sm:p-5 space-y-3.5">
+        <h2 className="text-base font-black text-white">
+          Monatswechsel & Monatsabschluss
+        </h2>
 
-      {/* MONATSWECHSEL */}
-      <section className="rounded-3xl bg-[#12151C] border border-white/[0.07] p-4 space-y-3">
-        <div className="flex items-center justify-between gap-2">
-          <div>
-            <h3 className="text-sm font-black text-white">Monatsrunden</h3>
-            <p className="text-[11px] text-slate-400">
-              Nächsten Monat mit Auf-/Abstieg generieren
-            </p>
-          </div>
+        <div className="flex flex-wrap gap-2">
           <button
             type="button"
             onClick={() => {
-              const createdLabel = onCreateNextMonth();
-              if (createdLabel) {
-                setAdminFeedback(`Neuer Monat "${createdLabel}" erstellt.`);
+              const created = onCreateNextMonth();
+              if (created) {
+                setAdminBanner(`Neuer Monat ${created} wurde erstellt!`);
+              } else {
+                setAdminBanner('Dieser Monat existiert bereits.');
               }
             }}
-            className="min-h-[38px] px-3.5 rounded-xl bg-[#10B981] text-slate-950 text-xs font-black shrink-0 cursor-pointer"
+            className="min-h-[40px] px-4 rounded-2xl bg-[#10B981] text-slate-950 text-xs font-black cursor-pointer"
           >
-            + Neuer Monat
+            + Neuen Monat generieren
           </button>
+
+          {seasons.length > 1 && managedSeason && (
+            <button
+              type="button"
+              onClick={() => {
+                onDeleteSeason(managedSeason.id);
+                setAdminBanner(`Monat ${managedSeason.label} gelöscht.`);
+              }}
+              className="min-h-[40px] px-3.5 rounded-2xl bg-rose-500/15 text-rose-300 text-xs font-black cursor-pointer"
+            >
+              {managedSeason.shortLabel} löschen
+            </button>
+          )}
         </div>
 
-        <div className="space-y-1.5">
-          {seasons.map(season => (
-            <div
-              key={season.id}
-              className="p-2.5 rounded-2xl bg-[#090B0F] flex items-center justify-between gap-2"
-            >
-              <span className="text-xs font-bold text-white">{season.label}</span>
-              {seasons.length > 1 && (
-                <div>
-                  {confirmDeleteSeasonId === season.id ? (
-                    <div className="flex gap-1">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          onDeleteSeason(season.id);
-                          setConfirmDeleteSeasonId(null);
-                        }}
-                        className="px-2.5 py-1 rounded-lg bg-rose-500 text-white text-[11px] font-black cursor-pointer"
-                      >
-                        Löschen
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setConfirmDeleteSeasonId(null)}
-                        className="px-2 py-1 rounded-lg bg-white/10 text-slate-300 text-[11px] cursor-pointer"
-                      >
-                        ✕
-                      </button>
-                    </div>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => setConfirmDeleteSeasonId(season.id)}
-                      className="px-2.5 py-1 rounded-lg bg-rose-500/15 text-rose-300 text-[11px] font-bold cursor-pointer"
-                    >
-                      Löschen
-                    </button>
-                  )}
-                </div>
-              )}
-            </div>
-          ))}
+        <div className="p-3 rounded-2xl bg-[#090B0F] space-y-2">
+          <p className="text-xs font-bold text-slate-300">
+            Monatsabschluss-Check auf Home:
+          </p>
+          <div className="grid grid-cols-3 gap-1.5">
+            {[
+              { id: 'auto', label: 'Auto (ab 26.)' },
+              { id: 'show', label: 'Einblenden' },
+              { id: 'hide', label: 'Ausblenden' },
+            ].map(opt => (
+              <button
+                key={opt.id}
+                type="button"
+                onClick={() => onChangeMonthEndMode(opt.id)}
+                className={`min-h-[36px] rounded-xl text-xs font-black cursor-pointer ${
+                  monthEndMode === opt.id
+                    ? 'bg-amber-400 text-slate-950'
+                    : 'bg-[#12151C] text-slate-300'
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
         </div>
       </section>
 
-      {/* LIGAZUTEILUNG & MATCH-RESET */}
-      {activeSeason && (
-        <section className="rounded-3xl bg-[#12151C] border border-white/[0.07] p-4 space-y-3">
-          <div className="flex items-center justify-between gap-2">
-            <h3 className="text-sm font-black text-white">
-              Ligen & Matches ({activeSeason.shortLabel})
-            </h3>
+      {/* LIGEN & MATCHES VERWALTEN */}
+      <section className="rounded-3xl bg-[#12151C] border border-white/[0.08] p-4 sm:p-5 space-y-3.5">
+        <div className="flex items-center justify-between gap-2">
+          <h2 className="text-base font-black text-white">Ligen & Matches</h2>
+          <select
+            value={managedSeason?.id || ''}
+            onChange={e => setManageSeasonId(e.target.value)}
+            className="min-h-[38px] px-3 rounded-xl bg-[#090B0F] border border-white/10 text-xs font-black text-white"
+          >
+            {seasons.map(s => (
+              <option key={s.id} value={s.id}>
+                {s.label}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* NICHT ZUGETEILTE AKTIVE SPIELER HINZUFÜGEN */}
+        {unassignedActiveMembers.length > 0 && managedSeason && (
+          <div className="p-3 rounded-2xl bg-sky-400/10 border border-sky-400/30 space-y-2">
+            <p className="text-xs font-black text-sky-300">
+              Nicht zugeteilte Spieler in {managedSeason.shortLabel}:
+            </p>
+            {unassignedActiveMembers.map(m => {
+              const selectedLvl =
+                addLeagueChoice[m.id] ||
+                managedSeason.groups[managedSeason.groups.length - 1]?.level ||
+                1;
+              return (
+                <div
+                  key={m.id}
+                  className="flex items-center justify-between gap-2 text-xs"
+                >
+                  <span className="font-bold text-white">{m.nickname}</span>
+                  <div className="flex items-center gap-1.5">
+                    <select
+                      value={selectedLvl}
+                      onChange={e =>
+                        setAddLeagueChoice(prev => ({
+                          ...prev,
+                          [m.id]: Number(e.target.value),
+                        }))
+                      }
+                      className="min-h-[34px] px-2.5 rounded-xl bg-[#090B0F] border border-white/10 text-xs text-white"
+                    >
+                      {managedSeason.groups.map(g => (
+                        <option key={g.level} value={g.level}>
+                          {g.name}
+                        </option>
+                      ))}
+                    </select>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onAddPlayerToLeague(
+                          managedSeason.id,
+                          Number(selectedLvl),
+                          m.id
+                        );
+                        setAdminBanner(
+                          `${m.nickname} der ${selectedLvl}. Liga hinzugefügt.`
+                        );
+                      }}
+                      className="min-h-[34px] px-3 rounded-xl bg-sky-400 text-slate-950 font-black cursor-pointer"
+                    >
+                      + Hinzufügen
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
           </div>
+        )}
 
-          {unassignedActiveMembers.length > 0 && activeSeason.groups.length > 0 && (
-            <div className="p-3 rounded-2xl bg-[#090B0F] border border-[#10B981]/30 space-y-2">
-              <p className="text-[11px] font-black text-[#34D399]">
-                Nicht zugeteilte Spieler in {activeSeason.shortLabel} ({unassignedActiveMembers.length})
-              </p>
-              <div className="flex flex-col sm:flex-row gap-2">
-                <select
-                  value={
-                    unassignedActiveMembers.some(m => m.id === selectedUnassignedId)
-                      ? selectedUnassignedId
-                      : unassignedActiveMembers[0]?.id || ''
-                  }
-                  onChange={e => setSelectedUnassignedId(e.target.value)}
-                  className="flex-1 min-h-[38px] px-2.5 rounded-xl bg-[#12151C] border border-white/10 text-xs font-bold text-white"
-                >
-                  {unassignedActiveMembers.map(m => (
-                    <option key={m.id} value={m.id}>
-                      {m.nickname} ({m.firstName} {m.lastName})
-                    </option>
-                  ))}
-                </select>
-
-                <select
-                  value={
-                    activeSeason.groups.some(g => g.level === selectedTargetLevel)
-                      ? selectedTargetLevel
-                      : activeSeason.groups[activeSeason.groups.length - 1]?.level || 1
-                  }
-                  onChange={e => setSelectedTargetLevel(Number(e.target.value))}
-                  className="min-h-[38px] px-2.5 rounded-xl bg-[#12151C] border border-white/10 text-xs font-bold text-white"
-                >
-                  {activeSeason.groups.map(g => (
-                    <option key={g.level} value={g.level}>
-                      {g.name}
-                    </option>
-                  ))}
-                </select>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    const pid = unassignedActiveMembers.some(
-                      m => m.id === selectedUnassignedId
-                    )
-                      ? selectedUnassignedId
-                      : unassignedActiveMembers[0]?.id;
-                    const lvl = activeSeason.groups.some(
-                      g => g.level === selectedTargetLevel
-                    )
-                      ? selectedTargetLevel
-                      : activeSeason.groups[activeSeason.groups.length - 1]?.level || 1;
-                    if (!pid) return;
-                    onAddPlayerToLeague(activeSeason.id, lvl, pid);
-                    const memberName = membersMap[pid]?.nickname || 'Spieler';
-                    setAdminFeedback(
-                      `${memberName} zur ${lvl}. Liga (${activeSeason.shortLabel}) hinzugefügt.`
-                    );
-                  }}
-                  className="min-h-[38px] px-3.5 rounded-xl bg-[#10B981] text-slate-950 text-xs font-black shrink-0 cursor-pointer"
-                >
-                  + Hinzufügen
-                </button>
-              </div>
-            </div>
-          )}
-
-          {activeSeason.groups.map(group => (
-            <div
-              key={group.level}
-              className="p-3 rounded-2xl bg-[#090B0F] space-y-2.5"
-            >
-              <p className="text-xs font-black text-[#34D399]">{group.name}</p>
-              <div className="space-y-1.5">
-                {group.playerIds.map(pid => {
-                  const m = membersMap[pid];
-                  if (!m) return null;
-                  return (
-                    <div
-                      key={pid}
-                      className="flex items-center justify-between gap-2 text-xs"
-                    >
-                      <span className="font-bold text-white">{m.nickname}</span>
-                      <div className="flex items-center gap-1.5">
-                        {activeSeason.groups.length > 1 && (
-                          <select
-                            value={group.level}
-                            onChange={e =>
-                              onMovePlayerLeague(
-                                activeSeason.id,
-                                pid,
-                                Number(e.target.value)
-                              )
-                            }
-                            className="px-2 py-1 rounded-lg bg-[#12151C] text-[11px] text-white"
-                          >
-                            {activeSeason.groups.map(targetG => (
-                              <option key={targetG.level} value={targetG.level}>
-                                {targetG.name}
-                              </option>
-                            ))}
-                          </select>
-                        )}
-                        <button
-                          type="button"
-                          onClick={() =>
-                            onRemovePlayerFromLeague(activeSeason.id, group.level, pid)
+        {(managedSeason?.groups || []).map(group => (
+          <div
+            key={group.level}
+            className="p-3.5 rounded-2xl bg-[#090B0F] border border-white/[0.06] space-y-2.5"
+          >
+            <h3 className="text-xs font-black text-[#34D399]">{group.name}</h3>
+            <div className="space-y-1.5">
+              {group.playerIds.map(pid => {
+                const m = membersMap[pid];
+                if (!m) return null;
+                return (
+                  <div
+                    key={pid}
+                    className="flex items-center justify-between gap-2 text-xs"
+                  >
+                    <span className="font-bold text-white">{m.nickname}</span>
+                    <div className="flex items-center gap-1.5">
+                      {managedSeason.groups.length > 1 && (
+                        <select
+                          value={group.level}
+                          onChange={e =>
+                            onMovePlayerLeague(
+                              managedSeason.id,
+                              pid,
+                              Number(e.target.value)
+                            )
                           }
-                          className="px-2 py-1 rounded-lg bg-rose-500/15 text-rose-300 text-[11px] cursor-pointer"
+                          className="min-h-[30px] px-2 rounded-lg bg-[#12151C] text-[11px] text-slate-300"
                         >
-                          ✕
-                        </button>
-                      </div>
+                          {managedSeason.groups.map(g => (
+                            <option key={g.level} value={g.level}>
+                              {g.name}
+                            </option>
+                          ))}
+                        </select>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() =>
+                          onRemovePlayerFromLeague(
+                            managedSeason.id,
+                            group.level,
+                            pid
+                          )
+                        }
+                        className="px-2 py-1 rounded-lg bg-rose-500/15 text-rose-300 text-[11px] font-bold cursor-pointer"
+                      >
+                        Entfernen
+                      </button>
                     </div>
-                  );
-                })}
-              </div>
+                  </div>
+                );
+              })}
+            </div>
 
-              <div className="pt-2 border-t border-white/[0.07] space-y-1">
-                {group.matches.map(match => {
-                  const p1 = membersMap[match.player1Id];
-                  const p2 = membersMap[match.player2Id];
+            {/* MATCH-RESET */}
+            <div className="pt-2 border-t border-white/[0.06] space-y-1">
+              {group.matches
+                .filter(m => m.setsP1 !== null && m.setsP2 !== null)
+                .map(m => {
+                  const p1 = membersMap[m.player1Id];
+                  const p2 = membersMap[m.player2Id];
                   if (!p1 || !p2) return null;
-                  const hasResult = match.setsP1 !== null && match.setsP2 !== null;
                   return (
                     <div
-                      key={match.id}
-                      className="flex items-center justify-between gap-2 text-xs py-0.5"
+                      key={m.id}
+                      className="flex items-center justify-between text-[11px] text-slate-400"
                     >
-                      <span className="text-slate-400 truncate">
-                        {p1.nickname} vs {p2.nickname}
+                      <span>
+                        {p1.nickname} {m.setsP1}:{m.setsP2} {p2.nickname}
                       </span>
-                      <div className="flex items-center gap-1.5 shrink-0">
-                        <span className="font-bold text-white">
-                          {hasResult ? `${match.setsP1}:${match.setsP2}` : 'Offen'}
-                        </span>
-                        {hasResult && (
-                          <button
-                            type="button"
-                            onClick={() => onAdminUpdateMatch(match.id, null, null)}
-                            className="px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 text-[10px] font-black cursor-pointer"
-                          >
-                            Reset
-                          </button>
-                        )}
-                      </div>
+                      <button
+                        type="button"
+                        onClick={() => onAdminUpdateMatch(m.id, null, null)}
+                        className="text-amber-300 font-bold cursor-pointer"
+                      >
+                        Zurücksetzen
+                      </button>
                     </div>
                   );
                 })}
-              </div>
             </div>
-          ))}
-        </section>
-      )}
+          </div>
+        ))}
+      </section>
 
-      {/* MITGLIEDERVERWALTUNG */}
-      <section className="rounded-3xl bg-[#12151C] border border-white/[0.07] p-4 space-y-2.5">
-        <h3 className="text-sm font-black text-white">
-          Mitglieder ({allMembers.length})
-        </h3>
+      {/* MITGLIEDERSTATUS & LÖSCHEN */}
+      <section className="rounded-3xl bg-[#12151C] border border-white/[0.08] p-4 sm:p-5 space-y-3">
+        <h2 className="text-base font-black text-white">
+          Mitgliederstatus & Folgemonat ({Object.keys(membersMap).length})
+        </h2>
         <div className="space-y-2">
-          {allMembers.map(member => (
+          {Object.values(membersMap).map(m => (
             <div
-              key={member.id}
-              className="p-3 rounded-2xl bg-[#090B0F] flex flex-col sm:flex-row sm:items-center justify-between gap-2"
+              key={m.id}
+              className="p-3 rounded-2xl bg-[#090B0F] flex flex-wrap items-center justify-between gap-2 text-xs"
             >
-              <p className="text-xs font-black text-white">
-                {member.nickname}{' '}
-                <span className="text-slate-500 font-normal">
-                  · PIN {member.pin}
-                </span>
-              </p>
+              <div>
+                <p className="font-black text-white">{m.nickname}</p>
+                <p className="text-[11px] text-slate-400">
+                  PIN: {m.pin} · {m.status}
+                </p>
+              </div>
 
               <div className="flex flex-wrap items-center gap-1.5">
                 <select
-                  value={member.status}
-                  onChange={e => onUpdateMemberStatus(member.id, e.target.value)}
-                  className="min-h-[32px] px-2 rounded-lg bg-[#12151C] text-xs font-bold text-white"
+                  value={m.status}
+                  onChange={e => onUpdateMemberStatus(m.id, e.target.value)}
+                  className="min-h-[34px] px-2.5 rounded-xl bg-[#12151C] border border-white/10 text-xs text-white"
                 >
                   <option value="Dabei">Dabei</option>
-                  <option value="Offen">Offen</option>
                   <option value="Pausiert">Pausiert</option>
-                  <option value="Gesperrt">Gesperrt</option>
+                  <option value="Offen">Offen</option>
                 </select>
 
                 <button
                   type="button"
-                  onClick={() => onToggleMemberNextMonth(member.id)}
-                  className={`min-h-[32px] px-2.5 rounded-lg text-xs font-black cursor-pointer ${
-                    member.nextMonthOptIn
-                      ? 'bg-[#10B981]/15 text-[#34D399]'
-                      : 'bg-amber-500/15 text-amber-300'
+                  onClick={() => onToggleMemberNextMonth(m.id)}
+                  className={`min-h-[34px] px-2.5 rounded-xl text-[11px] font-black cursor-pointer ${
+                    m.nextMonthOptIn
+                      ? 'bg-[#10B981]/20 text-[#34D399]'
+                      : 'bg-white/5 text-slate-400'
                   }`}
                 >
-                  {member.nextMonthOptIn ? 'Folgemonat: Dabei' : 'Folgemonat: Pause'}
+                  {m.nextMonthOptIn ? 'Folgemonat ✓' : 'Folgemonat –'}
                 </button>
 
-                {confirmDeleteMemberId === member.id ? (
+                {confirmDeleteMemberId === m.id ? (
                   <div className="flex items-center gap-1">
                     <button
                       type="button"
                       onClick={() => {
-                        onDeleteMember(member.id);
+                        onDeleteMember(m.id);
                         setConfirmDeleteMemberId(null);
+                        setAdminBanner(`Mitglied ${m.nickname} gelöscht.`);
                       }}
-                      className="min-h-[32px] px-2 rounded-lg bg-rose-500 text-white text-[11px] font-black cursor-pointer"
+                      className="min-h-[34px] px-2.5 rounded-xl bg-rose-500 text-white text-[11px] font-black cursor-pointer"
                     >
-                      Löschen
+                      Endgültig löschen
                     </button>
                     <button
                       type="button"
                       onClick={() => setConfirmDeleteMemberId(null)}
-                      className="min-h-[32px] px-2 rounded-lg bg-white/10 text-slate-300 text-[11px] cursor-pointer"
+                      className="min-h-[34px] px-2 rounded-xl bg-white/10 text-slate-300 text-[11px] cursor-pointer"
                     >
-                      ✕
+                      Abbrechen
                     </button>
                   </div>
                 ) : (
                   <button
                     type="button"
-                    onClick={() => setConfirmDeleteMemberId(member.id)}
-                    className="w-8 h-8 rounded-lg bg-rose-500/15 text-rose-300 flex items-center justify-center cursor-pointer"
-                    title="Mitglied löschen"
+                    onClick={() => setConfirmDeleteMemberId(m.id)}
+                    className="min-h-[34px] px-2.5 rounded-xl bg-rose-500/15 text-rose-300 text-[11px] font-bold cursor-pointer"
                   >
-                    <KlTrashIcon className="w-3.5 h-3.5" />
+                    Löschen
                   </button>
                 )}
               </div>
@@ -2346,45 +3015,44 @@ function AdminTab({
         </div>
       </section>
 
-      {/* ADMIN-PIN ÄNDERN */}
-      <section className="rounded-3xl bg-[#12151C] border border-white/[0.07] p-4 space-y-3">
+      {/* ADMIN-PIN ÄNDERN & DEMO-RESET */}
+      <section className="rounded-3xl bg-[#12151C] border border-white/[0.08] p-4 sm:p-5 space-y-3">
         <div className="flex items-center justify-between">
-          <h3 className="text-sm font-black text-white">Admin-PIN</h3>
-          <span className="text-[11px] font-mono text-slate-400">
+          <h2 className="text-base font-black text-white">Admin-PIN ändern</h2>
+          <span className="text-xs font-bold text-amber-300">
             Aktiv: {adminPin}
           </span>
         </div>
-
         <form onSubmit={handleChangePin} className="flex gap-2">
           <input
             type="text"
+            inputMode="numeric"
             value={newPinInput}
             onChange={e => setNewPinInput(e.target.value)}
-            placeholder="Neuer Admin-PIN"
+            placeholder="Neuer Admin-PIN (min. 4 Zeichen)"
             className="flex-1 min-h-[42px] px-3 rounded-xl bg-[#090B0F] border border-white/10 text-xs text-white"
           />
           <button
             type="submit"
-            className="min-h-[42px] px-4 rounded-xl bg-[#10B981] text-slate-950 text-xs font-black shrink-0 cursor-pointer"
+            className="min-h-[42px] px-4 rounded-xl bg-amber-400 text-slate-950 text-xs font-black shrink-0 cursor-pointer"
           >
-            Überschreiben
+            PIN überschreiben
           </button>
         </form>
         {pinSavedMsg && (
           <p className="text-xs font-bold text-[#34D399]">{pinSavedMsg}</p>
         )}
 
-        <div className="pt-2 border-t border-white/[0.07] flex items-center justify-between">
-          <span className="text-xs text-slate-400">Demo-Daten zurücksetzen</span>
+        <div className="pt-2 border-t border-white/[0.07]">
           <button
             type="button"
             onClick={() => {
               onResetDemoData();
-              setAdminFeedback('Demo-Daten zurückgesetzt.');
+              setAdminBanner('Demo-Daten wurden zurückgesetzt.');
             }}
-            className="min-h-[34px] px-3 rounded-xl bg-rose-500/15 text-rose-200 text-xs font-black cursor-pointer"
+            className="min-h-[38px] px-3.5 rounded-xl bg-white/5 text-xs font-bold text-slate-400 cursor-pointer"
           >
-            Reset
+            Demo-Daten zurücksetzen
           </button>
         </div>
       </section>
@@ -2393,17 +3061,15 @@ function AdminTab({
 }
 
 // ============================================================================
-// MODALS (MOBILE-FIRST BOTTOM-SHEET / CENTER DIALOGE)
+// MODALS (PIN-LOGIN, RESULTAT, STAMMDATEN, NEW PLAYER, LIVE-CHECKIN, PROFIL)
 // ============================================================================
 function PlayerPinLoginModal({ member, onSuccess, onClose }) {
-  const [pinInput, setPinInput] = useState('');
+  const [pin, setPin] = useState('');
   const [error, setError] = useState('');
-
-  if (!member) return null;
 
   const handleSubmit = e => {
     e.preventDefault();
-    if (pinInput.trim() === String(member.pin || '')) {
+    if (pin.trim() === String(member.pin || '1111')) {
       onSuccess(member.id);
       onClose();
     } else {
@@ -2412,29 +3078,16 @@ function PlayerPinLoginModal({ member, onSuccess, onClose }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
-      <div className="w-full sm:max-w-sm rounded-t-3xl sm:rounded-3xl bg-[#12151C] border-t sm:border border-white/15 p-5 space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div
-              className={`w-10 h-10 rounded-xl bg-gradient-to-br ${member.avatarBg} flex items-center justify-center text-white font-black text-sm`}
-            >
-              {member.nickname.slice(0, 2).toUpperCase()}
-            </div>
-            <div>
-              <h3 className="text-base font-black text-white">{member.nickname}</h3>
-              <p className="text-[11px] text-slate-400">
-                Spieler-PIN eingeben (Demo: {member.pin})
-              </p>
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="w-9 h-9 rounded-xl bg-white/5 text-slate-400 flex items-center justify-center cursor-pointer"
-          >
-            <KlXIcon className="w-4 h-4" />
-          </button>
+    <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-end sm:items-center justify-center p-3">
+      <div className="w-full max-w-sm rounded-3xl bg-[#12151C] border border-white/10 p-5 space-y-4">
+        <div>
+          <h3 className="text-base font-black text-white">
+            Profil wechseln · {member.nickname}
+          </h3>
+          <p className="text-xs text-slate-400">
+            Demo-PIN für {member.nickname}:{' '}
+            <span className="font-black text-[#34D399]">{member.pin}</span>
+          </p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-3">
@@ -2442,28 +3095,25 @@ function PlayerPinLoginModal({ member, onSuccess, onClose }) {
             type="password"
             inputMode="numeric"
             autoFocus
-            value={pinInput}
-            onChange={e => {
-              setPinInput(e.target.value);
-              setError('');
-            }}
-            placeholder="••••"
-            className="w-full min-h-[48px] px-4 rounded-2xl bg-[#090B0F] border border-white/10 text-center text-lg font-mono tracking-widest text-white focus:outline-none focus:border-[#10B981]"
+            value={pin}
+            onChange={e => setPin(e.target.value)}
+            placeholder="4-stelligen PIN eingeben"
+            className="w-full min-h-[44px] px-3.5 rounded-2xl bg-[#090B0F] border border-white/10 text-sm text-white"
           />
-          {error && <p className="text-xs font-bold text-rose-400">{error}</p>}
+          {error && <p className="text-xs text-rose-400 font-bold">{error}</p>}
           <div className="flex gap-2">
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 min-h-[46px] rounded-2xl bg-white/5 text-xs font-bold text-slate-300 cursor-pointer"
+              className="flex-1 min-h-[42px] rounded-2xl bg-white/5 text-xs font-bold text-slate-300 cursor-pointer"
             >
               Abbrechen
             </button>
             <button
               type="submit"
-              className="flex-1 min-h-[46px] rounded-2xl bg-[#10B981] text-slate-950 text-xs font-black cursor-pointer"
+              className="flex-1 min-h-[42px] rounded-2xl bg-[#10B981] text-slate-950 text-xs font-black cursor-pointer"
             >
-              Öffnen
+              Anmelden
             </button>
           </div>
         </form>
@@ -2490,53 +3140,43 @@ function MatchResultModal({ match, membersMap, onClose, onSaveResult }) {
   ];
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
-      <div className="w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl bg-[#12151C] border-t sm:border border-white/15 p-5 space-y-4">
-        <div className="flex items-center justify-between">
+    <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-end sm:items-center justify-center p-3">
+      <div className="w-full max-w-sm rounded-3xl bg-[#12151C] border border-white/10 p-5 space-y-4">
+        <div>
           <h3 className="text-base font-black text-white">Resultat eintragen</h3>
-          <button
-            type="button"
-            onClick={onClose}
-            className="w-9 h-9 rounded-xl bg-white/5 text-slate-400 flex items-center justify-center cursor-pointer"
-          >
-            <KlXIcon className="w-4 h-4" />
-          </button>
-        </div>
-
-        <div className="p-4 rounded-2xl bg-[#090B0F] text-center space-y-1">
-          <p className="text-sm font-black text-white">
-            {p1.nickname} <span className="text-slate-500">vs</span> {p2.nickname}
-          </p>
-          <p className="text-2xl font-black text-[#34D399]">
-            {setsP1} : {setsP2}
+          <p className="text-xs text-slate-400">
+            {p1.nickname} vs. {p2.nickname} (Best of 5 Sätze)
           </p>
         </div>
 
         <div className="grid grid-cols-3 gap-2">
-          {presets.map(([s1, s2]) => (
-            <button
-              key={`${s1}-${s2}`}
-              type="button"
-              onClick={() => {
-                setSetsP1(s1);
-                setSetsP2(s2);
-              }}
-              className={`min-h-[46px] rounded-2xl text-sm font-black cursor-pointer ${
-                setsP1 === s1 && setsP2 === s2
-                  ? 'bg-[#10B981] text-slate-950'
-                  : 'bg-[#090B0F] text-slate-200'
-              }`}
-            >
-              {s1} : {s2}
-            </button>
-          ))}
+          {presets.map(([s1, s2]) => {
+            const active = setsP1 === s1 && setsP2 === s2;
+            return (
+              <button
+                key={`${s1}-${s2}`}
+                type="button"
+                onClick={() => {
+                  setSetsP1(s1);
+                  setSetsP2(s2);
+                }}
+                className={`min-h-[44px] rounded-2xl text-sm font-black cursor-pointer ${
+                  active
+                    ? 'bg-[#10B981] text-slate-950'
+                    : 'bg-[#090B0F] border border-white/10 text-white'
+                }`}
+              >
+                {s1} : {s2}
+              </button>
+            );
+          })}
         </div>
 
         <div className="flex gap-2">
           <button
             type="button"
             onClick={onClose}
-            className="flex-1 min-h-[46px] rounded-2xl bg-white/5 text-xs font-bold text-slate-300 cursor-pointer"
+            className="flex-1 min-h-[42px] rounded-2xl bg-white/5 text-xs font-bold text-slate-300 cursor-pointer"
           >
             Abbrechen
           </button>
@@ -2546,9 +3186,9 @@ function MatchResultModal({ match, membersMap, onClose, onSaveResult }) {
               onSaveResult(match.id, setsP1, setsP2);
               onClose();
             }}
-            className="flex-1 min-h-[46px] rounded-2xl bg-[#10B981] text-slate-950 text-xs font-black cursor-pointer"
+            className="flex-1 min-h-[42px] rounded-2xl bg-[#10B981] text-slate-950 text-xs font-black cursor-pointer"
           >
-            Speichern
+            Speichern ({setsP1}:{setsP2})
           </button>
         </div>
       </div>
@@ -2560,272 +3200,123 @@ function PlayerProfileModal({
   member,
   activeSeason,
   isOwnProfile,
-  initialEditing = false,
+  initialEditing,
   onClose,
   onUpdateProfile,
 }) {
-  const [editing, setEditing] = useState(Boolean(initialEditing && isOwnProfile));
-  const [firstName, setFirstName] = useState(member.firstName);
-  const [lastName, setLastName] = useState(member.lastName);
+  const [editing, setEditing] = useState(Boolean(initialEditing));
+  const [playMode, setPlayMode] = useState(
+    isConnectOnlyMember(member, activeSeason) ? 'connect' : 'league'
+  );
   const [whatsapp, setWhatsapp] = useState(member.whatsapp || '');
-  const [language, setLanguage] = useState(member.language || 'DE');
-  const [style, setStyle] = useState(member.style || 'Allround');
+  const [style, setStyle] = useState(member.style || PLAY_STYLES[0]);
   const [bio, setBio] = useState(member.bio || '');
-  const [pin, setPin] = useState(member.pin || '');
+  const [pin, setPin] = useState(member.pin || '1111');
   const [usualDays, setUsualDays] = useState(member.usualDays || []);
   const [usualSlots, setUsualSlots] = useState(member.usualSlots || []);
+  const [langDe, setLangDe] = useState(
+    (member.language || '').includes('Deutsch')
+  );
+  const [langEn, setLangEn] = useState(
+    (member.language || '').includes('English')
+  );
 
-  const toggleDay = day => {
-    setUsualDays(prev =>
-      prev.includes(day) ? prev.filter(d => d !== day) : [...prev, day]
-    );
-  };
+  const group = activeSeason?.groups.find(g =>
+    g.playerIds.includes(member.id)
+  );
+  const waUrl = buildWhatsAppUrl(
+    member.whatsapp,
+    `Hoi ${member.nickname}, wollen wir zusammen Tischtennis spielen?`
+  );
 
-  const toggleSlot = slot => {
-    setUsualSlots(prev =>
-      prev.includes(slot) ? prev.filter(s => s !== slot) : [...prev, slot]
+  const toggleItem = (list, setList, item) => {
+    setList(prev =>
+      prev.includes(item) ? prev.filter(x => x !== item) : [...prev, item]
     );
   };
 
   const handleSave = e => {
     e.preventDefault();
+    const langs = [];
+    if (langDe) langs.push('Deutsch');
+    if (langEn) langs.push('English');
     onUpdateProfile(member.id, {
-      firstName: firstName.trim() || member.firstName,
-      lastName: lastName.trim() || member.lastName,
+      playMode,
+      status:
+        playMode === 'connect'
+          ? 'Pausiert'
+          : member.status === 'Pausiert'
+          ? 'Offen'
+          : member.status,
+      nextMonthOptIn: playMode === 'connect' ? false : member.nextMonthOptIn,
       whatsapp: whatsapp.trim(),
-      language,
       style,
       bio: bio.trim(),
-      pin: pin.trim() || member.pin,
+      pin: pin.trim().length >= 4 ? pin.trim() : member.pin,
       usualDays,
       usualSlots,
+      language: langs.join(' / ') || 'Deutsch',
     });
     setEditing(false);
   };
 
-  const waUrl = buildWhatsAppUrl(
-    member.whatsapp,
-    `Hoi ${member.nickname}, wollen wir in der PINGKONG Liga zusammen spielen?`
-  );
-  const memberGroup = activeSeason?.groups.find(g => g.playerIds.includes(member.id));
-
   return (
-    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 overflow-y-auto">
-      <div className="w-full sm:max-w-lg rounded-t-3xl sm:rounded-3xl bg-[#12151C] border-t sm:border border-white/15 p-5 space-y-4 max-h-[92vh] overflow-y-auto">
-        <div className="flex items-center justify-between">
+    <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-end sm:items-center justify-center p-3 overflow-y-auto">
+      <div className="w-full max-w-md rounded-3xl bg-[#12151C] border border-white/10 p-5 space-y-4 my-auto">
+        <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <div
-              className={`w-11 h-11 rounded-2xl bg-gradient-to-br ${member.avatarBg} flex items-center justify-center text-white font-black text-sm`}
+              className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${member.avatarBg} flex items-center justify-center text-white font-black text-sm`}
             >
               {member.nickname.slice(0, 2).toUpperCase()}
             </div>
             <div>
               <h3 className="text-base font-black text-white">{member.nickname}</h3>
               <p className="text-xs text-slate-400">
-                {memberGroup ? memberGroup.name : member.status} · {member.annualPoints}{' '}
-                Pkt
+                {member.firstName} {member.lastName} ·{' '}
+                {group ? group.name : isConnectOnlyMember(member, activeSeason) ? 'Nur CONNECT' : 'LEAGUE'}
               </p>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="w-9 h-9 rounded-xl bg-white/5 text-slate-400 flex items-center justify-center cursor-pointer"
-          >
-            <KlXIcon className="w-4 h-4" />
-          </button>
+
+          {isOwnProfile && !editing && (
+            <button
+              type="button"
+              onClick={() => setEditing(true)}
+              className="min-h-[36px] px-3 rounded-xl bg-[#10B981] text-slate-950 text-xs font-black cursor-pointer"
+            >
+              Bearbeiten
+            </button>
+          )}
         </div>
 
-        {editing ? (
-          <form onSubmit={handleSave} className="space-y-3">
-            <div className="grid grid-cols-2 gap-2.5">
-              <div>
-                <label className="block text-[11px] font-bold text-slate-400 mb-1">
-                  Vorname
-                </label>
-                <input
-                  type="text"
-                  value={firstName}
-                  onChange={e => setFirstName(e.target.value)}
-                  className="w-full min-h-[42px] px-3 rounded-xl bg-[#090B0F] border border-white/10 text-xs text-white"
-                />
-              </div>
-              <div>
-                <label className="block text-[11px] font-bold text-slate-400 mb-1">
-                  Nachname
-                </label>
-                <input
-                  type="text"
-                  value={lastName}
-                  onChange={e => setLastName(e.target.value)}
-                  className="w-full min-h-[42px] px-3 rounded-xl bg-[#090B0F] border border-white/10 text-xs text-white"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-2.5">
-              <div>
-                <label className="block text-[11px] font-bold text-slate-400 mb-1">
-                  WhatsApp (CH)
-                </label>
-                <input
-                  type="text"
-                  value={whatsapp}
-                  onChange={e => setWhatsapp(e.target.value)}
-                  placeholder="079 269 66 89"
-                  className="w-full min-h-[42px] px-3 rounded-xl bg-[#090B0F] border border-white/10 text-xs text-white"
-                />
-              </div>
-              <div>
-                <label className="block text-[11px] font-bold text-slate-400 mb-1">
-                  Spieler-PIN
-                </label>
-                <input
-                  type="text"
-                  value={pin}
-                  onChange={e => setPin(e.target.value)}
-                  className="w-full min-h-[42px] px-3 rounded-xl bg-[#090B0F] border border-white/10 text-xs text-white"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-2.5">
-              <div>
-                <label className="block text-[11px] font-bold text-slate-400 mb-1">
-                  Sprache
-                </label>
-                <select
-                  value={language}
-                  onChange={e => setLanguage(e.target.value)}
-                  className="w-full min-h-[42px] px-3 rounded-xl bg-[#090B0F] border border-white/10 text-xs text-white"
-                >
-                  <option value="DE">DE</option>
-                  <option value="EN">EN</option>
-                  <option value="Beides">Beides</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-[11px] font-bold text-slate-400 mb-1">
-                  Spielstil
-                </label>
-                <select
-                  value={style}
-                  onChange={e => setStyle(e.target.value)}
-                  className="w-full min-h-[42px] px-3 rounded-xl bg-[#090B0F] border border-white/10 text-xs text-white"
-                >
-                  {PLAY_STYLES.map(s => (
-                    <option key={s} value={s}>
-                      {s}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-[11px] font-bold text-slate-400 mb-1">
-                Kurzbeschreibung
-              </label>
-              <input
-                type="text"
-                value={bio}
-                onChange={e => setBio(e.target.value)}
-                className="w-full min-h-[42px] px-3 rounded-xl bg-[#090B0F] border border-white/10 text-xs text-white"
-              />
-            </div>
-
-            {/* HALLENTAGE IN STAMMDATEN */}
-            <div className="p-3 rounded-2xl bg-[#090B0F] space-y-2.5">
-              <p className="text-[11px] font-black uppercase tracking-wider text-[#34D399]">
-                Übliche Hallentage & Zeiten
-              </p>
-              <div className="flex flex-wrap gap-1.5">
-                {WEEKDAYS.map(day => (
-                  <button
-                    key={day}
-                    type="button"
-                    onClick={() => toggleDay(day)}
-                    className={`min-h-[36px] px-3 rounded-xl text-xs font-black cursor-pointer ${
-                      usualDays.includes(day)
-                        ? 'bg-[#10B981] text-slate-950'
-                        : 'bg-[#12151C] text-slate-300'
-                    }`}
-                  >
-                    {day}
-                  </button>
-                ))}
-              </div>
-              <div className="flex flex-wrap gap-1.5">
-                {DAY_SLOTS.map(slot => (
-                  <button
-                    key={slot}
-                    type="button"
-                    onClick={() => toggleSlot(slot)}
-                    className={`min-h-[36px] px-3 rounded-xl text-xs font-bold cursor-pointer ${
-                      usualSlots.includes(slot)
-                        ? 'bg-sky-500 text-slate-950'
-                        : 'bg-[#12151C] text-slate-300'
-                    }`}
-                  >
-                    {slot}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={() => setEditing(false)}
-                className="flex-1 min-h-[46px] rounded-2xl bg-white/5 text-xs font-bold text-slate-300 cursor-pointer"
-              >
-                Abbrechen
-              </button>
-              <button
-                type="submit"
-                className="flex-1 min-h-[46px] rounded-2xl bg-[#10B981] text-slate-950 text-xs font-black cursor-pointer"
-              >
-                Speichern
-              </button>
-            </div>
-          </form>
-        ) : (
+        {!editing ? (
           <div className="space-y-3 text-xs">
-            <div className="p-3.5 rounded-2xl bg-[#090B0F] space-y-2">
-              <p className="text-slate-300">
-                <span className="text-slate-500 font-bold">Name:</span>{' '}
-                {member.firstName} {member.lastName}
+            <div className="p-3 rounded-2xl bg-[#090B0F] space-y-1.5">
+              <div className="flex items-center justify-between pb-1.5 mb-1 border-b border-white/[0.06]">
+                <span className="text-slate-400 font-bold">Modus:</span>
+                {isConnectOnlyMember(member, activeSeason) ? (
+                  <span className="px-2.5 py-0.5 rounded-lg bg-sky-400/15 text-sky-300 font-black">
+                    Nur CONNECT (ohne Liga)
+                  </span>
+                ) : (
+                  <span className="px-2.5 py-0.5 rounded-lg bg-[#10B981]/15 text-[#34D399] font-black">
+                    LEAGUE + CONNECT
+                  </span>
+                )}
+              </div>
+              <p className="text-slate-300">{member.bio || 'Kein Profiltext.'}</p>
+              <p className="text-slate-400">
+                <strong className="text-white">Spielstil:</strong> {member.style}
               </p>
-              <p className="text-slate-300">
-                <span className="text-slate-500 font-bold">Spielstil:</span>{' '}
-                {member.style}
+              <p className="text-slate-400">
+                <strong className="text-white">Sprachen:</strong> {member.language}
               </p>
-              <p className="text-slate-300">
-                <span className="text-slate-500 font-bold">Sprache:</span>{' '}
-                {member.language}
+              <p className="text-slate-400">
+                <strong className="text-white">Hallentage:</strong>{' '}
+                {(member.usualDays || []).join(', ') || 'Flexibel'} (
+                {(member.usualSlots || []).join(', ') || 'Nach Absprache'})
               </p>
-              {member.bio && (
-                <p className="text-slate-300">
-                  <span className="text-slate-500 font-bold">Info:</span>{' '}
-                  {member.bio}
-                </p>
-              )}
-              <p className="text-slate-300">
-                <span className="text-slate-500 font-bold">Hallentage:</span>{' '}
-                {member.usualDays?.length
-                  ? `${member.usualDays.join(', ')}${
-                      member.usualSlots?.length
-                        ? ` (${member.usualSlots.join(', ')})`
-                        : ''
-                    }`
-                  : 'Keine angegeben'}
-              </p>
-              {isOwnProfile && member.pin && (
-                <p className="text-slate-300">
-                  <span className="text-slate-500 font-bold">Dein PIN:</span>{' '}
-                  <span className="font-mono">{member.pin}</span>
-                </p>
-              )}
             </div>
 
             <div className="flex gap-2">
@@ -2834,24 +3325,190 @@ function PlayerProfileModal({
                   href={waUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex-1 min-h-[46px] px-4 rounded-2xl bg-[#10B981] text-slate-950 font-black inline-flex items-center justify-center gap-1.5"
+                  className="flex-1 min-h-[42px] rounded-2xl bg-[#25D366] text-slate-950 font-black flex items-center justify-center gap-1.5"
                 >
                   <KlMessageIcon className="w-4 h-4" />
                   <span>WhatsApp</span>
                 </a>
               )}
-              {isOwnProfile && (
-                <button
-                  type="button"
-                  onClick={() => setEditing(true)}
-                  className="flex-1 min-h-[46px] px-4 rounded-2xl bg-white/10 text-white font-black inline-flex items-center justify-center gap-1.5 cursor-pointer"
-                >
-                  <KlEditIcon className="w-4 h-4" />
-                  <span>Bearbeiten</span>
-                </button>
-              )}
+              <button
+                type="button"
+                onClick={onClose}
+                className="flex-1 min-h-[42px] rounded-2xl bg-white/10 text-white font-bold cursor-pointer"
+              >
+                Schliessen
+              </button>
             </div>
           </div>
+        ) : (
+          <form onSubmit={handleSave} className="space-y-3 text-xs">
+            <div>
+              <label className="block text-[11px] font-bold text-slate-400 mb-1">
+                Spielmodus im Club
+              </label>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setPlayMode('league')}
+                  className={`p-2.5 rounded-xl border text-left cursor-pointer ${
+                    playMode === 'league'
+                      ? 'bg-[#10B981]/15 border-[#10B981] text-white'
+                      : 'bg-[#090B0F] border-white/10 text-slate-400'
+                  }`}
+                >
+                  <p className="font-black text-xs text-[#34D399]">LEAGUE + CONNECT</p>
+                  <p className="text-[10px]">Monatsliga + Pinnwand</p>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPlayMode('connect')}
+                  className={`p-2.5 rounded-xl border text-left cursor-pointer ${
+                    playMode === 'connect'
+                      ? 'bg-sky-400/15 border-sky-400 text-white'
+                      : 'bg-[#090B0F] border-white/10 text-slate-400'
+                  }`}
+                >
+                  <p className="font-black text-xs text-sky-300">Nur CONNECT</p>
+                  <p className="text-[10px]">Ohne Ligabetrieb</p>
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-bold text-slate-400 mb-1">
+                WhatsApp (CH)
+              </label>
+              <input
+                type="tel"
+                value={whatsapp}
+                onChange={e => setWhatsapp(e.target.value)}
+                placeholder="+41 79 123 45 67"
+                className="w-full min-h-[40px] px-3 rounded-xl bg-[#090B0F] border border-white/10 text-white"
+              />
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-bold text-slate-400 mb-1">
+                Übliche Hallentage
+              </label>
+              <div className="flex flex-wrap gap-1.5">
+                {WEEKDAYS.map(day => (
+                  <button
+                    key={day}
+                    type="button"
+                    onClick={() => toggleItem(usualDays, setUsualDays, day)}
+                    className={`min-h-[32px] px-2.5 rounded-xl font-black cursor-pointer ${
+                      usualDays.includes(day)
+                        ? 'bg-[#10B981] text-slate-950'
+                        : 'bg-[#090B0F] text-slate-400'
+                    }`}
+                  >
+                    {day}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-bold text-slate-400 mb-1">
+                Tageszeiten
+              </label>
+              <div className="flex flex-wrap gap-1.5">
+                {TIME_SLOTS.map(slot => (
+                  <button
+                    key={slot}
+                    type="button"
+                    onClick={() => toggleItem(usualSlots, setUsualSlots, slot)}
+                    className={`min-h-[32px] px-3 rounded-xl font-black cursor-pointer ${
+                      usualSlots.includes(slot)
+                        ? 'bg-sky-400 text-slate-950'
+                        : 'bg-[#090B0F] text-slate-400'
+                    }`}
+                  >
+                    {slot}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="block text-[11px] font-bold text-slate-400 mb-1">
+                  Spielstil
+                </label>
+                <select
+                  value={style}
+                  onChange={e => setStyle(e.target.value)}
+                  className="w-full min-h-[40px] px-2.5 rounded-xl bg-[#090B0F] border border-white/10 text-white"
+                >
+                  {PLAY_STYLES.map(s => (
+                    <option key={s} value={s}>
+                      {s}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-[11px] font-bold text-slate-400 mb-1">
+                  Spieler-PIN
+                </label>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={pin}
+                  onChange={e => setPin(e.target.value)}
+                  className="w-full min-h-[40px] px-3 rounded-xl bg-[#090B0F] border border-white/10 text-white"
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center gap-4">
+              <label className="inline-flex items-center gap-2 text-slate-200 font-bold cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={langDe}
+                  onChange={e => setLangDe(e.target.checked)}
+                />
+                <span>Deutsch (DE)</span>
+              </label>
+              <label className="inline-flex items-center gap-2 text-slate-200 font-bold cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={langEn}
+                  onChange={e => setLangEn(e.target.checked)}
+                />
+                <span>English (EN)</span>
+              </label>
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-bold text-slate-400 mb-1">
+                Kurzinfo
+              </label>
+              <input
+                type="text"
+                value={bio}
+                onChange={e => setBio(e.target.value)}
+                className="w-full min-h-[40px] px-3 rounded-xl bg-[#090B0F] border border-white/10 text-white"
+              />
+            </div>
+
+            <div className="flex gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => setEditing(false)}
+                className="flex-1 min-h-[42px] rounded-2xl bg-white/5 font-bold text-slate-300 cursor-pointer"
+              >
+                Abbrechen
+              </button>
+              <button
+                type="submit"
+                className="flex-1 min-h-[42px] rounded-2xl bg-[#10B981] text-slate-950 font-black cursor-pointer"
+              >
+                Speichern
+              </button>
+            </div>
+          </form>
         )}
       </div>
     </div>
@@ -2859,15 +3516,16 @@ function PlayerProfileModal({
 }
 
 function AddMemberModal({ onClose, onAddMember }) {
+  const [playMode, setPlayMode] = useState('league');
   const [nickname, setNickname] = useState('');
   const [pin, setPin] = useState('');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
-  const [whatsapp, setWhatsapp] = useState('');
+  const [whatsapp, setWhatsapp] = useState('+41 ');
   const [langDe, setLangDe] = useState(true);
   const [langEn, setLangEn] = useState(false);
-  const [style, setStyle] = useState('Allround');
-  const [startOption, setStartOption] = useState('nextMonth');
+  const [style, setStyle] = useState(PLAY_STYLES[0]);
+  const [nextMonthOptIn, setNextMonthOptIn] = useState(true);
   const [error, setError] = useState('');
 
   const handleSubmit = e => {
@@ -2877,185 +3535,200 @@ function AddMemberModal({ onClose, onAddMember }) {
       return;
     }
     if (pin.trim().length < 4) {
-      setError('Bitte einen PIN mit mindestens 4 Zeichen festlegen.');
+      setError('Bitte einen persönlichen PIN mit mindestens 4 Zeichen wählen.');
       return;
     }
-    if (!langDe && !langEn) {
-      setError('Bitte mindestens eine Sprache auswählen.');
-      return;
-    }
+    const langs = [];
+    if (langDe) langs.push('Deutsch');
+    if (langEn) langs.push('English');
 
-    const language = langDe && langEn ? 'Beides' : langDe ? 'DE' : 'EN';
     onAddMember({
+      playMode,
       nickname: nickname.trim(),
       pin: pin.trim(),
-      firstName: firstName.trim() || nickname.trim(),
+      firstName: firstName.trim(),
       lastName: lastName.trim(),
       whatsapp: whatsapp.trim(),
-      language,
+      language: langs.join(' / ') || 'Deutsch',
       style,
-      nextMonthOptIn: startOption === 'nextMonth',
+      nextMonthOptIn,
     });
     onClose();
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 overflow-y-auto">
-      <div className="w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl bg-[#12151C] border-t sm:border border-white/15 p-5 space-y-3.5 max-h-[92vh] overflow-y-auto">
-        <div className="flex items-center justify-between">
-          <div>
-            <h3 className="text-base font-black text-white">NEW PLAYER</h3>
-            <p className="text-[11px] text-slate-400">
-              Admin-Freigabe nach Erstellung erforderlich
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="w-9 h-9 rounded-xl bg-white/5 text-slate-400 flex items-center justify-center cursor-pointer"
-          >
-            <KlXIcon className="w-4 h-4" />
-          </button>
+    <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-end sm:items-center justify-center p-3 overflow-y-auto">
+      <div className="w-full max-w-md rounded-3xl bg-[#12151C] border border-white/10 p-5 space-y-4 my-auto">
+        <div>
+          <h3 className="text-base font-black text-white">NEW PLAYER</h3>
+          <p className="text-xs text-slate-400">
+            Neues Clubprofil anlegen
+          </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-3">
-          <div>
-            <label className="block text-[11px] font-black text-[#34D399] mb-1">
-              Nickname *
-            </label>
-            <input
-              type="text"
-              required
-              value={nickname}
-              onChange={e => setNickname(e.target.value)}
-              placeholder="z.B. SpinMaster"
-              className="w-full min-h-[44px] px-3.5 rounded-2xl bg-[#090B0F] border border-[#10B981]/40 text-sm text-white focus:outline-none focus:border-[#10B981]"
-            />
-          </div>
-
-          <div>
-            <label className="block text-[11px] font-bold text-slate-300 mb-1">
-              Persönlicher PIN (mind. 4 Zeichen) *
-            </label>
-            <input
-              type="text"
-              required
-              value={pin}
-              onChange={e => setPin(e.target.value)}
-              placeholder="z.B. 4821"
-              className="w-full min-h-[44px] px-3.5 rounded-2xl bg-[#090B0F] border border-white/10 text-sm text-white focus:outline-none focus:border-[#10B981]"
-            />
+        <form onSubmit={handleSubmit} className="space-y-3 text-xs">
+          {/* ENTSCHEIDUNG: LEAGUE + CONNECT ODER NUR CONNECT */}
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={() => setPlayMode('league')}
+              className={`p-3 rounded-2xl border text-left cursor-pointer ${
+                playMode === 'league'
+                  ? 'bg-[#10B981]/15 border-[#10B981] text-white'
+                  : 'bg-[#090B0F] border-white/10 text-slate-400'
+              }`}
+            >
+              <p className="font-black text-xs text-[#34D399]">LEAGUE + CONNECT</p>
+              <p className="text-[11px] mt-0.5">Monatsliga + Pinnwand</p>
+            </button>
+            <button
+              type="button"
+              onClick={() => setPlayMode('connect')}
+              className={`p-3 rounded-2xl border text-left cursor-pointer ${
+                playMode === 'connect'
+                  ? 'bg-sky-400/15 border-sky-400 text-white'
+                  : 'bg-[#090B0F] border-white/10 text-slate-400'
+              }`}
+            >
+              <p className="font-black text-xs text-sky-300">Nur CONNECT</p>
+              <p className="text-[11px] mt-0.5">Freies Spielen ohne Liga</p>
+            </button>
           </div>
 
           <div className="grid grid-cols-2 gap-2">
-            <input
-              type="text"
-              value={firstName}
-              onChange={e => setFirstName(e.target.value)}
-              placeholder="Vorname"
-              className="w-full min-h-[42px] px-3 rounded-xl bg-[#090B0F] border border-white/10 text-xs text-white"
-            />
-            <input
-              type="text"
-              value={lastName}
-              onChange={e => setLastName(e.target.value)}
-              placeholder="Nachname"
-              className="w-full min-h-[42px] px-3 rounded-xl bg-[#090B0F] border border-white/10 text-xs text-white"
-            />
+            <div>
+              <label className="block text-[11px] font-bold text-slate-400 mb-1">
+                Nickname *
+              </label>
+              <input
+                type="text"
+                required
+                value={nickname}
+                onChange={e => setNickname(e.target.value)}
+                placeholder="z.B. SpinMaster"
+                className="w-full min-h-[40px] px-3 rounded-xl bg-[#090B0F] border border-white/10 text-white"
+              />
+            </div>
+            <div>
+              <label className="block text-[11px] font-bold text-slate-400 mb-1">
+                Persönlicher PIN *
+              </label>
+              <input
+                type="text"
+                inputMode="numeric"
+                required
+                value={pin}
+                onChange={e => setPin(e.target.value)}
+                placeholder="min. 4 Ziffern"
+                className="w-full min-h-[40px] px-3 rounded-xl bg-[#090B0F] border border-white/10 text-white"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="block text-[11px] font-bold text-slate-400 mb-1">
+                Vorname
+              </label>
+              <input
+                type="text"
+                value={firstName}
+                onChange={e => setFirstName(e.target.value)}
+                className="w-full min-h-[40px] px-3 rounded-xl bg-[#090B0F] border border-white/10 text-white"
+              />
+            </div>
+            <div>
+              <label className="block text-[11px] font-bold text-slate-400 mb-1">
+                Nachname
+              </label>
+              <input
+                type="text"
+                value={lastName}
+                onChange={e => setLastName(e.target.value)}
+                className="w-full min-h-[40px] px-3 rounded-xl bg-[#090B0F] border border-white/10 text-white"
+              />
+            </div>
           </div>
 
           <div>
             <label className="block text-[11px] font-bold text-slate-400 mb-1">
-              WhatsApp Nummer (Schweizer Format)
+              WhatsApp (Schweiz +41)
             </label>
             <input
               type="tel"
               value={whatsapp}
               onChange={e => setWhatsapp(e.target.value)}
-              placeholder="079 269 66 89"
-              className="w-full min-h-[42px] px-3.5 rounded-xl bg-[#090B0F] border border-white/10 text-xs text-white"
+              placeholder="+41 79 123 45 67"
+              className="w-full min-h-[40px] px-3 rounded-xl bg-[#090B0F] border border-white/10 text-white"
             />
           </div>
 
           <div>
             <label className="block text-[11px] font-bold text-slate-400 mb-1">
-              Welche Sprache wird gesprochen?
+              Gesprochene Sprachen
             </label>
-            <div className="grid grid-cols-2 gap-2">
-              <label className="min-h-[42px] flex items-center gap-2 px-3 rounded-xl bg-[#090B0F] border border-white/10 text-xs font-bold text-white cursor-pointer">
+            <div className="flex items-center gap-4 p-2.5 rounded-xl bg-[#090B0F] border border-white/10">
+              <label className="inline-flex items-center gap-2 text-slate-200 font-bold cursor-pointer">
                 <input
                   type="checkbox"
                   checked={langDe}
                   onChange={e => setLangDe(e.target.checked)}
-                  className="accent-[#10B981] w-4 h-4"
                 />
                 <span>Deutsch (DE)</span>
               </label>
-              <label className="min-h-[42px] flex items-center gap-2 px-3 rounded-xl bg-[#090B0F] border border-white/10 text-xs font-bold text-white cursor-pointer">
+              <label className="inline-flex items-center gap-2 text-slate-200 font-bold cursor-pointer">
                 <input
                   type="checkbox"
                   checked={langEn}
                   onChange={e => setLangEn(e.target.checked)}
-                  className="accent-[#10B981] w-4 h-4"
                 />
                 <span>English (EN)</span>
               </label>
             </div>
           </div>
 
-          <div>
-            <label className="block text-[11px] font-bold text-slate-400 mb-1">
-              Spielstil
-            </label>
-            <select
-              value={style}
-              onChange={e => setStyle(e.target.value)}
-              className="w-full min-h-[42px] px-3 rounded-xl bg-[#090B0F] border border-white/10 text-xs text-white"
-            >
-              {PLAY_STYLES.map(s => (
-                <option key={s} value={s}>
-                  {s}
-                </option>
-              ))}
-            </select>
-          </div>
+          {playMode === 'league' && (
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setNextMonthOptIn(true)}
+                className={`min-h-[38px] rounded-xl font-black cursor-pointer ${
+                  nextMonthOptIn
+                    ? 'bg-[#10B981] text-slate-950'
+                    : 'bg-[#090B0F] text-slate-400'
+                }`}
+              >
+                Direkt starten
+              </button>
+              <button
+                type="button"
+                onClick={() => setNextMonthOptIn(false)}
+                className={`min-h-[38px] rounded-xl font-black cursor-pointer ${
+                  !nextMonthOptIn
+                    ? 'bg-amber-400 text-slate-950'
+                    : 'bg-[#090B0F] text-slate-400'
+                }`}
+              >
+                Noch warten
+              </button>
+            </div>
+          )}
 
-          <div className="p-3 rounded-2xl bg-[#090B0F] space-y-2">
-            <label className="flex items-center gap-2.5 text-xs text-white cursor-pointer">
-              <input
-                type="checkbox"
-                checked={startOption === 'nextMonth'}
-                onChange={() => setStartOption('nextMonth')}
-                className="accent-[#10B981] w-4 h-4"
-              />
-              <span className="font-bold">Ich möchte direkt im Folgemonat starten</span>
-            </label>
-            <label className="flex items-center gap-2.5 text-xs text-slate-300 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={startOption === 'wait'}
-                onChange={() => setStartOption('wait')}
-                className="accent-amber-500 w-4 h-4"
-              />
-              <span className="font-bold">Ich möchte noch warten (Pause)</span>
-            </label>
-          </div>
+          {error && <p className="text-xs text-rose-400 font-bold">{error}</p>}
 
-          {error && <p className="text-xs font-bold text-rose-400">{error}</p>}
-
-          <div className="flex gap-2">
+          <div className="flex gap-2 pt-1">
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 min-h-[46px] rounded-2xl bg-white/5 text-xs font-bold text-slate-300 cursor-pointer"
+              className="flex-1 min-h-[42px] rounded-2xl bg-white/5 font-bold text-slate-300 cursor-pointer"
             >
               Abbrechen
             </button>
             <button
               type="submit"
-              className="flex-1 min-h-[46px] rounded-2xl bg-[#10B981] text-slate-950 text-xs font-black cursor-pointer"
+              className="flex-1 min-h-[42px] rounded-2xl bg-[#10B981] text-slate-950 font-black cursor-pointer"
             >
-              Erstellen
+              Profil erstellen
             </button>
           </div>
         </form>
@@ -3076,26 +3749,38 @@ function QuickCheckInModal({
 }) {
   const [minutes, setMinutes] = useState(120);
   const [mood, setMood] = useState(CHECKIN_MOODS[0]);
-  const isLive = isMemberCheckedIn(currentUser, nowTick);
+  const liveMembers = Object.values(membersMap).filter(m =>
+    isMemberCheckedIn(m, nowTick)
+  );
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
-      <div className="w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl bg-[#12151C] border-t sm:border border-white/15 p-5 space-y-4">
+    <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-end sm:items-center justify-center p-3">
+      <div className="w-full max-w-sm rounded-3xl bg-[#12151C] border border-white/10 p-5 space-y-4">
         <div className="flex items-center justify-between">
-          <h3 className="text-base font-black text-white">Hallen Check-in</h3>
+          <div>
+            <h3 className="text-base font-black text-white">
+              LIVE in der Halle ({liveMembers.length})
+            </h3>
+            <p className="text-xs text-slate-400">
+              Schneller Check-in vor Ort
+            </p>
+          </div>
           <button
             type="button"
-            onClick={onClose}
-            className="w-9 h-9 rounded-xl bg-white/5 text-slate-400 flex items-center justify-center cursor-pointer"
+            onClick={() => {
+              onClose();
+              onGoToHallTab();
+            }}
+            className="text-xs font-black text-[#34D399] cursor-pointer"
           >
-            <KlXIcon className="w-4 h-4" />
+            Alle ansehen →
           </button>
         </div>
 
         {!currentUser ? (
-          <div className="space-y-2.5">
+          <div className="space-y-2">
             <p className="text-xs text-slate-300">Wähle zuerst dein Profil:</p>
-            <div className="flex flex-wrap gap-1.5 max-h-48 overflow-y-auto">
+            <div className="flex flex-wrap gap-1.5">
               {Object.values(membersMap).map(m => (
                 <button
                   key={m.id}
@@ -3104,35 +3789,24 @@ function QuickCheckInModal({
                     onClose();
                     onRequestSelectUser(m.id);
                   }}
-                  className="min-h-[38px] px-3 rounded-xl bg-[#090B0F] text-xs font-bold text-white cursor-pointer"
+                  className="min-h-[36px] px-3 rounded-xl bg-[#090B0F] border border-white/10 text-xs font-bold text-white cursor-pointer"
                 >
                   {m.nickname}
                 </button>
               ))}
             </div>
           </div>
-        ) : isLive ? (
-          <div className="space-y-3">
-            <div className="p-3.5 rounded-2xl bg-[#090B0F] border border-[#10B981]/35">
-              <p className="text-xs font-black text-[#34D399]">
-                Eingecheckt · noch{' '}
-                {formatRemainingTime(currentUser.checkedInUntil, nowTick)}
-              </p>
-              <p className="text-xs text-slate-400 mt-1">
-                {currentUser.checkInMood || CHECKIN_MOODS[0]}
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={() => {
-                onCheckOut(currentUser.id);
-                onClose();
-              }}
-              className="w-full min-h-[46px] rounded-2xl bg-rose-500 text-white text-xs font-black cursor-pointer"
-            >
-              CHECK-OUT
-            </button>
-          </div>
+        ) : isMemberCheckedIn(currentUser, nowTick) ? (
+          <button
+            type="button"
+            onClick={() => {
+              onCheckOut(currentUser.id);
+              onClose();
+            }}
+            className="w-full min-h-[44px] rounded-2xl bg-rose-500 text-white text-xs font-black cursor-pointer"
+          >
+            Jetzt auschecken (CHECK-OUT)
+          </button>
         ) : (
           <div className="space-y-3">
             <div className="grid grid-cols-4 gap-1.5">
@@ -3141,7 +3815,7 @@ function QuickCheckInModal({
                   key={m}
                   type="button"
                   onClick={() => setMinutes(m)}
-                  className={`min-h-[42px] rounded-xl text-xs font-black cursor-pointer ${
+                  className={`min-h-[38px] rounded-xl text-xs font-black cursor-pointer ${
                     minutes === m
                       ? 'bg-[#10B981] text-slate-950'
                       : 'bg-[#090B0F] text-slate-300'
@@ -3151,11 +3825,10 @@ function QuickCheckInModal({
                 </button>
               ))}
             </div>
-
             <select
               value={mood}
               onChange={e => setMood(e.target.value)}
-              className="w-full min-h-[44px] px-3 rounded-xl bg-[#090B0F] border border-white/10 text-xs font-bold text-white"
+              className="w-full min-h-[42px] px-3 rounded-xl bg-[#090B0F] border border-white/10 text-xs font-bold text-white"
             >
               {CHECKIN_MOODS.map(item => (
                 <option key={item} value={item}>
@@ -3163,31 +3836,26 @@ function QuickCheckInModal({
                 </option>
               ))}
             </select>
-
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={() => {
-                  onClose();
-                  onGoToHallTab();
-                }}
-                className="flex-1 min-h-[46px] rounded-2xl bg-white/5 text-xs font-bold text-slate-300 cursor-pointer"
-              >
-                LIVE-Ansicht
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  onCheckIn(currentUser.id, minutes, mood);
-                  onClose();
-                }}
-                className="flex-1 min-h-[46px] rounded-2xl bg-[#10B981] text-slate-950 text-xs font-black cursor-pointer"
-              >
-                Einchecken
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={() => {
+                onCheckIn(currentUser.id, minutes, mood);
+                onClose();
+              }}
+              className="w-full min-h-[44px] rounded-2xl bg-[#10B981] text-slate-950 text-xs font-black cursor-pointer"
+            >
+              Jetzt einchecken
+            </button>
           </div>
         )}
+
+        <button
+          type="button"
+          onClick={onClose}
+          className="w-full min-h-[40px] rounded-2xl bg-white/5 text-xs font-bold text-slate-400 cursor-pointer"
+        >
+          Schliessen
+        </button>
       </div>
     </div>
   );
@@ -3203,135 +3871,119 @@ function ProfileSwitcherModal({
   onOpenAddMember,
   onClose,
 }) {
-  const [search, setSearch] = useState('');
-
-  const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    return Object.values(membersMap).filter(m => {
-      if (!q) return true;
-      return (
-        m.nickname.toLowerCase().includes(q) ||
-        `${m.firstName} ${m.lastName}`.toLowerCase().includes(q)
-      );
-    });
-  }, [membersMap, search]);
-
   return (
-    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
-      <div className="w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl bg-[#12151C] border-t sm:border border-white/15 p-5 space-y-3.5 max-h-[88vh] flex flex-col">
-        <div className="flex items-center justify-between">
-          <h3 className="text-base font-black text-white">Spielerprofil</h3>
+    <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-end sm:items-center justify-center p-3 overflow-y-auto">
+      <div className="w-full max-w-sm rounded-3xl bg-[#12151C] border border-white/10 p-5 space-y-4 my-auto">
+        <div className="flex items-center justify-between gap-2">
+          <div>
+            <h3 className="text-base font-black text-white">Spielerprofil</h3>
+            <p className="text-xs text-slate-400">
+              Profil wechseln oder neu registrieren
+            </p>
+          </div>
           <button
             type="button"
-            onClick={onClose}
-            className="w-9 h-9 rounded-xl bg-white/5 text-slate-400 flex items-center justify-center cursor-pointer"
+            onClick={() => {
+              onClose();
+              onOpenAddMember();
+            }}
+            className="min-h-[36px] px-3 rounded-xl bg-[#10B981] text-slate-950 text-xs font-black cursor-pointer"
           >
-            <KlXIcon className="w-4 h-4" />
+            + NEW PLAYER
           </button>
         </div>
 
-        <button
-          type="button"
-          onClick={() => {
-            onClose();
-            onOpenAddMember();
-          }}
-          className="w-full min-h-[44px] rounded-2xl bg-[#10B981] text-slate-950 text-xs font-black inline-flex items-center justify-center gap-1.5 shrink-0 cursor-pointer"
-        >
-          <KlUserPlusIcon className="w-4 h-4" />
-          <span>NEW PLAYER</span>
-        </button>
-
-        <input
-          type="text"
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          placeholder="Nickname suchen..."
-          className="w-full min-h-[42px] px-3.5 rounded-xl bg-[#090B0F] border border-white/10 text-xs text-white shrink-0"
-        />
-
-        <div className="overflow-y-auto space-y-1.5 flex-1">
-          {filtered.map(m => {
-            const g = activeSeason?.groups.find(gr => gr.playerIds.includes(m.id));
-            const selected = currentUser?.id === m.id;
-            return (
-              <button
-                key={m.id}
-                type="button"
-                onClick={() => {
-                  onClose();
-                  if (!selected) {
-                    onRequestSelectUser(m.id);
-                  }
-                }}
-                className={`w-full flex items-center justify-between p-3 rounded-2xl border text-left cursor-pointer ${
-                  selected
-                    ? 'bg-[#10B981]/15 border-[#10B981]/40'
-                    : 'bg-[#090B0F] border-transparent'
-                }`}
-              >
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <div
-                    className={`w-8 h-8 rounded-xl bg-gradient-to-br ${m.avatarBg} flex items-center justify-center text-white font-black text-xs shrink-0`}
-                  >
-                    {m.nickname.slice(0, 2).toUpperCase()}
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-xs font-black text-white truncate">
-                      {m.nickname}
-                    </p>
-                    <p className="text-[10px] text-slate-400 truncate">
-                      {g ? g.name : m.status}
-                    </p>
-                  </div>
-                </div>
-                {selected ? (
-                  <span className="text-[11px] font-black text-[#34D399]">Aktiv</span>
-                ) : (
-                  <span className="text-[11px] font-bold text-slate-400">PIN →</span>
-                )}
-              </button>
-            );
-          })}
-        </div>
-
         {currentUser && (
-          <div className="flex gap-2 pt-2 border-t border-white/10 shrink-0">
+          <div className="p-3 rounded-2xl bg-[#090B0F] border border-[#10B981]/30 flex items-center justify-between gap-2">
+            <div>
+              <p className="text-xs font-black text-white">
+                Aktiv: {currentUser.nickname}
+              </p>
+              <p className="text-[11px] text-slate-400">
+                Stammdaten & Hallentage bearbeiten
+              </p>
+            </div>
             <button
               type="button"
               onClick={() => {
                 onClose();
                 onOpenOwnDetails(currentUser.id);
               }}
-              className="flex-1 min-h-[42px] rounded-xl bg-white/10 text-xs font-bold text-white cursor-pointer"
+              className="min-h-[34px] px-3 rounded-xl bg-white/10 text-xs font-black text-white cursor-pointer"
             >
-              Stammdaten
+              Öffnen
             </button>
+          </div>
+        )}
+
+        <div className="space-y-1.5 max-h-60 overflow-y-auto">
+          {Object.values(membersMap).map(m => {
+            const group = activeSeason?.groups.find(g =>
+              g.playerIds.includes(m.id)
+            );
+            const active = currentUser?.id === m.id;
+            return (
+              <button
+                key={m.id}
+                type="button"
+                onClick={() => {
+                  onClose();
+                  if (!active) onRequestSelectUser(m.id);
+                }}
+                className={`w-full p-2.5 rounded-2xl flex items-center justify-between text-left cursor-pointer ${
+                  active
+                    ? 'bg-[#10B981]/15 border border-[#10B981]/40'
+                    : 'bg-[#090B0F] border border-white/[0.05]'
+                }`}
+              >
+                <span className="text-xs font-black text-white">{m.nickname}</span>
+                <span className="text-[11px] text-slate-400">
+                  {group ? group.name : 'CONNECT'} · PIN {m.pin}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="flex gap-2">
+          {currentUser && (
             <button
               type="button"
               onClick={() => {
                 onClearUser();
                 onClose();
               }}
-              className="px-3.5 min-h-[42px] rounded-xl bg-rose-500/15 text-xs font-bold text-rose-300 cursor-pointer"
+              className="flex-1 min-h-[40px] rounded-2xl bg-rose-500/15 text-rose-300 text-xs font-bold cursor-pointer"
             >
               Abmelden
             </button>
-          </div>
-        )}
+          )}
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex-1 min-h-[40px] rounded-2xl bg-white/10 text-xs font-bold text-white cursor-pointer"
+          >
+            Schliessen
+          </button>
+        </div>
       </div>
     </div>
   );
 }
 
 // ============================================================================
-// HAUPTKOMPONENTE APP (MOBILE-FIRST BOTTOM NAV + CLEAN HEADER)
+// HAUPTKOMPONENTE APP
 // ============================================================================
 export default function App() {
   const [membersMap, setMembersMap] = useState(INITIAL_MEMBERS);
   const [seasons, setSeasons] = useState(INITIAL_SEASONS);
+  const [meetupPosts, setMeetupPosts] = useState(INITIAL_MEETUP_POSTS);
+  const [hallAnnouncements, setHallAnnouncements] = useState(
+    INITIAL_HALL_ANNOUNCEMENTS
+  );
   const [selectedSeasonId, setSelectedSeasonId] = useState('2026-11');
   const [currentUserId, setCurrentUserId] = useState('m1');
+  const [appWorld, setAppWorld] = useState('league');
   const [activeTab, setActiveTab] = useState('home');
   const [nowTick, setNowTick] = useState(() => Date.now());
   const [allowDirectEntry, setAllowDirectEntry] = useState(true);
@@ -3355,6 +4007,25 @@ export default function App() {
     () => seasons.find(s => s.id === selectedSeasonId) || seasons[0] || null,
     [seasons, selectedSeasonId]
   );
+
+  const isCurrentUserConnectOnly = useMemo(
+    () => isConnectOnlyMember(currentUser, activeSeason),
+    [currentUser, activeSeason]
+  );
+
+  useEffect(() => {
+    if (isCurrentUserConnectOnly && appWorld === 'league') {
+      setAppWorld('connect');
+      if (!['board', 'announcements', 'schedule', 'hall', 'players', 'admin'].includes(activeTab)) {
+        setActiveTab('board');
+      }
+    }
+  }, [isCurrentUserConnectOnly, appWorld, activeTab]);
+
+  const nextMonthInfo = useMemo(() => {
+    const latest = seasons[seasons.length - 1];
+    return getNextMonthInfo(latest?.id || activeSeason?.id);
+  }, [seasons, activeSeason]);
 
   const liveCount = useMemo(
     () =>
@@ -3383,6 +4054,7 @@ export default function App() {
         },
       };
     });
+    setHallAnnouncements(prev => prev.filter(a => a.memberId !== memberId));
   };
 
   const handleCheckOut = memberId => {
@@ -3401,18 +4073,11 @@ export default function App() {
   };
 
   const handleToggleNextMonth = () => {
-    if (!currentUser) return;
-    setMembersMap(prev => ({
-      ...prev,
-      [currentUser.id]: {
-        ...prev[currentUser.id],
-        nextMonthOptIn: !prev[currentUser.id].nextMonthOptIn,
-      },
-    }));
+    if (!currentUserId) return;
+    handleToggleMemberNextMonth(currentUserId);
   };
 
   const handleSaveMatchResult = (matchId, setsP1, setsP2) => {
-    const todayStr = new Date().toISOString().slice(0, 10);
     setSeasons(prev =>
       prev.map(season => ({
         ...season,
@@ -3424,7 +4089,10 @@ export default function App() {
                   ...m,
                   setsP1,
                   setsP2,
-                  playedAt: setsP1 === null ? null : todayStr,
+                  playedAt:
+                    setsP1 === null || setsP2 === null
+                      ? null
+                      : new Date().toISOString().slice(0, 10),
                 }
               : m
           ),
@@ -3439,22 +4107,33 @@ export default function App() {
       if (!m) return prev;
       return {
         ...prev,
-        [memberId]: { ...m, ...updates },
+        [memberId]: {
+          ...m,
+          ...updates,
+        },
       };
     });
+    if (memberId === currentUserId && updates.playMode === 'connect') {
+      setAppWorld('connect');
+      setActiveTab('board');
+    }
   };
 
   const handleAddMember = data => {
-    const id = `m_${Date.now()}`;
+    const newId = `m_${Date.now()}`;
+    const isConnectOnly = data.playMode === 'connect';
     const gradients = [
       'from-emerald-500 to-teal-700',
       'from-sky-500 to-indigo-700',
       'from-amber-500 to-orange-700',
       'from-purple-500 to-fuchsia-700',
+      'from-rose-500 to-pink-700',
     ];
     const avatarBg = gradients[Object.keys(membersMap).length % gradients.length];
+
     const newMember = {
-      id,
+      id: newId,
+      playMode: isConnectOnly ? 'connect' : 'league',
       nickname: data.nickname,
       firstName: data.firstName,
       lastName: data.lastName,
@@ -3462,9 +4141,9 @@ export default function App() {
       whatsapp: data.whatsapp,
       language: data.language,
       style: data.style,
-      bio: '',
-      status: 'Offen',
-      nextMonthOptIn: data.nextMonthOptIn,
+      bio: isConnectOnly ? 'Nur CONNECT · Pinnwand & Training' : 'Neues Clubmitglied',
+      status: isConnectOnly ? 'Pausiert' : 'Offen',
+      nextMonthOptIn: isConnectOnly ? false : Boolean(data.nextMonthOptIn),
       usualDays: [],
       usualSlots: [],
       annualPoints: 0,
@@ -3473,8 +4152,13 @@ export default function App() {
       checkedInUntil: null,
       checkInMood: '',
     };
-    setMembersMap(prev => ({ ...prev, [id]: newMember }));
-    setCurrentUserId(id);
+
+    setMembersMap(prev => ({ ...prev, [newId]: newMember }));
+    setCurrentUserId(newId);
+    if (isConnectOnly) {
+      setAppWorld('connect');
+      setActiveTab('board');
+    }
   };
 
   const handleApproveMember = memberId => {
@@ -3486,7 +4170,6 @@ export default function App() {
         [memberId]: {
           ...m,
           status: 'Dabei',
-          nextMonthOptIn: true,
         },
       };
     });
@@ -3494,30 +4177,52 @@ export default function App() {
 
   const handleDirectEntryMember = memberId => {
     handleApproveMember(memberId);
-    setSeasons(prev =>
-      prev.map(season => {
-        if (season.id !== activeSeason?.id || season.groups.length === 0) return season;
-        const lastIdx = season.groups.length - 1;
+    if (activeSeason && activeSeason.groups.length > 0) {
+      const lowestGroup = activeSeason.groups[activeSeason.groups.length - 1];
+      handleAddPlayerToLeague(activeSeason.id, lowestGroup.level, memberId);
+    }
+  };
+
+  const handleSaveHallAnnouncement = (memberId, { dayLabel, timeText, note }) => {
+    setHallAnnouncements(prev => {
+      const existing = prev.find(a => a.memberId === memberId);
+      if (existing) {
+        return prev.map(a =>
+          a.memberId === memberId
+            ? { ...a, dayLabel, timeText, note }
+            : a
+        );
+      }
+      return [
+        {
+          id: `ann_${Date.now()}`,
+          memberId,
+          dayLabel,
+          timeText,
+          note,
+          meTooIds: [],
+          createdAt: Date.now(),
+        },
+        ...prev,
+      ];
+    });
+  };
+
+  const handleDeleteHallAnnouncement = memberId => {
+    setHallAnnouncements(prev => prev.filter(a => a.memberId !== memberId));
+  };
+
+  const handleToggleAnnouncementMeToo = (annId, memberId) => {
+    setHallAnnouncements(prev =>
+      prev.map(ann => {
+        if (ann.id !== annId) return ann;
+        const list = ann.meTooIds || [];
+        const has = list.includes(memberId);
         return {
-          ...season,
-          groups: season.groups.map((g, idx) => {
-            if (idx !== lastIdx || g.playerIds.includes(memberId)) return g;
-            const newMatches = g.playerIds.map(existingId => ({
-              id: `${season.id}_L${g.level}_${existingId}_${memberId}`,
-              seasonId: season.id,
-              leagueLevel: g.level,
-              player1Id: existingId,
-              player2Id: memberId,
-              setsP1: null,
-              setsP2: null,
-              playedAt: null,
-            }));
-            return {
-              ...g,
-              playerIds: [...g.playerIds, memberId],
-              matches: [...g.matches, ...newMatches],
-            };
-          }),
+          ...ann,
+          meTooIds: has
+            ? list.filter(id => id !== memberId)
+            : [...list, memberId],
         };
       })
     );
@@ -3707,59 +4412,168 @@ export default function App() {
   const handleResetDemoData = () => {
     setMembersMap(INITIAL_MEMBERS);
     setSeasons(INITIAL_SEASONS);
+    setMeetupPosts(INITIAL_MEETUP_POSTS);
+    setHallAnnouncements(INITIAL_HALL_ANNOUNCEMENTS);
     setSelectedSeasonId('2026-11');
     setCurrentUserId('m1');
     setMonthEndMode('auto');
   };
 
-  const primaryTabs = [
+  const handleCreateMeetupPost = ({ authorId, whenText, mode, note }) => {
+    const newPost = {
+      id: `post_${Date.now()}`,
+      authorId,
+      whenText,
+      mode,
+      note,
+      joinedIds: [],
+      createdAt: Date.now(),
+    };
+    setMeetupPosts(prev => [newPost, ...prev]);
+  };
+
+  const handleToggleJoinMeetupPost = (postId, memberId) => {
+    setMeetupPosts(prev =>
+      prev.map(post => {
+        if (post.id !== postId) return post;
+        const already = post.joinedIds.includes(memberId);
+        if (already) {
+          return {
+            ...post,
+            joinedIds: post.joinedIds.filter(id => id !== memberId),
+          };
+        }
+        const isSingles = !post.mode.toLowerCase().includes('doppel');
+        const maxPlayers = isSingles ? 1 : 3;
+        if (post.joinedIds.length >= maxPlayers) return post;
+        return {
+          ...post,
+          joinedIds: [...post.joinedIds, memberId],
+        };
+      })
+    );
+  };
+
+  const handleDeleteMeetupPost = postId => {
+    setMeetupPosts(prev => prev.filter(post => post.id !== postId));
+  };
+
+  const handleToggleUserDay = (memberId, day) => {
+    setMembersMap(prev => {
+      const m = prev[memberId];
+      if (!m) return prev;
+      const currentDays = m.usualDays || [];
+      const nextDays = currentDays.includes(day)
+        ? currentDays.filter(d => d !== day)
+        : [...currentDays, day];
+      return {
+        ...prev,
+        [memberId]: {
+          ...m,
+          usualDays: nextDays,
+        },
+      };
+    });
+  };
+
+  const leagueTabs = [
     { id: 'home', label: 'Home', Icon: KlHomeIcon },
     { id: 'leagues', label: 'Liga', Icon: KlTrophyIcon },
-    { id: 'hall', label: 'LIVE', Icon: KlMapPinIcon, badge: liveCount },
-    { id: 'nextmonth', label: 'Folgemonat', Icon: KlCalendarIcon },
-  ];
-
-  const secondaryTabs = [
+    { id: 'nextmonth', label: nextMonthInfo.monthName, Icon: KlCalendarIcon },
     { id: 'recent', label: 'Spiele', Icon: KlHistoryIcon },
     { id: 'annual', label: 'Rangliste', Icon: KlAwardIcon },
     { id: 'players', label: 'Spieler', Icon: KlUsersIcon },
   ];
 
+  const connectTabs = [
+    { id: 'board', label: 'Pinnwand', Icon: KlHandshakeIcon, badge: meetupPosts.length },
+    {
+      id: 'announcements',
+      label: 'Vorankündigungen',
+      Icon: KlHistoryIcon,
+      badge: hallAnnouncements.length,
+    },
+    { id: 'schedule', label: 'Hallentage', Icon: KlCalendarIcon },
+    {
+      id: 'hall',
+      label: 'LIVE',
+      Icon: KlMapPinIcon,
+      badge: liveCount,
+    },
+    { id: 'players', label: 'Club-Spieler', Icon: KlUsersIcon },
+  ];
+
+  const activeWorldTabs = appWorld === 'connect' ? connectTabs : leagueTabs;
+
+  const mobileBottomTabs =
+    appWorld === 'connect'
+      ? [
+          { id: 'board', label: 'Pinnwand', Icon: KlHandshakeIcon, badge: meetupPosts.length },
+          {
+            id: 'announcements',
+            label: 'Ankündigen',
+            Icon: KlHistoryIcon,
+            badge: hallAnnouncements.length,
+          },
+          { id: 'schedule', label: 'Hallentage', Icon: KlCalendarIcon },
+          { id: 'hall', label: 'LIVE', Icon: KlMapPinIcon, badge: liveCount },
+        ]
+      : [
+          { id: 'home', label: 'Home', Icon: KlHomeIcon },
+          { id: 'leagues', label: 'Liga', Icon: KlTrophyIcon },
+          { id: 'nextmonth', label: nextMonthInfo.monthName, Icon: KlCalendarIcon },
+          { id: 'annual', label: 'Rangliste', Icon: KlAwardIcon },
+        ];
+
+  const handleSwitchWorld = targetWorld => {
+    if (targetWorld === 'league' && isCurrentUserConnectOnly) {
+      return;
+    }
+    setAppWorld(targetWorld);
+    if (targetWorld === 'connect') {
+      if (!['board', 'announcements', 'schedule', 'hall', 'players'].includes(activeTab)) {
+        setActiveTab('board');
+      }
+    } else {
+      if (!['home', 'leagues', 'nextmonth', 'recent', 'annual', 'players'].includes(activeTab)) {
+        setActiveTab('home');
+      }
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-[#090B0F] text-slate-100 flex flex-col pb-20 sm:pb-8">
-      {/* KOMPAKTER MOBILE-FIRST HEADER */}
-      <header className="sticky top-0 z-30 bg-[#090B0F]/90 backdrop-blur-md border-b border-white/[0.07]">
-        <div className="max-w-3xl mx-auto px-4 py-2.5 flex items-center justify-between gap-2">
+    <div className="min-h-screen bg-[#090B0F] text-slate-100 flex flex-col pb-24 sm:pb-8">
+      {/* GROSSZÜGIGER MOBILE-FIRST HEADER MIT LEAGUE / CONNECT SWITCH */}
+      <header className="sticky top-0 z-30 bg-[#090B0F]/95 backdrop-blur-xl border-b border-white/[0.08]">
+        <div className="max-w-3xl mx-auto px-4 pt-3.5 pb-2.5 flex items-center justify-between gap-2.5">
           <button
             type="button"
-            onClick={() => setActiveTab('home')}
-            className="flex items-center gap-2 text-left cursor-pointer"
+            onClick={() =>
+              handleSwitchWorld(isCurrentUserConnectOnly ? 'connect' : 'league')
+            }
+            aria-label="Zur Startseite"
+            className="w-11 h-11 rounded-2xl bg-[#10B981] flex items-center justify-center text-slate-950 font-black text-sm shadow-lg shadow-[#10B981]/20 shrink-0 active:scale-[0.98] cursor-pointer"
           >
-            <div className="w-8 h-8 rounded-xl bg-[#10B981] flex items-center justify-center text-slate-950 font-black text-xs">
-              KL
-            </div>
-            <span className="text-sm font-black tracking-tight text-white">
-              KONGLeague
-            </span>
+            KL
           </button>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2.5 min-w-0">
             {isCurrentUserLive && currentUser ? (
               <button
                 type="button"
                 onClick={() => handleCheckOut(currentUser.id)}
-                className="min-h-[36px] px-3 rounded-xl bg-rose-500 text-white text-xs font-black inline-flex items-center gap-1.5 cursor-pointer"
+                className="min-h-[44px] px-3.5 rounded-2xl bg-rose-500 active:scale-[0.98] text-white text-xs font-black inline-flex items-center gap-2 shadow-lg shadow-rose-500/20 shrink-0 cursor-pointer"
               >
-                <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+                <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
                 <span>CHECK-OUT</span>
               </button>
             ) : (
               <button
                 type="button"
                 onClick={() => setShowQuickCheckInModal(true)}
-                className="min-h-[36px] px-3 rounded-xl bg-[#12151C] border border-[#10B981]/35 text-[#34D399] text-xs font-black inline-flex items-center gap-1.5 cursor-pointer"
+                className="min-h-[44px] px-3.5 rounded-2xl bg-[#12151C] border border-[#10B981]/40 active:scale-[0.98] text-[#34D399] text-xs font-black inline-flex items-center gap-2 shrink-0 cursor-pointer"
               >
-                <span className="w-1.5 h-1.5 rounded-full bg-[#10B981]" />
+                <span className="w-2 h-2 rounded-full bg-[#10B981]" />
                 <span>LIVE ({liveCount})</span>
               </button>
             )}
@@ -3767,95 +4581,121 @@ export default function App() {
             <button
               type="button"
               onClick={() => setShowProfileSwitchModal(true)}
-              className="min-h-[36px] px-2.5 rounded-xl bg-[#12151C] border border-white/10 text-xs font-black text-white inline-flex items-center gap-1.5 cursor-pointer"
+              className="min-h-[44px] px-3.5 rounded-2xl bg-[#12151C] border border-white/10 active:scale-[0.98] text-xs font-black text-white inline-flex items-center gap-2 min-w-0 cursor-pointer"
             >
               {currentUser ? (
                 <>
                   <span
-                    className={`w-5 h-5 rounded-md bg-gradient-to-br ${currentUser.avatarBg} flex items-center justify-center text-[9px] font-black text-white shrink-0`}
+                    className={`w-6 h-6 rounded-lg bg-gradient-to-br ${currentUser.avatarBg} flex items-center justify-center text-[10px] font-black text-white shrink-0`}
                   >
                     {currentUser.nickname.slice(0, 2).toUpperCase()}
                   </span>
-                  <span className="max-w-[85px] sm:max-w-[130px] truncate">
+                  <span className="max-w-[120px] sm:max-w-[160px] truncate">
                     {currentUser.nickname}
                   </span>
                 </>
               ) : (
                 <span className="text-[#34D399]">Profil</span>
               )}
-              <KlChevronDownIcon className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+              <KlChevronDownIcon className="w-4 h-4 text-slate-400 shrink-0" />
             </button>
           </div>
         </div>
 
-        {/* SUB-NAVIGATION FÜR WEITERE ANSICHTEN (MOBILE SCROLLBAR, DESKTOP ALLES IN EINER LEISTE) */}
-        <div className="max-w-3xl mx-auto px-4 pb-2 flex items-center gap-1.5 overflow-x-auto">
-          <div className="hidden sm:flex items-center gap-1.5">
-            {primaryTabs.map(tab => {
-              const Icon = tab.Icon;
-              const active = activeTab === tab.id;
-              return (
-                <button
-                  key={tab.id}
-                  type="button"
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`min-h-[34px] px-3 rounded-xl text-xs font-black inline-flex items-center gap-1.5 cursor-pointer ${
-                    active
-                      ? 'bg-[#10B981] text-slate-950'
-                      : 'bg-[#12151C] text-slate-300 hover:text-white'
+        {/* HAUPT-UMSCHALTER: LEAGUE vs CONNECT */}
+        <div className="max-w-3xl mx-auto px-4 pb-2.5">
+          <div className="grid grid-cols-2 gap-2 p-1 rounded-2xl bg-[#12151C] border border-white/[0.08]">
+            <button
+              type="button"
+              disabled={isCurrentUserConnectOnly}
+              onClick={() => handleSwitchWorld('league')}
+              title={
+                isCurrentUserConnectOnly
+                  ? 'In deinen Stammdaten ist «Nur CONNECT» gewählt'
+                  : 'Zur Monatsliga wechseln'
+              }
+              className={`min-h-[42px] rounded-xl text-xs font-black tracking-wide inline-flex items-center justify-center gap-2 transition ${
+                isCurrentUserConnectOnly
+                  ? 'bg-white/[0.02] text-slate-600 opacity-55 cursor-not-allowed'
+                  : appWorld === 'league'
+                  ? 'bg-[#10B981] text-slate-950 shadow-md shadow-[#10B981]/20 cursor-pointer'
+                  : 'text-slate-400 hover:text-white cursor-pointer'
+              }`}
+            >
+              {isCurrentUserConnectOnly ? (
+                <KlLockIcon className="w-3.5 h-3.5" />
+              ) : (
+                <KlTrophyIcon className="w-4 h-4" />
+              )}
+              <span>LEAGUE</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleSwitchWorld('connect')}
+              className={`min-h-[42px] rounded-xl text-xs font-black tracking-wide inline-flex items-center justify-center gap-2 transition cursor-pointer ${
+                appWorld === 'connect'
+                  ? 'bg-sky-400 text-slate-950 shadow-md shadow-sky-400/20'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <KlHandshakeIcon className="w-4 h-4" />
+              <span>CONNECT</span>
+              {(meetupPosts.length > 0 || liveCount > 0) && (
+                <span
+                  className={`px-1.5 py-0.5 rounded-full text-[10px] leading-none ${
+                    appWorld === 'connect'
+                      ? 'bg-slate-950 text-sky-300'
+                      : 'bg-sky-400/20 text-sky-300'
                   }`}
                 >
-                  <Icon className="w-3.5 h-3.5" />
-                  <span>{tab.label}</span>
-                  {typeof tab.badge === 'number' && tab.badge > 0 && (
-                    <span
-                      className={`px-1.5 rounded-full text-[10px] ${
-                        active
-                          ? 'bg-slate-950 text-[#34D399]'
-                          : 'bg-[#10B981]/20 text-[#34D399]'
-                      }`}
-                    >
-                      {tab.badge}
-                    </span>
-                  )}
-                </button>
-              );
-            })}
+                  {meetupPosts.length}
+                </span>
+              )}
+            </button>
           </div>
-
-          {secondaryTabs.map(tab => {
-            const Icon = tab.Icon;
-            const active = activeTab === tab.id;
-            return (
-              <button
-                key={tab.id}
-                type="button"
-                onClick={() => setActiveTab(tab.id)}
-                className={`min-h-[32px] px-2.5 rounded-xl text-xs font-bold inline-flex items-center gap-1.5 shrink-0 cursor-pointer ${
-                  active
-                    ? 'bg-white text-slate-950 font-black'
-                    : 'bg-[#12151C] text-slate-400 hover:text-white'
-                }`}
-              >
-                <Icon className="w-3.5 h-3.5" />
-                <span>{tab.label}</span>
-              </button>
-            );
-          })}
-
-          <button
-            type="button"
-            onClick={() => setActiveTab('admin')}
-            className={`min-h-[32px] px-2.5 rounded-xl text-xs font-bold inline-flex items-center gap-1 shrink-0 ml-auto cursor-pointer ${
-              activeTab === 'admin'
-                ? 'bg-amber-400 text-slate-950 font-black'
-                : 'bg-[#12151C] text-slate-500 hover:text-slate-300'
-            }`}
-          >
-            <KlLockIcon className="w-3 h-3" />
-            <span>Admin</span>
-          </button>
         </div>
+
+        {/* SUB-NAVIGATION JE NACH WELT (LEAGUE ODER CONNECT) */}
+        {activeTab !== 'admin' && (
+          <nav aria-label="Bereichsnavigation" className="max-w-3xl mx-auto px-4 pb-3.5 pt-0.5">
+            <div
+              className={`grid ${
+                appWorld === 'connect' ? 'grid-cols-2' : 'grid-cols-3'
+              } sm:flex sm:flex-wrap items-center gap-2`}
+            >
+              {activeWorldTabs.map(tab => {
+                const Icon = tab.Icon;
+                const active = activeTab === tab.id;
+                const activeClasses =
+                  appWorld === 'connect'
+                    ? 'bg-sky-400/20 border-sky-400/50 text-sky-300'
+                    : 'bg-[#10B981]/20 border-[#10B981]/50 text-[#34D399]';
+
+                return (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`min-h-[40px] px-3 sm:px-3.5 rounded-2xl border text-xs font-black inline-flex items-center justify-center gap-2 transition active:scale-[0.98] cursor-pointer ${
+                      active
+                        ? activeClasses
+                        : 'bg-[#12151C] border-white/[0.07] text-slate-300 hover:text-white'
+                    }`}
+                  >
+                    <Icon className="w-4 h-4 shrink-0" />
+                    <span className="truncate">{tab.label}</span>
+                    {typeof tab.badge === 'number' && tab.badge > 0 && (
+                      <span className="px-1.5 py-0.5 rounded-full bg-white/10 text-[10px] leading-none shrink-0">
+                        {tab.badge}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </nav>
+        )}
       </header>
 
       {/* HAUPTINHALT */}
@@ -3864,6 +4704,7 @@ export default function App() {
           <HomeTab
             membersMap={membersMap}
             activeSeason={activeSeason}
+            nextMonthInfo={nextMonthInfo}
             currentUser={currentUser}
             nowTick={nowTick}
             liveCount={liveCount}
@@ -3877,7 +4718,12 @@ export default function App() {
               setProfileModalState({ memberId: id, startEditing })
             }
             onOpenAddMember={() => setShowAddMemberModal(true)}
-            onNavigateTab={tab => setActiveTab(tab)}
+            onNavigateTab={tab => {
+              if (tab === 'hall' || tab === 'board') {
+                setAppWorld('connect');
+              }
+              setActiveTab(tab);
+            }}
           />
         )}
 
@@ -3899,6 +4745,7 @@ export default function App() {
           <NextMonthTab
             membersMap={membersMap}
             activeSeason={activeSeason}
+            nextMonthInfo={nextMonthInfo}
             currentUser={currentUser}
             onToggleNextMonth={handleToggleNextMonth}
             onOpenProfile={id =>
@@ -3956,6 +4803,51 @@ export default function App() {
           />
         )}
 
+        {activeTab === 'announcements' && (
+          <AnnouncementsTab
+            membersMap={membersMap}
+            activeSeason={activeSeason}
+            currentUser={currentUser}
+            announcements={hallAnnouncements}
+            onRequestSelectUser={id => setPendingLoginMemberId(id)}
+            onSaveAnnouncement={handleSaveHallAnnouncement}
+            onDeleteAnnouncement={handleDeleteHallAnnouncement}
+            onToggleAnnouncementMeToo={handleToggleAnnouncementMeToo}
+            onOpenProfile={id =>
+              setProfileModalState({ memberId: id, startEditing: false })
+            }
+          />
+        )}
+
+        {activeTab === 'schedule' && (
+          <HallScheduleTab
+            membersMap={membersMap}
+            activeSeason={activeSeason}
+            currentUser={currentUser}
+            nowTick={nowTick}
+            onToggleUserDay={handleToggleUserDay}
+            onOpenProfile={(id, startEditing = false) =>
+              setProfileModalState({ memberId: id, startEditing })
+            }
+          />
+        )}
+
+        {activeTab === 'board' && (
+          <MeetupBoardTab
+            posts={meetupPosts}
+            membersMap={membersMap}
+            activeSeason={activeSeason}
+            currentUser={currentUser}
+            onRequestSelectUser={id => setPendingLoginMemberId(id)}
+            onCreatePost={handleCreateMeetupPost}
+            onToggleJoinPost={handleToggleJoinMeetupPost}
+            onDeletePost={handleDeleteMeetupPost}
+            onOpenProfile={id =>
+              setProfileModalState({ memberId: id, startEditing: false })
+            }
+          />
+        )}
+
         {activeTab === 'admin' && (
           <AdminTab
             membersMap={membersMap}
@@ -3981,27 +4873,60 @@ export default function App() {
         )}
       </main>
 
+      {/* FOOTER MIT ADMIN-ZUGANG */}
+      <footer className="max-w-3xl w-full mx-auto px-4 pt-2 pb-6 border-t border-white/[0.07] flex items-center justify-between gap-3 text-xs text-slate-500">
+        <span>KONGLeague · by pingkong</span>
+        <button
+          type="button"
+          onClick={() => {
+            setActiveTab('admin');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }}
+          className={`min-h-[38px] px-3.5 rounded-xl text-xs font-black inline-flex items-center gap-1.5 transition cursor-pointer ${
+            activeTab === 'admin'
+              ? 'bg-amber-400 text-slate-950'
+              : 'bg-[#12151C] border border-white/[0.08] text-slate-300 hover:text-white'
+          }`}
+        >
+          <KlLockIcon className="w-3.5 h-3.5" />
+          <span>Admin</span>
+        </button>
+      </footer>
+
       {/* MOBILE-FIRST FIXED BOTTOM NAVIGATION */}
       <nav className="sm:hidden fixed bottom-0 inset-x-0 z-30 bg-[#090B0F]/95 backdrop-blur-md border-t border-white/[0.08] px-2 py-1.5">
-        <div className="grid grid-cols-4 gap-1">
-          {primaryTabs.map(tab => {
+        <div
+          className={`grid gap-1 ${
+            mobileBottomTabs.length === 3 ? 'grid-cols-3' : 'grid-cols-4'
+          }`}
+        >
+          {mobileBottomTabs.map(tab => {
             const Icon = tab.Icon;
             const active = activeTab === tab.id;
+            const activeStyle =
+              appWorld === 'connect'
+                ? 'bg-sky-400/15 text-sky-300'
+                : 'bg-[#10B981]/15 text-[#34D399]';
+            const badgeStyle =
+              appWorld === 'connect'
+                ? 'bg-sky-400 text-slate-950'
+                : 'bg-[#10B981] text-slate-950';
+
             return (
               <button
                 key={tab.id}
                 type="button"
                 onClick={() => setActiveTab(tab.id)}
                 className={`min-h-[48px] rounded-2xl flex flex-col items-center justify-center gap-0.5 relative cursor-pointer ${
-                  active
-                    ? 'bg-[#10B981]/15 text-[#34D399]'
-                    : 'text-slate-400'
+                  active ? activeStyle : 'text-slate-400'
                 }`}
               >
                 <Icon className="w-5 h-5" />
                 <span className="text-[10px] font-black">{tab.label}</span>
                 {typeof tab.badge === 'number' && tab.badge > 0 && (
-                  <span className="absolute top-1.5 right-4 px-1.5 rounded-full bg-[#10B981] text-slate-950 text-[9px] font-black">
+                  <span
+                    className={`absolute top-1.5 right-4 px-1.5 rounded-full text-[9px] font-black ${badgeStyle}`}
+                  >
                     {tab.badge}
                   </span>
                 )}
@@ -4055,7 +4980,10 @@ export default function App() {
           onRequestSelectUser={id => setPendingLoginMemberId(id)}
           onCheckIn={handleCheckIn}
           onCheckOut={handleCheckOut}
-          onGoToHallTab={() => setActiveTab('hall')}
+          onGoToHallTab={() => {
+            setAppWorld('connect');
+            setActiveTab('hall');
+          }}
           onClose={() => setShowQuickCheckInModal(false)}
         />
       )}
