@@ -2739,6 +2739,161 @@ export default function App() {
   const pullStartYRef = React.useRef(null);
   const lastActiveTimestampRef = React.useRef(Date.now());
 
+  // Seitentitel & Home-Bildschirm App-Icon ("PINGKONG") automatisch generieren und registrieren
+  React.useEffect(() => {
+    if (typeof document === 'undefined') return;
+
+    document.title = 'PINGKONG';
+
+    const upsertMeta = (name, content) => {
+      let tag = document.querySelector(`meta[name="${name}"]`);
+      if (!tag) {
+        tag = document.createElement('meta');
+        tag.setAttribute('name', name);
+        document.head.appendChild(tag);
+      }
+      tag.setAttribute('content', content);
+    };
+
+    const upsertLink = (rel, href, extraAttrs = {}) => {
+      let link = document.querySelector(`link[rel="${rel}"]`);
+      if (!link) {
+        link = document.createElement('link');
+        link.setAttribute('rel', rel);
+        document.head.appendChild(link);
+      }
+      link.setAttribute('href', href);
+      Object.entries(extraAttrs).forEach(([k, v]) => link.setAttribute(k, v));
+    };
+
+    upsertMeta('apple-mobile-web-app-title', 'PINGKONG');
+    upsertMeta('application-name', 'PINGKONG');
+    upsertMeta('apple-mobile-web-app-capable', 'yes');
+    upsertMeta('mobile-web-app-capable', 'yes');
+    upsertMeta('apple-mobile-web-app-status-bar-style', 'black-translucent');
+    upsertMeta('theme-color', '#060708');
+
+    // Hochauflösendes 512x512 PNG-Icon mit dem PINGKONG-Signet rendern (für iOS & Android Home-Screen)
+    let manifestBlobUrl = null;
+    try {
+      const size = 512;
+      const canvas = document.createElement('canvas');
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext('2d');
+
+      if (ctx) {
+        // Dunkler Hintergrund
+        ctx.fillStyle = '#060708';
+        ctx.fillRect(0, 0, size, size);
+
+        // Dezenter Rahmen-Glow
+        ctx.strokeStyle = 'rgba(222, 117, 75, 0.25)';
+        ctx.lineWidth = 8;
+        ctx.strokeRect(16, 16, size - 32, size - 32);
+
+        // PINGKONG-Signet zentriert skalieren
+        const scale = 3.5;
+        const offsetX = (size - 100 * scale) / 2;
+        const offsetY = (size - 102 * scale) / 2;
+
+        ctx.save();
+        ctx.translate(offsetX, offsetY);
+        ctx.scale(scale, scale);
+        ctx.fillStyle = '#DE754B';
+
+        const polygons = [
+          [
+            [24.2, 3.4],
+            [39.8, 14.8],
+            [24.4, 44.0],
+            [14.8, 37.2],
+            [17.6, 23.6],
+            [14.6, 20.0],
+          ],
+          [
+            [42.4, 15.6],
+            [56.0, 21.0],
+            [32.8, 96.6],
+            [4.0, 96.6],
+          ],
+          [
+            [40.6, 72.4],
+            [49.4, 74.8],
+            [47.0, 96.6],
+            [35.6, 96.6],
+          ],
+          [
+            [56.6, 31.2],
+            [66.8, 54.6],
+            [78.6, 56.6],
+            [64.0, 74.8],
+            [42.0, 69.6],
+          ],
+          [
+            [80.8, 58.8],
+            [92.6, 68.2],
+            [78.4, 84.4],
+            [81.4, 96.6],
+            [71.8, 96.6],
+            [66.2, 78.0],
+          ],
+          [
+            [93.2, 71.4],
+            [96.4, 96.6],
+            [88.2, 96.6],
+            [81.6, 84.6],
+          ],
+        ];
+
+        polygons.forEach((pts) => {
+          ctx.beginPath();
+          pts.forEach(([x, y], idx) => {
+            if (idx === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+          });
+          ctx.closePath();
+          ctx.fill();
+        });
+        ctx.restore();
+
+        const pngDataUrl = canvas.toDataURL('image/png');
+        upsertLink('apple-touch-icon', pngDataUrl, { sizes: '512x512' });
+        upsertLink('icon', pngDataUrl, { type: 'image/png', sizes: '512x512' });
+
+        const manifest = {
+          name: 'PINGKONG',
+          short_name: 'PINGKONG',
+          start_url: '.',
+          display: 'standalone',
+          background_color: '#060708',
+          theme_color: '#060708',
+          icons: [
+            {
+              src: pngDataUrl,
+              sizes: '512x512',
+              type: 'image/png',
+              purpose: 'any maskable',
+            },
+          ],
+        };
+        const blob = new Blob([JSON.stringify(manifest)], {
+          type: 'application/manifest+json',
+        });
+        manifestBlobUrl = URL.createObjectURL(blob);
+        upsertLink('manifest', manifestBlobUrl);
+      }
+    } catch {
+      // Fallback falls Canvas blockiert ist
+    }
+
+    return () => {
+      if (manifestBlobUrl) {
+        URL.revokeObjectURL(manifestBlobUrl);
+      }
+    };
+  }, []);
+
   const showToast = (msg) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(''), 2600);
