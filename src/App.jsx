@@ -1077,8 +1077,8 @@ function AuthGateScreen({
   };
 
   return (
-    <div className="min-h-screen bg-[#060708] px-4 py-6 text-[#F3F4F6]">
-      <div className="mx-auto max-w-md space-y-4">
+    <div className="min-h-screen overflow-x-hidden bg-[#060708] px-4 py-6 text-[#F3F4F6]">
+      <div className="mx-auto w-full max-w-md space-y-4">
         <div className="rounded-3xl border border-[#22252B] bg-[#121417] px-6 py-7 text-center">
           <div className="flex flex-col items-center">
             <PingkongFullLogo
@@ -1201,13 +1201,24 @@ function AuthGateScreen({
               </form>
             ) : (
               <>
-                <input
-                  type="text"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Profil suchen nach Name oder Spielername..."
-                  className="w-full rounded-xl border border-[#2B2F37] bg-[#0F1114] px-3 py-2.5 text-xs text-[#F3F4F6]"
-                />
+                <style>{`
+                  @media (max-width: 639px) {
+                    .pk-mobile-search-input {
+                      width: 123.08% !important;
+                      transform: scale(0.8125);
+                      transform-origin: left center;
+                    }
+                  }
+                `}</style>
+                <div className="overflow-hidden">
+                  <input
+                    type="text"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    placeholder="Profil suchen nach Name oder Spielername..."
+                    className="pk-mobile-search-input w-full rounded-xl border border-[#2B2F37] bg-[#0F1114] px-3.5 py-3 text-[16px] text-[#F3F4F6] placeholder:text-[#6B7280] focus:border-[#6FB3A2] focus:outline-none sm:px-3 sm:py-2.5 sm:text-xs"
+                  />
+                </div>
 
                 <div>
                   {filteredPlayers.length === 0 ? (
@@ -7047,6 +7058,101 @@ function AdminPanelTab({
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+function PlayerBadge({ player, season, ratingInfo }) {
+  if (!player) return null;
+  const league = season?.leagues?.find((l) => l.playerIds.includes(player.id));
+
+  return (
+    <div className="flex flex-wrap items-center gap-1">
+      {league ? (
+        <span className="rounded bg-[#2C1912] px-1.5 py-0.5 text-[9px] font-bold text-[#F4ECC2] ring-1 ring-[#DE754B]/40">
+          {league.name}
+        </span>
+      ) : (
+        <span className="rounded bg-[#152622] px-1.5 py-0.5 text-[9px] font-bold text-[#A8D0B1] ring-1 ring-[#6FB3A2]/35">
+          CLUB
+        </span>
+      )}
+      {player.sttClass && (
+        <span className="rounded bg-[#131417] px-1.5 py-0.5 text-[9px] font-semibold text-[#9CA3AF] ring-1 ring-[#262A31]">
+          {player.sttClass}
+        </span>
+      )}
+      {ratingInfo?.tier && (
+        <span
+          className={`rounded border px-1.5 py-0.5 text-[9px] font-bold leading-none ${ratingInfo.tier.badgeClass}`}
+        >
+          {ratingInfo.tier.symbol} {ratingInfo.elo}
+        </span>
+      )}
+    </div>
+  );
+}
+
+function PlatformInfoModal({ onClose }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/80 p-3 backdrop-blur-sm sm:items-center">
+      <div className="w-full max-w-md space-y-3.5 rounded-2xl border border-[#2E323B] bg-[#14161A] p-4 shadow-2xl">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[#DE754B] text-xs font-black text-[#060708]">
+              i
+            </span>
+            <h3 className="text-sm font-black text-[#F4ECC2]">
+              Was ist CONNECT?
+            </h3>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-lg bg-[#202329] px-2.5 py-1 text-xs font-bold text-[#9CA3AF] hover:text-[#F3F4F6]"
+          >
+            ✕
+          </button>
+        </div>
+
+        <p className="text-xs leading-relaxed text-[#D1D5DB]">
+          <strong className="text-[#F4ECC2]">CONNECT</strong> verbindet unseren
+          gesamten Tischtennis-Club auf einer Plattform – unkompliziert und
+          ohne E-Mail-Stress:
+        </p>
+
+        <div className="space-y-2 text-xs">
+          <div className="rounded-xl border border-[#6FB3A2]/35 bg-[#152622]/60 p-3">
+            <div className="font-black text-[#A8D0B1]">
+              🏓 CLUB (Hallen-Community)
+            </div>
+            <p className="mt-1 text-[11px] leading-relaxed text-[#D1D5DB]">
+              Sieh sofort, wer gerade <strong>LIVE in der Halle</strong> ist,
+              melde dich für <strong>Club-Abende</strong> an, finde Trainingspartner
+              an deinen Hallentagen oder fordere andere spontan heraus.
+            </p>
+          </div>
+
+          <div className="rounded-xl border border-[#DE754B]/35 bg-[#291711]/60 p-3">
+            <div className="font-black text-[#F4ECC2]">
+              🏆 LEAGUE (Freiwillige Monatsliga)
+            </div>
+            <p className="mt-1 text-[11px] leading-relaxed text-[#D1D5DB]">
+              Spiele in ausgeglichenen 3er-/4er-Gruppen pro Monat mit{' '}
+              <strong>Auf- &amp; Abstieg</strong>. Du kannst monatlich flexibel
+              einsteigen oder pausieren.
+            </p>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={onClose}
+          className="w-full rounded-xl bg-[#6FB3A2] py-2.5 text-xs font-black text-[#060708] transition hover:bg-[#82C1B1]"
+        >
+          Alles klar!
+        </button>
+      </div>
     </div>
   );
 }
