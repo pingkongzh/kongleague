@@ -1748,8 +1748,9 @@ function AuthGateScreen({
           ? {
               height: `${viewportBox.height}px`,
               top: `${viewportBox.offsetTop}px`,
+              colorScheme: 'dark',
             }
-          : undefined
+          : { colorScheme: 'dark' }
       }
       className={`overflow-x-hidden bg-[#060708] px-3.5 text-[#F3F4F6] sm:px-4 ${
         mode === 'select' && !pendingProfile
@@ -1760,7 +1761,39 @@ function AuthGateScreen({
       }`}
     >
       <style>{`
+        :root {
+          color-scheme: dark;
+        }
+        .pk-dark-scroll {
+          color-scheme: dark;
+          scrollbar-width: thin;
+          scrollbar-color: #2B2F37 #0F1114;
+        }
+        .pk-dark-scroll::-webkit-scrollbar {
+          width: 4px;
+          height: 4px;
+        }
+        .pk-dark-scroll::-webkit-scrollbar-track {
+          background: #0F1114;
+          border-radius: 9999px;
+        }
+        .pk-dark-scroll::-webkit-scrollbar-thumb {
+          background: #2B2F37;
+          border-radius: 9999px;
+        }
+        .pk-dark-scroll::-webkit-scrollbar-thumb:hover {
+          background: #3E434E;
+        }
         @media (max-width: 639px) {
+          .pk-dark-scroll {
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+          }
+          .pk-dark-scroll::-webkit-scrollbar {
+            display: none;
+            width: 0;
+            height: 0;
+          }
           .pk-mobile-nozoom-wrap {
             height: 36px;
             overflow: hidden;
@@ -1807,7 +1840,7 @@ function AuthGateScreen({
         >
           <div className="flex flex-col items-center">
             <PingkongFullLogo
-              className="w-16 max-w-full sm:w-28"
+              className="w-32 max-w-full sm:w-36"
               customSrc={customLogoUrl}
             />
 
@@ -1950,7 +1983,7 @@ function AuthGateScreen({
                   />
                 </div>
 
-                <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pr-0.5 sm:max-h-[420px] sm:flex-initial">
+                <div className="pk-dark-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain pr-0.5 sm:max-h-[420px] sm:flex-initial">
                   {filteredPlayers.length === 0 ? (
                     <div className="rounded-xl border border-[#22252B] bg-[#0F1114] p-3 text-center text-xs text-[#8E95A2]">
                       Kein Profil gefunden.{' '}
@@ -3690,35 +3723,47 @@ export default function App() {
       <header className="sticky top-0 z-30 border-b border-[#22252B] bg-[#060708]/95 backdrop-blur-md">
         <div className="mx-auto max-w-2xl px-4 pt-3 pb-2.5">
           <div className="flex items-center justify-between gap-2">
-            <button
-              type="button"
-              onClick={() => {
-                setWorld('connect');
-                setConnectTab('overview');
-              }}
-              className="flex items-center gap-2.5 text-left"
-            >
-              <div className="hidden h-10 w-10 items-center justify-center overflow-hidden rounded-xl border border-[#2B2F37] bg-[#0C0D10] p-1 text-[#DE754B] sm:flex">
-                {customLogoUrl ? (
-                  <img
-                    src={customLogoUrl}
-                    alt="PINGKONG Signet"
-                    className="h-full w-full object-contain"
-                  />
-                ) : (
-                  <PingkongLogo className="h-full w-full" accentHead={false} />
-                )}
-              </div>
-              <div>
-                <div className="text-sm font-black tracking-[0.14em] text-[#F4ECC2] uppercase">
-                  CONNECT
+            <div className="flex items-center gap-2.5">
+              <button
+                type="button"
+                onClick={() => {
+                  setWorld('connect');
+                  setConnectTab('overview');
+                }}
+                className="flex items-center gap-2.5 text-left"
+              >
+                <div className="hidden h-10 w-10 items-center justify-center overflow-hidden rounded-xl border border-[#2B2F37] bg-[#0C0D10] p-1 text-[#DE754B] sm:flex">
+                  {customLogoUrl ? (
+                    <img
+                      src={customLogoUrl}
+                      alt="PINGKONG Signet"
+                      className="h-full w-full object-contain"
+                    />
+                  ) : (
+                    <PingkongLogo className="h-full w-full" accentHead={false} />
+                  )}
                 </div>
-                <div className="text-[10px] font-bold tracking-[0.16em] text-[#6FB3A2] uppercase">
-                  CLUB <span className="text-[#6B7280]">/</span>{' '}
-                  <span className="text-[#DE754B]">LEAGUE</span>
+                <div>
+                  <div className="text-sm font-black tracking-[0.14em] text-[#F4ECC2] uppercase">
+                    CONNECT
+                  </div>
+                  <div className="text-[10px] font-bold tracking-[0.16em] text-[#6FB3A2] uppercase">
+                    CLUB <span className="text-[#6B7280]">/</span>{' '}
+                    <span className="text-[#DE754B]">LEAGUE</span>
+                  </div>
                 </div>
-              </div>
-            </button>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setShowPlatformInfo(true)}
+                title="Was ist CONNECT?"
+                aria-label="Was ist CONNECT?"
+                className="hidden h-7 w-7 items-center justify-center rounded-full bg-[#15171B] text-xs font-black text-[#F4ECC2] ring-1 ring-[#2B2F37] transition hover:border-[#DE754B] hover:text-[#DE754B] sm:flex"
+              >
+                i
+              </button>
+            </div>
 
             <div className="flex items-center gap-1.5">
               <button
@@ -3726,7 +3771,7 @@ export default function App() {
                 onClick={() => syncLiveAndAppState(true)}
                 title="Ansicht aktualisieren"
                 aria-label="Ansicht aktualisieren"
-                className="flex h-8 w-8 items-center justify-center rounded-full bg-[#15171B] text-xs font-black text-[#A8D0B1] ring-1 ring-[#2B2F37] transition hover:border-[#6FB3A2] hover:text-[#6FB3A2]"
+                className="flex h-8 w-8 items-center justify-center rounded-full bg-[#15171B] text-xs font-black text-[#A8D0B1] ring-1 ring-[#2B2F37] transition hover:border-[#6FB3A2] hover:text-[#6FB3A2] sm:hidden"
               >
                 <span className={isRefreshing ? 'animate-spin inline-block' : ''}>
                   ↻
@@ -3735,29 +3780,28 @@ export default function App() {
 
               <button
                 type="button"
-                onClick={() => setShowPlatformInfo(true)}
-                title="Was ist CONNECT?"
-                aria-label="Was ist CONNECT?"
-                className="hidden h-8 w-8 items-center justify-center rounded-full bg-[#15171B] text-xs font-black text-[#F4ECC2] ring-1 ring-[#2B2F37] transition hover:border-[#DE754B] hover:text-[#DE754B] sm:flex"
-              >
-                i
-              </button>
-
-              <button
-                type="button"
                 onClick={() => (isCurrentUserLive ? handleCheckOut() : handleOneTapCheckIn())}
-                className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold transition ${
+                title={
                   isCurrentUserLive
-                    ? 'bg-[#6FB3A2]/25 text-[#A8D0B1] ring-1 ring-[#6FB3A2]/60'
-                    : 'bg-[#15171B] text-[#D1D5DB] ring-1 ring-[#2B2F37] hover:border-[#6FB3A2]'
+                    ? 'Du bist LIVE eingecheckt (tippen zum Auschecken)'
+                    : '1-Tap LIVE in die Halle einchecken'
+                }
+                className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-black transition ${
+                  isCurrentUserLive
+                    ? 'bg-rose-500/20 text-rose-300 ring-1 ring-rose-500/60 shadow-sm shadow-rose-500/20'
+                    : 'bg-[#15171B] text-[#D1D5DB] ring-1 ring-[#2B2F37] hover:border-rose-500/50 hover:text-rose-200'
                 }`}
               >
                 <span
                   className={`h-2 w-2 rounded-full ${
-                    isCurrentUserLive ? 'animate-pulse bg-[#6FB3A2]' : 'bg-[#6B7280]'
+                    isCurrentUserLive
+                      ? 'animate-ping bg-rose-500'
+                      : liveCheckins.length > 0
+                      ? 'bg-[#6FB3A2]'
+                      : 'bg-[#6B7280]'
                   }`}
                 />
-                <span>{isCurrentUserLive ? 'In Halle' : 'LIVE'}</span>
+                <span>{liveCheckins.length} LIVE</span>
               </button>
 
               <div className="flex items-center overflow-hidden rounded-full border border-[#2B2F37] bg-[#15171B]">
@@ -3805,16 +3849,18 @@ export default function App() {
             <button
               type="button"
               onClick={() => setWorld('connect')}
-              className={`relative flex items-center justify-between rounded-xl px-3.5 py-2 text-left transition ${
+              className={`relative flex items-center justify-between rounded-xl px-4 py-3.5 text-left transition sm:px-3.5 sm:py-2 ${
                 world === 'connect'
                   ? 'bg-[#6FB3A2] text-[#060708] shadow-lg shadow-[#6FB3A2]/25'
                   : 'bg-[#14161A] text-[#D1D5DB] ring-1 ring-[#6FB3A2]/35 hover:bg-[#16221F]'
               }`}
             >
               <div>
-                <div className="text-xs font-black tracking-wide uppercase">CLUB</div>
+                <div className="text-sm font-black tracking-wide uppercase sm:text-xs">
+                  CLUB
+                </div>
                 <div
-                  className={`text-[10px] font-medium ${
+                  className={`text-[11px] font-medium sm:text-[10px] ${
                     world === 'connect' ? 'text-[#060708]/80' : 'text-[#8E95A2]'
                   }`}
                 >
@@ -3822,7 +3868,7 @@ export default function App() {
                 </div>
               </div>
               <span
-                className={`rounded-full px-2 py-0.5 text-[10px] font-black ${
+                className={`rounded-full px-2.5 py-1 text-[11px] font-black sm:px-2 sm:py-0.5 sm:text-[10px] ${
                   world === 'connect'
                     ? 'bg-[#060708] text-[#A8D0B1]'
                     : 'bg-[#152622] text-[#A8D0B1]'
@@ -3835,16 +3881,18 @@ export default function App() {
             <button
               type="button"
               onClick={() => setWorld('league')}
-              className={`relative flex items-center justify-between rounded-xl px-3.5 py-2 text-left transition ${
+              className={`relative flex items-center justify-between rounded-xl px-4 py-3.5 text-left transition sm:px-3.5 sm:py-2 ${
                 world === 'league'
                   ? 'bg-[#DE754B] text-[#060708] shadow-lg shadow-[#DE754B]/25'
                   : 'bg-[#14161A] text-[#D1D5DB] ring-1 ring-[#DE754B]/35 hover:bg-[#231611]'
               }`}
             >
               <div>
-                <div className="text-xs font-black tracking-wide uppercase">LEAGUE</div>
+                <div className="text-sm font-black tracking-wide uppercase sm:text-xs">
+                  LEAGUE
+                </div>
                 <div
-                  className={`text-[10px] font-medium ${
+                  className={`text-[11px] font-medium sm:text-[10px] ${
                     world === 'league' ? 'text-[#060708]/80' : 'text-[#8E95A2]'
                   }`}
                 >
@@ -3858,7 +3906,7 @@ export default function App() {
               </div>
               {openLeagueMatchesCount > 0 ? (
                 <span
-                  className={`rounded-full px-2 py-0.5 text-[10px] font-black ${
+                  className={`rounded-full px-2.5 py-1 text-[11px] font-black sm:px-2 sm:py-0.5 sm:text-[10px] ${
                     world === 'league'
                       ? 'bg-[#060708] text-[#F4ECC2]'
                       : 'bg-[#2C1912] text-[#F4ECC2] ring-1 ring-[#DE754B]/45'
@@ -3868,7 +3916,7 @@ export default function App() {
                 </span>
               ) : (
                 <span
-                  className={`rounded-full px-2 py-0.5 text-[10px] font-black ${
+                  className={`rounded-full px-2.5 py-1 text-[11px] font-black sm:px-2 sm:py-0.5 sm:text-[10px] ${
                     world === 'league'
                       ? 'bg-[#060708] text-[#F4ECC2]'
                       : 'bg-[#2C1912] text-[#DE754B]'
@@ -4074,9 +4122,9 @@ export default function App() {
         {world === 'connect' && (
           <div className="space-y-4">
             <div className="rounded-2xl border border-[#6FB3A2]/35 bg-[#14161A] p-3 shadow-lg shadow-black/25">
-              <div className="mb-2 flex items-center justify-between px-0.5">
+              <div className="mb-2.5 flex items-center justify-between px-0.5">
                 <span className="text-[10px] font-black uppercase tracking-[0.14em] text-[#6FB3A2]">
-                  ⚡ Schnellaktionen
+                  Schnellaktionen
                 </span>
                 <span className="text-[10px] font-medium text-[#8E95A2]">
                   1-Tap Check-in · Auto-Ablauf
@@ -4089,127 +4137,118 @@ export default function App() {
                   onClick={() =>
                     isCurrentUserLive ? handleCheckOut() : handleOneTapCheckIn()
                   }
-                  className={`flex items-center justify-center gap-1.5 rounded-xl px-3 py-2.5 text-xs font-extrabold transition ${
+                  className={`flex items-center justify-between rounded-xl border px-3 py-2.5 text-left text-xs font-bold transition ${
                     isCurrentUserLive
-                      ? 'bg-emerald-500/20 text-emerald-300 ring-1 ring-emerald-500/45 hover:bg-emerald-500/30'
-                      : 'bg-[#6FB3A2]/20 text-[#A8D0B1] ring-1 ring-[#6FB3A2]/45 hover:bg-[#6FB3A2]/30'
+                      ? 'border-[#6FB3A2]/60 bg-[#152622] text-[#A8D0B1]'
+                      : 'border-[#2B2F37] bg-[#0F1114] text-[#F3F4F6] hover:border-[#6FB3A2]/50'
                   }`}
                 >
-                  <span
-                    className={`h-2 w-2 rounded-full ${
-                      isCurrentUserLive ? 'animate-pulse bg-emerald-400' : 'bg-[#6FB3A2]'
-                    }`}
-                  />
                   <span>
-                    {isCurrentUserLive ? 'Auschecken (LIVE ✓)' : 'In Halle einchecken'}
+                    {isCurrentUserLive
+                      ? 'Auschecken (LIVE)'
+                      : 'In Halle einchecken'}
                   </span>
+                  <span className="text-[#6FB3A2]">→</span>
                 </button>
 
                 <button
                   type="button"
                   onClick={() => setChallengeTargetId(null)}
-                  className="flex items-center justify-center gap-1.5 rounded-xl bg-[#6FB3A2] px-3 py-2.5 text-xs font-black text-[#060708] transition hover:bg-[#82C1B1]"
+                  className="flex items-center justify-between rounded-xl border border-[#2B2F37] bg-[#0F1114] px-3 py-2.5 text-left text-xs font-bold text-[#F3F4F6] transition hover:border-[#6FB3A2]/50"
                 >
-                  <span>⚡</span>
                   <span>Herausfordern</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setRecordConnectTargetId('')}
-                  className="flex items-center justify-center gap-1.5 rounded-xl border border-[#2B2F37] bg-[#0F1114] px-3 py-2.5 text-xs font-bold text-[#F4ECC2] transition hover:border-[#6FB3A2] hover:bg-[#191C21]"
-                >
-                  <span>🏆</span>
-                  <span>Partie eintragen</span>
+                  <span className="text-[#6FB3A2]">→</span>
                 </button>
 
                 <button
                   type="button"
                   onClick={() => setCreateSessionType('announcement')}
-                  className="flex items-center justify-center gap-1.5 rounded-xl border border-[#2B2F37] bg-[#0F1114] px-3 py-2.5 text-xs font-bold text-[#A8D0B1] transition hover:border-[#6FB3A2] hover:bg-[#191C21]"
+                  className="flex items-center justify-between rounded-xl border border-[#2B2F37] bg-[#0F1114] px-3 py-2.5 text-left text-xs font-bold text-[#F3F4F6] transition hover:border-[#6FB3A2]/50"
                 >
-                  <span>📌</span>
-                  <span>Training posten</span>
+                  <span>Session planen</span>
+                  <span className="text-[#6FB3A2]">→</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setRecordConnectTargetId('')}
+                  className="flex items-center justify-between rounded-xl border border-[#2B2F37] bg-[#0F1114] px-3 py-2.5 text-left text-xs font-bold text-[#F3F4F6] transition hover:border-[#6FB3A2]/50"
+                >
+                  <span>Club-Partie eintragen</span>
+                  <span className="text-[#6FB3A2]">→</span>
                 </button>
               </div>
             </div>
 
-            <div className="border-t border-[#22252B] pt-3.5">
-              <div className="grid grid-cols-3 gap-1.5 rounded-xl bg-[#14161A] p-1 ring-1 ring-[#6FB3A2]/25">
-                {[
-                  { id: 'overview', label: 'Übersicht' },
-                  { id: 'rating', label: 'Rating & Partien' },
-                  { id: 'halldays', label: 'Hallentage' },
-                ].map((t) => (
-                  <button
-                    key={t.id}
-                    type="button"
-                    onClick={() => setConnectTab(t.id)}
-                    className={`rounded-lg py-2 text-xs font-bold transition ${
-                      connectTab === t.id
-                        ? 'bg-[#6FB3A2] text-[#060708]'
-                        : 'text-[#8E95A2] hover:text-[#F4ECC2]'
-                    }`}
-                  >
-                    {t.label}
-                  </button>
-                ))}
-              </div>
+            <div className="grid grid-cols-4 gap-1.5 rounded-xl bg-[#14161A] p-1 ring-1 ring-[#6FB3A2]/25">
+              {[
+                { id: 'overview', label: 'Übersicht' },
+                { id: 'players', label: 'Rangliste' },
+                { id: 'matches', label: 'Partien' },
+                { id: 'halldays', label: 'Hallentage' },
+              ].map((t) => (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => setConnectTab(t.id)}
+                  className={`rounded-lg py-2 text-[11px] font-bold transition ${
+                    connectTab === t.id
+                      ? 'bg-[#6FB3A2] text-[#060708]'
+                      : 'text-[#8E95A2] hover:text-[#F4ECC2]'
+                  }`}
+                >
+                  {t.label}
+                </button>
+              ))}
             </div>
 
             {connectTab === 'overview' && (
               <ConnectOverviewTab
                 currentUser={currentUser}
-                activeSeason={activeSeason}
                 players={players}
                 playersById={playersById}
+                activeSeason={activeSeason}
+                connectRatings={ratingsByPlayer}
                 liveCheckins={liveCheckins}
                 sessions={sessions}
                 challenges={challenges}
                 connectMatches={connectMatches}
-                connectRatings={ratingsByPlayer}
-                matchDeltas={matchDeltas}
-                onNavigateTab={(tab) => setConnectTab(tab)}
-                onToggleJoinSession={handleToggleJoinSession}
-                onRespondChallenge={handleRespondChallenge}
-                onOpenChallenge={(targetId = null) => setChallengeTargetId(targetId)}
-                onOpenCreateSession={(type) => setCreateSessionType(type)}
                 onOneTapCheckIn={handleOneTapCheckIn}
                 onUpdateMyLiveCheckin={handleUpdateMyLiveCheckin}
                 onExtendMyLiveCheckin={handleExtendMyLiveCheckin}
                 onToggleComingToo={handleToggleComingToo}
                 onCheckOut={handleCheckOut}
-                onOpenEditProfile={() => setShowProfileModal(true)}
+                onToggleJoinSession={handleToggleJoinSession}
+                onOpenChallenge={(targetId) => setChallengeTargetId(targetId)}
+                onRespondChallenge={handleRespondChallenge}
+                onOpenCreateSession={(type) => setCreateSessionType(type)}
+                onSelectMember={(memberId) => setSelectedMemberId(memberId)}
+                onNavigateTab={(tab) => setConnectTab(tab)}
+              />
+            )}
+
+            {connectTab === 'players' && (
+              <ClubPlayersTab
+                players={players}
+                currentUser={currentUser}
+                activeSeason={activeSeason}
+                connectRatings={ratingsByPlayer}
+                connectMatches={connectMatches}
+                liveCheckins={liveCheckins}
+                onOpenChallenge={(targetId) => setChallengeTargetId(targetId)}
                 onSelectMember={(memberId) => setSelectedMemberId(memberId)}
               />
             )}
 
-            {connectTab === 'rating' && (
-              <div className="space-y-5">
-                <ClubPlayersTab
-                  players={players}
-                  currentUser={currentUser}
-                  activeSeason={activeSeason}
-                  liveCheckins={liveCheckins}
-                  connectRatings={ratingsByPlayer}
-                  onOpenAddMember={() => setShowAddMemberModal(true)}
-                  onOpenChallenge={(targetId) => setChallengeTargetId(targetId)}
-                  onOpenRecordConnectMatch={(opponentId) =>
-                    setRecordConnectTargetId(opponentId)
-                  }
-                  onSelectMember={(memberId) => setSelectedMemberId(memberId)}
-                />
-
-                <div className="border-t border-[#22252B] pt-4">
-                  <ConnectMatchesTab
-                    connectMatches={connectMatches}
-                    matchDeltas={matchDeltas}
-                    playersById={playersById}
-                    currentUser={currentUser}
-                    connectRatings={ratingsByPlayer}
-                  />
-                </div>
-              </div>
+            {connectTab === 'matches' && (
+              <ConnectMatchesTab
+                connectMatches={connectMatches}
+                matchDeltas={matchDeltas}
+                playersById={playersById}
+                currentUser={currentUser}
+                connectRatings={ratingsByPlayer}
+                onOpenRecordConnectMatch={() => setRecordConnectTargetId('')}
+              />
             )}
 
             {connectTab === 'halldays' && (
@@ -4218,61 +4257,29 @@ export default function App() {
                 currentUser={currentUser}
                 activeSeason={activeSeason}
                 connectRatings={ratingsByPlayer}
-                onOpenEditProfile={() => setShowProfileModal(true)}
                 onOpenChallenge={(targetId) => setChallengeTargetId(targetId)}
                 onSelectMember={(memberId) => setSelectedMemberId(memberId)}
               />
             )}
           </div>
         )}
-      </main>
 
-      <footer className="mx-auto mt-10 max-w-2xl border-t border-[#1D2026] px-4 pt-4 pb-6">
-        <div className="flex items-center justify-between text-[11px] text-[#6B7280]">
-          <button
-            type="button"
-            onClick={() => setShowPlatformInfo(true)}
-            className="inline-flex items-center gap-1.5 font-semibold text-[#8E95A2] transition hover:text-[#F4ECC2]"
-          >
-            <span className="flex h-4 w-4 items-center justify-center rounded-full bg-[#1C1F26] text-[10px] font-black text-[#DE754B]">
-              i
-            </span>
-            <span>Über CONNECT</span>
-          </button>
-
+        <footer className="mt-8 border-t border-[#1D2026] pt-4 pb-2 text-center">
           <button
             type="button"
             onClick={handleOpenAdmin}
-            className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 font-bold transition ${
-              world === 'admin'
-                ? 'bg-[#DE754B] text-[#060708]'
-                : 'bg-[#14161A] text-[#9CA3AF] ring-1 ring-[#24272E] hover:border-[#DE754B] hover:text-[#F4ECC2]'
-            }`}
+            className="inline-flex items-center gap-1.5 rounded-full border border-[#24272E] bg-[#121417] px-3.5 py-1.5 text-[11px] font-bold text-[#8E95A2] transition hover:border-[#DE754B]/50 hover:text-[#F4ECC2]"
           >
             <span>🛡️</span>
-            <span>Club-Admin</span>
+            <span>
+              {isAdminUnlocked ? 'Admin-Bereich öffnen' : 'Club-Admin'}
+            </span>
           </button>
-        </div>
-      </footer>
+        </footer>
+      </main>
 
       {showPlatformInfo && (
         <PlatformInfoModal onClose={() => setShowPlatformInfo(false)} />
-      )}
-
-      {selectedMemberId && playersById[selectedMemberId] && (
-        <MemberDetailModal
-          player={playersById[selectedMemberId]}
-          currentUser={currentUser}
-          playersById={playersById}
-          activeSeason={activeSeason}
-          seasons={seasons}
-          ratingInfo={ratingsByPlayer[selectedMemberId]}
-          connectMatches={connectMatches}
-          liveCheckin={liveCheckins.find((c) => c.playerId === selectedMemberId)}
-          onChallenge={(targetId) => setChallengeTargetId(targetId)}
-          onRecordMatch={(opponentId) => setRecordConnectTargetId(opponentId)}
-          onClose={() => setSelectedMemberId(null)}
-        />
       )}
 
       {showProfileModal && (
@@ -4284,6 +4291,24 @@ export default function App() {
           }}
           onSave={handleUpdatePlayer}
           onClose={() => setShowProfileModal(false)}
+        />
+      )}
+
+      {selectedMemberId && playersById[selectedMemberId] && (
+        <MemberDetailModal
+          player={playersById[selectedMemberId]}
+          currentUser={currentUser}
+          playersById={playersById}
+          activeSeason={activeSeason}
+          seasons={seasons}
+          ratingInfo={ratingsByPlayer[selectedMemberId]}
+          connectMatches={connectMatches}
+          liveCheckin={
+            liveCheckins.find((c) => c.playerId === selectedMemberId) || null
+          }
+          onChallenge={(targetId) => setChallengeTargetId(targetId)}
+          onRecordMatch={(targetId) => setRecordConnectTargetId(targetId)}
+          onClose={() => setSelectedMemberId(null)}
         />
       )}
 
@@ -4337,29 +4362,23 @@ export default function App() {
       )}
 
       {showAdminPinPrompt && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-xs space-y-3 rounded-2xl border border-[#DE754B]/45 bg-[#14161A] p-4 shadow-2xl">
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/80 p-3 sm:items-center">
+          <div className="w-full max-w-xs space-y-3 rounded-2xl border border-[#DE754B]/45 bg-[#181A1E] p-4 shadow-2xl">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="text-base">🛡️</span>
-                <h3 className="text-sm font-black text-[#F4ECC2]">
-                  Club-Admin Zugang
-                </h3>
-              </div>
+              <h3 className="text-sm font-black text-[#F4ECC2]">
+                🛡️ Admin-PIN eingeben
+              </h3>
               <button
                 type="button"
                 onClick={() => setShowAdminPinPrompt(false)}
-                className="rounded-lg bg-[#202329] px-2 py-1 text-xs font-bold text-[#9CA3AF]"
+                className="text-xs font-bold text-[#8E95A2]"
               >
                 ✕
               </button>
             </div>
-
             <p className="text-[11px] text-[#9CA3AF]">
-              Bitte 4-stelligen Admin-PIN eingeben, um Mitglieder, Ligen und
-              Resultate zu verwalten.
+              4-stelligen Admin-Code eingeben (Demo-PIN: 9999).
             </p>
-
             <input
               type="password"
               inputMode="numeric"
@@ -4368,11 +4387,10 @@ export default function App() {
               value={adminPinInput}
               onChange={(e) => handleAdminPinChange(e.target.value)}
               placeholder="••••"
-              className="w-full rounded-xl border border-[#2B2F37] bg-[#0F1114] px-3 py-2.5 text-center text-base font-black tracking-[0.4em] text-[#F4ECC2]"
+              className="w-full rounded-xl border border-[#2E323B] bg-[#131417] px-3 py-2.5 text-center text-base font-black tracking-[0.4em] text-[#F4ECC2] focus:border-[#DE754B] focus:outline-none"
             />
-
             {adminPinError && (
-              <div className="rounded-xl border border-rose-500/40 bg-rose-950/30 px-3 py-1.5 text-center text-[11px] font-bold text-rose-300">
+              <div className="rounded-lg bg-rose-950/40 px-2.5 py-1.5 text-[11px] font-bold text-rose-300">
                 {adminPinError}
               </div>
             )}
@@ -4392,1086 +4410,158 @@ function LeagueMatchesTab({
   daysRemaining,
   onSelectMatchToRecord,
 }) {
-  const [showAllLeagues, setShowAllLeagues] = useState(false);
+  const userLeague = season.leagues.find((l) =>
+    l.playerIds.includes(currentUser.id)
+  );
+  const isPaused = season.pausedPlayerIds.includes(currentUser.id);
 
-  const visibleMatches = useMemo(() => {
-    if (showAllLeagues) return season.matches;
-    return season.matches.filter(
-      (m) => m.player1Id === currentUser.id || m.player2Id === currentUser.id
+  if (isPaused || !userLeague) {
+    return (
+      <div className="rounded-2xl border border-[#24272D] bg-[#181A1E] p-5 text-center">
+        <div className="text-sm font-bold text-[#F3F4F6]">
+          Du bist im {season.label} in keiner Liga eingeteilt
+        </div>
+        <p className="mt-1 text-xs text-[#9CA3AF]">
+          Nutze den CLUB-Bereich für freie Spiele &amp; Hallen-Check-ins oder melde dich unter «Monats-Status» für die nächste Monatsliga an.
+        </p>
+      </div>
     );
-  }, [season, currentUser.id, showAllLeagues]);
+  }
 
-  const leaguesById = useMemo(() => {
-    const map = {};
-    season.leagues.forEach((l) => {
-      map[l.id] = l;
-    });
-    return map;
-  }, [season]);
+  const myMatches = season.matches.filter(
+    (m) =>
+      m.leagueId === userLeague.id &&
+      (m.player1Id === currentUser.id || m.player2Id === currentUser.id)
+  );
 
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <span className="text-xs font-bold text-[#9CA3AF]">
-          {showAllLeagues ? 'Alle Spiele im Monat' : 'Deine Liga-Spiele'} (
-          {visibleMatches.length})
-        </span>
-        <button
-          type="button"
-          onClick={() => setShowAllLeagues((v) => !v)}
-          className="text-xs font-bold text-[#DE754B] underline"
-        >
-          {showAllLeagues ? 'Nur meine Spiele' : 'Alle Ligen zeigen'}
-        </button>
+        <div>
+          <h2 className="text-xs font-black tracking-wide text-[#DE754B] uppercase">
+            {userLeague.name} · {season.label}
+          </h2>
+          <p className="text-[11px] text-[#8E95A2]">
+            {myMatches.filter((m) => m.score1 !== null).length} von{' '}
+            {myMatches.length} Partien gespielt
+          </p>
+        </div>
       </div>
 
-      {visibleMatches.length === 0 ? (
-        <div className="rounded-2xl border border-[#24272D] bg-[#181A1E] p-5 text-center text-xs text-[#9CA3AF]">
-          Keine Liga-Spiele in dieser Ansicht vorhanden.
-        </div>
-      ) : (
-        <div className="space-y-2.5">
-          {visibleMatches.map((m) => {
-            const p1 = playersById[m.player1Id];
-            const p2 = playersById[m.player2Id];
-            const league = leaguesById[m.leagueId];
-            const isPlayed = m.score1 !== null && m.score2 !== null;
-            const opponent = m.player1Id === currentUser.id ? p2 : p1;
-            const waText = opponent
-              ? getContextWhatsAppMessage('league_match', currentUser, opponent, {
-                  leagueName: league?.name,
-                  seasonLabel: season.label,
-                })
-              : '';
-            const waReminderText = opponent
-              ? getContextWhatsAppMessage('league_reminder', currentUser, opponent, {
-                  seasonLabel: season.label,
-                  daysRemaining,
-                })
-              : '';
+      <div className="space-y-2.5">
+        {myMatches.map((m) => {
+          const isP1 = m.player1Id === currentUser.id;
+          const opponentId = isP1 ? m.player2Id : m.player1Id;
+          const opponent = playersById[opponentId];
+          const isPlayed = m.score1 !== null && m.score2 !== null;
+          const myScore = isP1 ? m.score1 : m.score2;
+          const oppScore = isP1 ? m.score2 : m.score1;
+          const iWon = isPlayed && myScore > oppScore;
 
-            return (
-              <div
-                key={m.id}
-                className="rounded-2xl border border-[#24272D] bg-[#181A1E] p-3.5"
-              >
-                <div className="flex items-center justify-between text-[11px] text-[#8E95A2]">
-                  <span className="font-bold text-[#DE754B]">{league?.name}</span>
-                  <span>{isPlayed ? 'Gespielt' : 'Offen'}</span>
-                </div>
-
-                <div className="mt-2 flex items-center justify-between gap-2">
-                  <div className="min-w-0 flex-1">
-                    <div className="truncate text-sm font-extrabold text-[#F3F4F6]">
-                      {p1?.nickname}
+          return (
+            <div
+              key={m.id}
+              className="rounded-2xl border border-[#24272D] bg-[#181A1E] p-3.5"
+            >
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex min-w-0 items-center gap-2.5">
+                  <PlayerAvatar
+                    player={opponent}
+                    sizeClass="h-9 w-9 text-xs"
+                    isConnectAccent={opponent?.connectOnly}
+                  />
+                  <div className="min-w-0">
+                    <div className="truncate text-xs font-black text-[#F3F4F6]">
+                      vs. {opponent?.nickname}
                     </div>
                     <div className="mt-0.5">
                       <PlayerBadge
-                        player={p1}
+                        player={opponent}
                         season={season}
-                        ratingInfo={connectRatings[p1?.id]}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="shrink-0 rounded-xl bg-[#111215] px-3 py-1.5 text-center ring-1 ring-[#2A2D35]">
-                    {isPlayed ? (
-                      <span className="text-sm font-black tracking-wider text-[#F4ECC2]">
-                        {m.score1} : {m.score2}
-                      </span>
-                    ) : (
-                      <span className="text-xs font-bold text-[#6B7280]">vs</span>
-                    )}
-                  </div>
-
-                  <div className="min-w-0 flex-1 text-right">
-                    <div className="truncate text-sm font-extrabold text-[#F3F4F6]">
-                      {p2?.nickname}
-                    </div>
-                    <div className="mt-0.5 flex justify-end">
-                      <PlayerBadge
-                        player={p2}
-                        season={season}
-                        ratingInfo={connectRatings[p2?.id]}
+                        ratingInfo={connectRatings[opponent?.id]}
                       />
                     </div>
                   </div>
                 </div>
 
-                <div className="mt-3 flex flex-wrap items-center justify-end gap-2">
-                  {!isPlayed && opponent && opponent.id !== currentUser.id && (
-                    <>
-                      <WhatsAppActionButton
-                        phone={opponent.phone}
-                        message={waText}
-                        label="WhatsApp Termin"
-                      />
-                      {isEndOfMonthReminderWindow && (
-                        <a
-                          href={buildWhatsAppLink(opponent.phone, waReminderText)}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="rounded-lg bg-amber-500/20 px-2.5 py-1.5 text-[11px] font-bold text-amber-300 ring-1 ring-amber-500/40"
-                        >
-                          ⏰ Erinnern
-                        </a>
-                      )}
-                    </>
-                  )}
+                {isPlayed ? (
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`rounded-lg px-2.5 py-1 text-xs font-black ${
+                        iWon
+                          ? 'bg-emerald-500/20 text-emerald-300'
+                          : 'bg-rose-500/20 text-rose-300'
+                      }`}
+                    >
+                      {myScore}:{oppScore}
+                    </span>
+                    {season.status === 'active' && (
+                      <button
+                        type="button"
+                        onClick={() => onSelectMatchToRecord(m)}
+                        className="rounded-lg bg-[#252830] px-2 py-1 text-[10px] font-bold text-[#9CA3AF]"
+                      >
+                        Ändern
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                  <span className="rounded-full bg-[#2C1912] px-2.5 py-0.5 text-[10px] font-bold text-[#F4ECC2]">
+                    Offen
+                  </span>
+                )}
+              </div>
+
+              {!isPlayed && season.status === 'active' && (
+                <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-[#22252B] pt-2.5">
+                  <WhatsAppActionButton
+                    phone={opponent?.phone}
+                    message={getContextWhatsAppMessage(
+                      isEndOfMonthReminderWindow
+                        ? 'league_reminder'
+                        : 'league_match',
+                      currentUser,
+                      opponent,
+                      {
+                        leagueName: userLeague.name,
+                        seasonLabel: season.label,
+                        daysRemaining,
+                      }
+                    )}
+                    label={
+                      isEndOfMonthReminderWindow
+                        ? 'Erinnerung senden'
+                        : 'Termin per WhatsApp'
+                    }
+                    compact
+                  />
                   <button
                     type="button"
                     onClick={() => onSelectMatchToRecord(m)}
-                    className={`rounded-lg px-3 py-1.5 text-[11px] font-black transition ${
-                      isPlayed
-                        ? 'bg-[#252830] text-[#D1D5DB] hover:bg-[#30343E]'
-                        : 'bg-[#DE754B] text-[#060708] hover:bg-[#E78760]'
-                    }`}
+                    className="rounded-lg bg-[#DE754B] px-3 py-1.5 text-[11px] font-black text-[#060708]"
                   >
-                    {isPlayed ? 'Korrigieren' : 'Resultat eintragen'}
+                    Resultat eintragen
                   </button>
                 </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function ConnectOverviewTab({
-  currentUser,
-  activeSeason,
-  players,
-  playersById,
-  liveCheckins,
-  sessions,
-  challenges,
-  connectMatches,
-  connectRatings,
-  matchDeltas,
-  onNavigateTab,
-  onToggleJoinSession,
-  onRespondChallenge,
-  onOpenChallenge,
-  onOpenCreateSession,
-  onOneTapCheckIn,
-  onUpdateMyLiveCheckin,
-  onExtendMyLiveCheckin,
-  onToggleComingToo,
-  onCheckOut,
-  onOpenEditProfile,
-  onSelectMember,
-}) {
-  const [onlyMatchingLevel, setOnlyMatchingLevel] = useState(false);
-  const [editingMyLive, setEditingMyLive] = useState(false);
-  const [customLiveNote, setCustomLiveNote] = useState('');
-
-  const myLiveCheckin = useMemo(
-    () => liveCheckins.find((c) => c.playerId === currentUser.id),
-    [liveCheckins, currentUser.id]
-  );
-
-  const newMembers = useMemo(
-    () => players.filter((p) => p.isNewMember),
-    [players]
-  );
-
-  const visibleChallenges = useMemo(() => {
-    return challenges.filter((c) => {
-      if (c.status === 'declined') return false;
-      if (!onlyMatchingLevel) return true;
-      const author = playersById[c.challengerId];
-      if (!author || author.id === currentUser.id) return true;
-      return isMatchingLevel(currentUser, author, activeSeason);
-    });
-  }, [challenges, onlyMatchingLevel, playersById, currentUser, activeSeason]);
-
-  const visibleSessions = useMemo(() => {
-    if (!onlyMatchingLevel) return sessions;
-    return sessions.filter((s) => {
-      const author = playersById[s.authorId];
-      if (!author || author.id === currentUser.id) return true;
-      return isMatchingLevel(currentUser, author, activeSeason);
-    });
-  }, [sessions, onlyMatchingLevel, playersById, currentUser, activeSeason]);
-
-  const topRatedPlayers = useMemo(() => {
-    return [...players]
-      .sort(
-        (a, b) =>
-          (connectRatings[b.id]?.elo || 0) - (connectRatings[a.id]?.elo || 0)
-      )
-      .slice(0, 3);
-  }, [players, connectRatings]);
-
-  const myRating = connectRatings[currentUser.id];
-
-  return (
-    <div className="space-y-4">
-      <div className="grid grid-cols-3 gap-2">
-        <a
-          href="#club-live-section"
-          className="rounded-xl border border-emerald-500/30 bg-[#181A1E] p-2.5 text-center transition hover:border-emerald-400/60"
-        >
-          <div className="text-sm font-black text-emerald-300">
-            {liveCheckins.length}
-          </div>
-          <div className="mt-0.5 text-[10px] font-bold text-[#9CA3AF]">
-            LIVE Halle
-          </div>
-        </a>
-
-        <button
-          type="button"
-          onClick={() => onNavigateTab('rating')}
-          className="rounded-xl border border-[#C8A26E]/30 bg-[#181A1E] p-2.5 text-center transition hover:border-[#C8A26E]/60"
-        >
-          <div className="text-sm font-black text-[#E6C79C]">
-            {myRating?.elo || 1200}
-          </div>
-          <div className="mt-0.5 text-[10px] font-bold text-[#9CA3AF]">
-            Mein Rating
-          </div>
-        </button>
-
-        <a
-          href="#club-newbies-section"
-          className="rounded-xl border border-[#24272D] bg-[#181A1E] p-2.5 text-center transition hover:border-[#6FB3A2]/50"
-        >
-          <div className="text-sm font-black text-[#F3F4F6]">
-            {newMembers.length}
-          </div>
-          <div className="mt-0.5 text-[10px] font-bold text-[#9CA3AF]">
-            Neu im Club
-          </div>
-        </a>
-      </div>
-
-      {/* 1. LIVE in der Halle (1-Tap Check-in, Stimmungs-Chips, +30 Min, 👋 Komme auch) */}
-      <div
-        id="club-live-section"
-        className="rounded-2xl border border-emerald-500/25 bg-[#181A1E] p-3.5"
-      >
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-1.5">
-            <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-400" />
-            <span className="text-xs font-black uppercase tracking-wide text-[#F3F4F6]">
-              Gerade LIVE in der Halle ({liveCheckins.length})
-            </span>
-          </div>
-          {!myLiveCheckin ? (
-            <button
-              type="button"
-              onClick={onOneTapCheckIn}
-              className="rounded-lg bg-emerald-500/20 px-2.5 py-1 text-[11px] font-black text-emerald-300 ring-1 ring-emerald-500/40 transition hover:bg-emerald-500/30"
-            >
-              🟢 1-Tap Einchecken
-            </button>
-          ) : (
-            <span className="text-[10px] font-semibold text-emerald-300/80">
-              Auto-Ablauf aktiv
-            </span>
-          )}
-        </div>
-
-        {liveCheckins.length === 0 ? (
-          <div className="mt-2.5 flex items-center justify-between gap-2 rounded-xl bg-[#131417] p-3 text-xs text-[#9CA3AF]">
-            <span>Momentan ist noch niemand LIVE eingecheckt.</span>
-            <button
-              type="button"
-              onClick={onOneTapCheckIn}
-              className="shrink-0 rounded-lg bg-[#6FB3A2] px-3 py-1.5 text-[11px] font-black text-[#060708]"
-            >
-              Jetzt einchecken
-            </button>
-          </div>
-        ) : (
-          <div className="mt-2.5 space-y-2.5">
-            {liveCheckins.map((item) => {
-              const p = playersById[item.playerId];
-              if (!p) return null;
-              const isMe = p.id === currentUser.id;
-              const comingTooIds = item.comingTooIds || [];
-              const iAmComingToo = comingTooIds.includes(currentUser.id);
-              const comingNames = comingTooIds
-                .map((id) => playersById[id]?.nickname)
-                .filter(Boolean);
-
-              const waMsg = getContextWhatsAppMessage('live_hall', currentUser, p, {
-                durationLabel: item.durationLabel,
-              });
-
-              return (
-                <div
-                  key={item.id}
-                  className={`rounded-xl border p-3 ${
-                    isMe
-                      ? 'border-[#6FB3A2]/45 bg-[#121D1A]'
-                      : 'border-[#22262E] bg-[#131417]'
-                  }`}
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <button
-                      type="button"
-                      onClick={() => onSelectMember?.(p.id)}
-                      className="flex min-w-0 items-center gap-2.5 text-left transition hover:opacity-85"
-                    >
-                      <PlayerAvatar
-                        player={p}
-                        sizeClass="h-8 w-8 text-[10px]"
-                        isConnectAccent
-                      />
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-1.5">
-                          <span className="truncate text-xs font-black text-[#F3F4F6] underline decoration-[#6FB3A2]/50 underline-offset-2">
-                            {p.nickname}
-                          </span>
-                          {isMe && (
-                            <span className="rounded bg-[#6FB3A2]/20 px-1.5 py-0.5 text-[9px] font-black text-[#A8D0B1]">
-                              Du
-                            </span>
-                          )}
-                        </div>
-                        <div className="mt-0.5">
-                          <PlayerBadge
-                            player={p}
-                            season={activeSeason}
-                            ratingInfo={connectRatings[p.id]}
-                          />
-                        </div>
-                      </div>
-                    </button>
-
-                    <span className="shrink-0 rounded-full bg-emerald-500/15 px-2.5 py-0.5 text-[10px] font-bold text-emerald-300">
-                      {item.durationLabel}
-                    </span>
-                  </div>
-
-                  {item.note && (
-                    <div className="mt-2 rounded-lg bg-[#181A1E] px-2.5 py-1.5 text-[11px] font-semibold text-[#E5E7EB]">
-                      {item.note}
-                    </div>
-                  )}
-
-                  {comingNames.length > 0 && (
-                    <div className="mt-1.5 flex items-center gap-1 text-[10px] font-bold text-[#A8D0B1]">
-                      <span>👋 Kommt auch:</span>
-                      <span>{comingNames.join(', ')}</span>
-                    </div>
-                  )}
-
-                  {/* Nachträgliches Anpassen für den eigenen Check-in */}
-                  {isMe && editingMyLive && (
-                    <div className="mt-2.5 space-y-2.5 rounded-xl border border-[#2B2F37] bg-[#0F1114] p-2.5">
-                      <div>
-                        <div className="mb-1 text-[10px] font-bold uppercase tracking-wider text-[#8E95A2]">
-                          Stimmung wählen
-                        </div>
-                        <div className="flex flex-wrap gap-1.5">
-                          {LIVE_MOOD_PRESETS.map((preset) => (
-                            <button
-                              key={preset}
-                              type="button"
-                              onClick={() => {
-                                onUpdateMyLiveCheckin({ note: preset });
-                                setCustomLiveNote('');
-                              }}
-                              className={`rounded-lg px-2 py-1 text-[10px] font-bold transition ${
-                                item.note === preset
-                                  ? 'bg-[#6FB3A2] text-[#060708]'
-                                  : 'bg-[#181A1E] text-[#D1D5DB] ring-1 ring-[#262A32] hover:border-[#6FB3A2]'
-                              }`}
-                            >
-                              {preset}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-
-                      <div>
-                        <div className="mb-1 text-[10px] font-bold uppercase tracking-wider text-[#8E95A2]">
-                          Dauer (checkt danach automatisch aus)
-                        </div>
-                        <div className="grid grid-cols-4 gap-1.5">
-                          {LIVE_DURATION_OPTIONS.map((dur) => (
-                            <button
-                              key={dur.id}
-                              type="button"
-                              onClick={() =>
-                                onUpdateMyLiveCheckin({ minutes: dur.minutes })
-                              }
-                              className="rounded-lg bg-[#181A1E] py-1.5 text-[10px] font-extrabold text-[#F4ECC2] ring-1 ring-[#262A32] transition hover:bg-[#6FB3A2] hover:text-[#060708]"
-                            >
-                              {dur.label}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-
-                      <div className="flex gap-1.5">
-                        <input
-                          type="text"
-                          value={customLiveNote}
-                          onChange={(e) => setCustomLiveNote(e.target.value)}
-                          placeholder="Oder kurze eigene Notiz..."
-                          className="min-w-0 flex-1 rounded-lg border border-[#262A32] bg-[#181A1E] px-2.5 py-1.5 text-[11px] text-[#F3F4F6] focus:border-[#6FB3A2] focus:outline-none"
-                        />
-                        <button
-                          type="button"
-                          disabled={!customLiveNote.trim()}
-                          onClick={() => {
-                            onUpdateMyLiveCheckin({
-                              note: customLiveNote.trim(),
-                            });
-                            setCustomLiveNote('');
-                          }}
-                          className="shrink-0 rounded-lg bg-[#6FB3A2] px-2.5 py-1.5 text-[10px] font-black text-[#060708] disabled:opacity-40"
-                        >
-                          OK
-                        </button>
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="mt-2.5 flex flex-wrap items-center justify-between gap-2 text-[10px] text-[#8E95A2]">
-                    <span>Check-in {item.checkedInAt}</span>
-
-                    {isMe ? (
-                      <div className="flex flex-wrap items-center gap-1.5">
-                        <button
-                          type="button"
-                          onClick={onExtendMyLiveCheckin}
-                          className="rounded-lg bg-[#182924] px-2.5 py-1 font-extrabold text-[#A8D0B1] ring-1 ring-[#6FB3A2]/35 transition hover:bg-[#203630]"
-                        >
-                          ⏱ +30 Min
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setEditingMyLive((v) => !v)}
-                          className={`rounded-lg px-2.5 py-1 font-bold transition ${
-                            editingMyLive
-                              ? 'bg-[#6FB3A2] text-[#060708]'
-                              : 'bg-[#202329] text-[#F4ECC2] hover:bg-[#2A2E36]'
-                          }`}
-                        >
-                          {editingMyLive ? 'Fertig ✓' : 'Anpassen'}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setEditingMyLive(false);
-                            onCheckOut();
-                          }}
-                          className="rounded-lg bg-[#252830] px-2.5 py-1 font-bold text-[#9CA3AF] hover:text-rose-300"
-                        >
-                          Auschecken
-                        </button>
-                      </div>
-                    ) : (
-                      <div className="flex flex-wrap items-center gap-1.5">
-                        <button
-                          type="button"
-                          onClick={() => onToggleComingToo(item.id)}
-                          className={`rounded-lg px-2.5 py-1 font-extrabold transition ${
-                            iAmComingToo
-                              ? 'bg-[#6FB3A2] text-[#060708]'
-                              : 'bg-[#1D2229] text-[#F4ECC2] ring-1 ring-[#2E343E] hover:border-[#6FB3A2]'
-                          }`}
-                        >
-                          {iAmComingToo ? '👋 Komme auch ✓' : '👋 Komme auch'}
-                        </button>
-                        <WhatsAppActionButton
-                          phone={p.phone}
-                          message={waMsg}
-                          label=""
-                          compact
-                          title={`${p.nickname} per WhatsApp anschreiben`}
-                        />
-                        <button
-                          type="button"
-                          onClick={() => onOpenChallenge(p.id)}
-                          className="rounded-lg bg-[#6FB3A2] px-2.5 py-1 font-black text-[#060708]"
-                        >
-                          ⚡ Duell
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
-
-      {/* 2. Pinnwand: Herausforderungen & Sessions (vollständig integriert) */}
-      <div className="space-y-2.5 rounded-2xl border border-[#24272D] bg-[#181A1E] p-3.5">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <span className="text-xs font-black uppercase tracking-wide text-[#F3F4F6]">
-            📌 Pinnwand ({visibleChallenges.length + visibleSessions.length})
-          </span>
-
-          <div className="flex items-center gap-1.5">
-            <button
-              type="button"
-              onClick={() => setOnlyMatchingLevel((v) => !v)}
-              className={`rounded-full px-2.5 py-1 text-[10px] font-bold transition ${
-                onlyMatchingLevel
-                  ? 'bg-[#6FB3A2] text-[#060708]'
-                  : 'bg-[#131417] text-[#9CA3AF] ring-1 ring-[#272A30]'
-              }`}
-            >
-              {onlyMatchingLevel ? '✓ Mein Niveau' : 'Mein Niveau'}
-            </button>
-            <button
-              type="button"
-              onClick={() => onOpenCreateSession('spontaneous')}
-              className="rounded-lg bg-[#22252C] px-2 py-1 text-[10px] font-bold text-[#E6C79C]"
-            >
-              + Spontan
-            </button>
-          </div>
-        </div>
-
-        {visibleChallenges.map((ch) => {
-          const challenger = playersById[ch.challengerId];
-          const target = ch.targetId ? playersById[ch.targetId] : null;
-          if (!challenger) return null;
-
-          const isMyOutgoing = challenger.id === currentUser.id;
-          const canAccept =
-            ch.status === 'open' &&
-            !isMyOutgoing &&
-            (ch.targetId === currentUser.id || ch.targetId === null);
-
-          const waReply = getContextWhatsAppMessage(
-            'challenge_reply',
-            currentUser,
-            challenger,
-            { format: ch.format, whenLabel: ch.whenLabel }
-          );
-
-          return (
-            <div
-              key={ch.id}
-              className="rounded-xl border border-[#C8A26E]/45 bg-[#201B14] p-3"
-            >
-              <div className="flex items-start justify-between gap-2">
-                <div className="min-w-0">
-                  <div className="flex flex-wrap items-center gap-1.5">
-                    <span className="rounded bg-[#C8A26E] px-1.5 py-0.5 text-[9px] font-black text-[#0F1012]">
-                      ⚡ DUELL
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => onSelectMember?.(challenger.id)}
-                      className="text-xs font-black text-[#F3F4F6] underline decoration-[#C8A26E]/50 underline-offset-2"
-                    >
-                      {challenger.nickname}
-                    </button>
-                    <span className="text-xs text-[#9CA3AF]">→</span>
-                    <span className="text-xs font-extrabold text-[#E6C79C]">
-                      {target ? target.nickname : 'Offen an alle'}
-                    </span>
-                  </div>
-                  <div className="mt-1 text-[11px] font-bold text-[#E6C79C]">
-                    {ch.format} · <span className="text-[#D1D5DB]">{ch.whenLabel}</span>
-                  </div>
-                </div>
-
-                <span
-                  className={`shrink-0 rounded-full px-2 py-0.5 text-[9px] font-black ${
-                    ch.status === 'accepted'
-                      ? 'bg-emerald-500/20 text-emerald-300'
-                      : 'bg-[#2E261A] text-[#E6C79C]'
-                  }`}
-                >
-                  {ch.status === 'accepted' ? 'Angenommen ✓' : 'Offen'}
-                </span>
-              </div>
-
-              {ch.note && (
-                <p className="mt-1.5 text-[11px] text-[#D1D5DB]">«{ch.note}»</p>
               )}
-
-              <div className="mt-2.5 flex flex-wrap items-center justify-between gap-2">
-                <span className="text-[10px] text-[#8E95A2]">{ch.createdAt}</span>
-
-                <div className="flex items-center gap-1.5">
-                  {canAccept && (
-                    <>
-                      <button
-                        type="button"
-                        onClick={() => onRespondChallenge(ch.id, 'accepted')}
-                        className="rounded-lg bg-emerald-500 px-2.5 py-1 text-[10px] font-black text-[#0F1012]"
-                      >
-                        Annehmen ✓
-                      </button>
-                      {ch.targetId === currentUser.id && (
-                        <button
-                          type="button"
-                          onClick={() => onRespondChallenge(ch.id, 'declined')}
-                          className="rounded-lg bg-[#252830] px-2 py-1 text-[10px] font-bold text-[#9CA3AF]"
-                        >
-                          Passt nicht
-                        </button>
-                      )}
-                    </>
-                  )}
-
-                  {!isMyOutgoing && (
-                    <WhatsAppActionButton
-                      phone={challenger.phone}
-                      message={waReply}
-                      label="WhatsApp"
-                      compact
-                    />
-                  )}
-                </div>
-              </div>
             </div>
           );
         })}
-
-        {visibleSessions.map((s) => {
-          const author = playersById[s.authorId];
-          if (!author) return null;
-          const isJoined = s.joinedIds.includes(currentUser.id);
-          const waMsg = getContextWhatsAppMessage('session_join', currentUser, author, {
-            dateLabel: s.dateLabel,
-          });
-
-          return (
-            <div
-              key={s.id}
-              className="rounded-xl border border-[#22262E] bg-[#131417] p-3"
-            >
-              <div className="flex items-center justify-between gap-2">
-                <button
-                  type="button"
-                  onClick={() => onSelectMember?.(author.id)}
-                  className="flex min-w-0 items-center gap-2 text-left transition hover:opacity-85"
-                >
-                  <PlayerAvatar
-                    player={author}
-                    sizeClass="h-7 w-7 text-[10px]"
-                    isConnectAccent={author.connectOnly}
-                  />
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-1.5">
-                      <span className="truncate text-xs font-black text-[#F3F4F6] underline decoration-[#6FB3A2]/50 underline-offset-2">
-                        {author.nickname}
-                      </span>
-                      <span
-                        className={`shrink-0 rounded px-1.5 py-0.5 text-[9px] font-bold ${
-                          s.type === 'announcement'
-                            ? 'bg-[#152622] text-[#A8D0B1]'
-                            : 'bg-[#2C2418] text-[#E6C79C]'
-                        }`}
-                      >
-                        {s.type === 'announcement' ? 'Vorankündigung' : 'Spontan'}
-                      </span>
-                    </div>
-                  </div>
-                </button>
-
-                <span className="shrink-0 text-[10px] text-[#8E95A2]">
-                  {s.createdAt}
-                </span>
-              </div>
-
-              <div className="mt-2 text-xs font-extrabold text-[#E6C79C]">
-                {s.dateLabel}
-              </div>
-              <p className="mt-0.5 text-[11px] text-[#D1D5DB]">{s.note}</p>
-
-              <div className="mt-2.5 flex flex-wrap items-center justify-between gap-2">
-                <div className="text-[10px] text-[#9CA3AF]">
-                  Dabei ({s.joinedIds.length}):{' '}
-                  {s.joinedIds
-                    .map((id) => playersById[id]?.nickname)
-                    .filter(Boolean)
-                    .join(', ')}
-                </div>
-
-                <div className="flex items-center gap-1.5">
-                  {author.id !== currentUser.id && (
-                    <WhatsAppActionButton
-                      phone={author.phone}
-                      message={waMsg}
-                      label=""
-                      compact
-                    />
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => onToggleJoinSession(s.id)}
-                    className={`rounded-lg px-2.5 py-1 text-[10px] font-bold transition ${
-                      isJoined
-                        ? 'bg-[#6FB3A2] text-[#060708]'
-                        : 'bg-[#252830] text-[#F3F4F6] hover:bg-[#313540]'
-                    }`}
-                  >
-                    {isJoined ? 'Dabei ✓' : 'Bin dabei'}
-                  </button>
-                </div>
-              </div>
-            </div>
-          );
-        })}
-
-        {visibleChallenges.length === 0 && visibleSessions.length === 0 && (
-          <div className="rounded-xl bg-[#131417] p-3 text-center text-xs text-[#8E95A2]">
-            Keine passenden Einträge für diesen Filter vorhanden.
-          </div>
-        )}
       </div>
-
-      {/* 3. Top-3 CLUB-Rating Vorschau */}
-      <div className="rounded-2xl border border-[#24272D] bg-[#181A1E] p-3.5">
-        <div className="flex items-center justify-between">
-          <span className="text-xs font-black uppercase tracking-wide text-[#E6C79C]">
-            Top-3 CLUB-Rating
-          </span>
-          <button
-            type="button"
-            onClick={() => onNavigateTab('rating')}
-            className="text-[11px] font-bold text-[#E6C79C] underline"
-          >
-            Rangliste &amp; Partien →
-          </button>
-        </div>
-
-        <div className="mt-2.5 space-y-1.5">
-          {topRatedPlayers.map((p, idx) => {
-            const r = connectRatings[p.id];
-            return (
-              <div
-                key={p.id}
-                className="flex items-center justify-between gap-2 rounded-xl bg-[#131417] px-3 py-2"
-              >
-                <button
-                  type="button"
-                  onClick={() => onSelectMember?.(p.id)}
-                  className="flex min-w-0 flex-1 items-center gap-2 text-left transition hover:opacity-85"
-                >
-                  <span className="w-4 text-xs font-black text-[#E6C79C]">
-                    #{idx + 1}
-                  </span>
-                  <PlayerAvatar
-                    player={p}
-                    sizeClass="h-6 w-6 text-[9px]"
-                    isConnectAccent={p.connectOnly}
-                  />
-                  <span className="truncate text-xs font-bold text-[#F3F4F6] underline decoration-[#6FB3A2]/50 underline-offset-2">
-                    {p.nickname}
-                  </span>
-                </button>
-                {r?.tier && (
-                  <span
-                    className={`rounded border px-2 py-0.5 text-[10px] font-bold ${r.tier.badgeClass}`}
-                  >
-                    {r.tier.symbol} {r.elo}
-                  </span>
-                )}
-              </div>
-            );
-          })}
-        </div>
-
-        {connectMatches.length > 0 && (
-          <div className="mt-2.5 border-t border-[#22252B] pt-2.5">
-            <div className="mb-1.5 flex items-center justify-between text-[10px] font-bold text-[#8E95A2]">
-              <span>Letzte freie Partie</span>
-              <button
-                type="button"
-                onClick={() => onNavigateTab('rating')}
-                className="text-[#A8D0B1] underline"
-              >
-                Alle ({connectMatches.length})
-              </button>
-            </div>
-            {connectMatches.slice(0, 1).map((m) => {
-              const p1 = playersById[m.player1Id];
-              const p2 = playersById[m.player2Id];
-              const deltas = matchDeltas[m.id] || { delta1: 0, delta2: 0 };
-              if (!p1 || !p2) return null;
-              return (
-                <div
-                  key={m.id}
-                  className="flex items-center justify-between gap-2 rounded-xl bg-[#131417] px-3 py-2 text-xs"
-                >
-                  <div className="truncate font-bold text-[#F3F4F6]">
-                    {p1.nickname}{' '}
-                    <span className="text-[10px] text-[#8E95A2]">
-                      ({deltas.delta1 >= 0 ? `+${deltas.delta1}` : deltas.delta1})
-                    </span>{' '}
-                    vs. {p2.nickname}
-                  </div>
-                  <span className="shrink-0 rounded bg-[#181A1E] px-2 py-0.5 font-black text-[#E6C79C]">
-                    {m.score}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
-
-      {/* 4. Neu im Club (vollständig integriert) */}
-      {newMembers.length > 0 && (
-        <div
-          id="club-newbies-section"
-          className="rounded-2xl border border-[#24272D] bg-[#181A1E] p-3.5"
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-black uppercase tracking-wide text-[#F3F4F6]">
-              Neu im Club ({newMembers.length})
-            </span>
-            <button
-              type="button"
-              onClick={onOpenEditProfile}
-              className="text-[11px] font-bold text-[#A8D0B1] underline"
-            >
-              Mein Status
-            </button>
-          </div>
-
-          <div className="mt-2.5 space-y-2">
-            {newMembers.map((p) => (
-              <div
-                key={p.id}
-                className="rounded-xl border border-[#6FB3A2]/25 bg-[#131417] p-3"
-              >
-                <div className="flex items-center justify-between gap-2">
-                  <button
-                    type="button"
-                    onClick={() => onSelectMember?.(p.id)}
-                    className="flex min-w-0 flex-1 items-center gap-2.5 text-left transition hover:opacity-85"
-                  >
-                    <PlayerAvatar
-                      player={p}
-                      sizeClass="h-9 w-9 text-xs"
-                      isConnectAccent
-                    />
-                    <div className="min-w-0">
-                      <div className="truncate text-xs font-black text-[#F3F4F6] underline decoration-emerald-400/50 underline-offset-2">
-                        {p.nickname} ({p.firstName})
-                      </div>
-                      <div className="mt-0.5">
-                        <PlayerBadge
-                          player={p}
-                          season={activeSeason}
-                          ratingInfo={connectRatings[p.id]}
-                        />
-                      </div>
-                    </div>
-                  </button>
-
-                  {p.id !== currentUser.id && (
-                    <div className="flex shrink-0 items-center gap-1.5">
-                      <WhatsAppActionButton
-                        phone={p.phone}
-                        message={getContextWhatsAppMessage('new_member', currentUser, p)}
-                        label=""
-                        compact
-                      />
-                      <button
-                        type="button"
-                        onClick={() => onOpenChallenge(p.id)}
-                        className="shrink-0 rounded-lg bg-[#6FB3A2] px-2.5 py-1.5 text-[10px] font-black text-[#060708]"
-                      >
-                        ⚡ Einladen
-                      </button>
-                    </div>
-                  )}
-                </div>
-
-                {formatHallScheduleSummary(p) && (
-                  <div className="mt-2 text-[10px] text-[#8E95A2]">
-                    Oft in der Halle: {formatHallScheduleSummary(p)}
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   );
 }
 
-function LeagueStandingsTab({ season, playersById, currentUser, connectRatings }) {
+function LeagueStandingsTab({
+  season,
+  playersById,
+  currentUser,
+  connectRatings,
+}) {
   const sortedLeagues = [...season.leagues].sort((a, b) => a.tier - b.tier);
 
-  const funStats = useMemo(() => {
-    const playedMatches = season.matches.filter(
-      (m) => m.score1 !== null && m.score2 !== null
-    );
-    if (playedMatches.length === 0) return [];
-
-    const playerAgg = {};
-    season.leagues.forEach((l) => {
-      l.playerIds.forEach((pid) => {
-        playerAgg[pid] = {
-          playerId: pid,
-          player: playersById[pid],
-          leagueName: l.name,
-          played: 0,
-          won: 0,
-          lost: 0,
-          setsWon: 0,
-          setsLost: 0,
-          fiveSetWins: 0,
-          cleanSweeps: 0,
-        };
-      });
-    });
-
-    playedMatches.forEach((m) => {
-      const s1 = playerAgg[m.player1Id];
-      const s2 = playerAgg[m.player2Id];
-      if (!s1 || !s2) return;
-
-      s1.played += 1;
-      s2.played += 1;
-      s1.setsWon += m.score1;
-      s1.setsLost += m.score2;
-      s2.setsWon += m.score2;
-      s2.setsLost += m.score1;
-
-      const isFiveSetter = m.score1 + m.score2 >= 5;
-      if (m.score1 > m.score2) {
-        s1.won += 1;
-        s2.lost += 1;
-        if (isFiveSetter) s1.fiveSetWins += 1;
-        if (m.score2 === 0) s1.cleanSweeps += 1;
-      } else {
-        s2.won += 1;
-        s1.lost += 1;
-        if (isFiveSetter) s2.fiveSetWins += 1;
-        if (m.score1 === 0) s2.cleanSweeps += 1;
-      }
-    });
-
-    const activeStats = Object.values(playerAgg).filter((s) => s.played > 0);
-    if (activeStats.length === 0) return [];
-
-    const cards = [];
-
-    const undefeated = activeStats
-      .filter((s) => s.won > 0 && s.lost === 0)
-      .sort((a, b) => b.won - a.won || b.setsWon - b.setsWon);
-    if (undefeated.length > 0) {
-      const names = undefeated.map((u) => u.player?.nickname).join(', ');
-      const top = undefeated[0];
-      cards.push({
-        id: 'undefeated',
-        icon: '🛡️',
-        title: 'Noch ungeschlagen',
-        highlight: names,
-        detail:
-          undefeated.length === 1
-            ? `${top.won} Sieg${top.won === 1 ? '' : 'e'}, 0 Niederlagen (${top.leagueName})`
-            : `${undefeated.length} Spieler noch ohne Niederlage`,
-      });
-    }
-
-    const bestDiff = [...activeStats].sort((a, b) => {
-      const diffA = a.setsWon - a.setsLost;
-      const diffB = b.setsWon - b.setsLost;
-      if (diffB !== diffA) return diffB - diffA;
-      return b.setsWon - a.setsWon;
-    })[0];
-    if (bestDiff) {
-      const diff = bestDiff.setsWon - bestDiff.setsLost;
-      cards.push({
-        id: 'sets',
-        icon: '🔥',
-        title: 'Satz-Maschine',
-        highlight: bestDiff.player?.nickname,
-        detail: `Satzverhältnis ${bestDiff.setsWon}:${bestDiff.setsLost} (${
-          diff >= 0 ? `+${diff}` : diff
-        })`,
-      });
-    }
-
-    const clutch = [...activeStats]
-      .filter((s) => s.fiveSetWins > 0)
-      .sort((a, b) => b.fiveSetWins - a.fiveSetWins)[0];
-    if (clutch) {
-      cards.push({
-        id: 'clutch',
-        icon: '⚡',
-        title: 'Nerven aus Stahl',
-        highlight: clutch.player?.nickname,
-        detail: `${clutch.fiveSetWins}× im 5. Entscheidungssatz gejubelt`,
-      });
-    }
-
-    const sweeper = [...activeStats]
-      .filter((s) => s.cleanSweeps > 0)
-      .sort((a, b) => b.cleanSweeps - a.cleanSweeps)[0];
-    if (sweeper) {
-      cards.push({
-        id: 'sweep',
-        icon: '🧹',
-        title: 'Zu-Null-Abräumer',
-        highlight: sweeper.player?.nickname,
-        detail: `${sweeper.cleanSweeps}× glatt mit 3:0 durchmarschiert`,
-      });
-    }
-
-    const busiest = [...activeStats].sort((a, b) => b.played - a.played)[0];
-    if (busiest) {
-      cards.push({
-        id: 'busiest',
-        icon: '🏃',
-        title: 'Fleissbiene',
-        highlight: busiest.player?.nickname,
-        detail: `Bereits ${busiest.played} Liga-Partie(n) absolviert`,
-      });
-    }
-
-    return cards.slice(0, 4);
-  }, [season, playersById]);
-
   return (
     <div className="space-y-4">
-      {funStats.length > 0 && (
-        <div className="rounded-2xl border border-[#DE754B]/35 bg-gradient-to-br from-[#231611] to-[#16181C] p-3.5">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-black uppercase tracking-wider text-[#F4ECC2]">
-              ✨ Monats-Highlights · {season.label}
-            </span>
-            <span className="text-[10px] text-[#8E95A2]">Live-Auswertung</span>
-          </div>
-
-          <div className="mt-2.5 grid grid-cols-2 gap-2">
-            {funStats.map((item) => (
-              <div
-                key={item.id}
-                className="rounded-xl border border-[#2A2926] bg-[#121316]/90 p-2.5"
-              >
-                <div className="flex items-center gap-1.5">
-                  <span className="text-sm">{item.icon}</span>
-                  <span className="text-[10px] font-bold uppercase tracking-wide text-[#9CA3AF]">
-                    {item.title}
-                  </span>
-                </div>
-                <div className="mt-1 truncate text-xs font-black text-[#F3F4F6]">
-                  {item.highlight}
-                </div>
-                <div className="mt-0.5 text-[10px] leading-snug text-[#DE754B]">
-                  {item.detail}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
       {sortedLeagues.map((league, idx) => {
         const rows = computeStandings(league, season.matches, playersById);
         const hasUpper = idx > 0;
@@ -5482,85 +4572,73 @@ function LeagueStandingsTab({ season, playersById, currentUser, connectRatings }
             key={league.id}
             className="overflow-hidden rounded-2xl border border-[#24272D] bg-[#181A1E]"
           >
-            <div className="flex items-center justify-between border-b border-[#24272D] bg-[#1D2025] px-3.5 py-2.5">
-              <span className="text-xs font-black tracking-wide text-[#DE754B] uppercase">
+            <div className="flex items-center justify-between border-b border-[#24272D] bg-[#131417] px-3.5 py-2.5">
+              <span className="text-xs font-black text-[#DE754B] uppercase">
                 {league.name}
               </span>
-              <span className="text-[11px] text-[#8E95A2]">
-                {hasUpper ? '↑ Aufstieg' : ''} {hasUpper && hasLower ? '·' : ''}{' '}
-                {hasLower ? '↓ Abstieg' : ''}
+              <span className="text-[10px] text-[#8E95A2]">
+                {hasUpper && '▲ Aufstieg'} {hasUpper && hasLower && '·'}{' '}
+                {hasLower && '▼ Abstieg'}
               </span>
             </div>
 
             <div className="divide-y divide-[#22252B]">
-              {rows.map((r, pos) => {
-                const isPromotion = hasUpper && pos === 0;
-                const isRelegation = hasLower && pos === rows.length - 1 && rows.length > 1;
-                const isMe = r.playerId === currentUser.id;
+              {rows.map((row, rowIdx) => {
+                const isMe = row.playerId === currentUser.id;
+                const isPromo = hasUpper && rowIdx === 0 && rows.length >= 2;
+                const isReleg =
+                  hasLower && rowIdx === rows.length - 1 && rows.length >= 2;
 
                 return (
                   <div
-                    key={r.playerId}
-                    className={`flex items-center justify-between gap-2 px-3.5 py-2.5 ${
-                      isMe ? 'bg-[#291711]' : ''
+                    key={row.playerId}
+                    className={`flex items-center justify-between gap-2 px-3.5 py-2.5 text-xs ${
+                      isMe ? 'bg-[#291711]/55' : ''
                     }`}
                   >
                     <div className="flex min-w-0 items-center gap-2.5">
                       <span
-                        className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-xs font-black ${
-                          isPromotion
+                        className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md text-[10px] font-black ${
+                          isPromo
                             ? 'bg-emerald-500/20 text-emerald-300'
-                            : isRelegation
+                            : isReleg
                             ? 'bg-rose-500/20 text-rose-300'
-                            : 'bg-[#131417] text-[#9CA3AF]'
+                            : 'bg-[#131417] text-[#8E95A2]'
                         }`}
                       >
-                        {pos + 1}
+                        {rowIdx + 1}
                       </span>
+                      <PlayerAvatar
+                        player={row.player}
+                        sizeClass="h-7 w-7 text-[10px]"
+                      />
                       <div className="min-w-0">
-                        <div className="truncate text-xs font-bold text-[#F3F4F6]">
-                          {r.player?.nickname}{' '}
-                          {isPromotion && (
-                            <span className="text-[10px] text-emerald-400">↑</span>
-                          )}
-                          {isRelegation && (
-                            <span className="text-[10px] text-rose-400">↓</span>
-                          )}
+                        <div className="truncate font-bold text-[#F3F4F6]">
+                          {row.player?.nickname}
                         </div>
-                        <div className="mt-0.5">
-                          <PlayerBadge
-                            player={r.player}
-                            season={season}
-                            ratingInfo={connectRatings[r.playerId]}
-                          />
+                        <div className="text-[10px] text-[#8E95A2]">
+                          {row.played} Sp. · Sätze {row.setsWon}:{row.setsLost}
                         </div>
                       </div>
                     </div>
 
                     <div className="flex shrink-0 items-center gap-2">
-                      <div className="text-right">
-                        <div className="text-[11px] font-semibold text-[#9CA3AF]">
-                          {r.setsWon}:{r.setsLost}
-                        </div>
-                        <div className="text-[10px] text-[#6B7280]">{r.played} Sp.</div>
-                      </div>
-                      <div className="w-8 rounded-lg bg-[#111215] py-1 text-center text-xs font-black text-[#F4ECC2]">
-                        {r.points}
-                      </div>
-                      {!isMe && r.player && (
+                      {!isMe && row.player && (
                         <WhatsAppActionButton
-                          phone={r.player.phone}
+                          phone={row.player.phone}
                           message={getContextWhatsAppMessage(
                             'league_table',
                             currentUser,
-                            r.player,
+                            row.player,
                             { leagueName: league.name }
                           )}
                           label=""
                           compact
-                          title={`${r.player.nickname} per WhatsApp anschreiben`}
                         />
                       )}
+                      <span className="rounded-lg bg-[#131417] px-2.5 py-1 text-xs font-black text-[#F4ECC2]">
+                        {row.points} Pkt
+                      </span>
                     </div>
                   </div>
                 );
@@ -5577,82 +4655,538 @@ function LeagueStatusTab({
   season,
   currentUser,
   players,
-  connectRatings,
   isCurrentUserPaused,
   onTogglePause,
   onOpenAddMember,
 }) {
-  const pausedPlayers = players.filter((p) => season.pausedPlayerIds.includes(p.id));
+  const pausedPlayers = season.pausedPlayerIds
+    .map((id) => players.find((p) => p.id === id))
+    .filter(Boolean);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       <div className="rounded-2xl border border-[#24272D] bg-[#181A1E] p-4">
-        <div className="text-xs font-black tracking-wide text-[#DE754B] uppercase">
-          Deine Monats-Teilnahme ({season.label})
+        <div className="text-xs font-black text-[#F3F4F6]">
+          Dein Liga-Status ({season.label})
         </div>
-        <p className="mt-1.5 text-xs text-[#D1D5DB]">
+        <p className="mt-1 text-xs text-[#9CA3AF]">
           {isCurrentUserPaused
-            ? 'Du bist aktuell für diesen Monat pausiert. Du kannst jederzeit für den nächsten Monat wieder einsteigen.'
-            : 'Du spielst diesen Monat aktiv in der Liga mit.'}
+            ? 'Du pausierst diesen Monat in der Monatsliga. Du kannst jederzeit wieder einsteigen.'
+            : 'Du bist aktuell aktiv in der Monatsliga eingeteilt.'}
         </p>
-
         <button
           type="button"
           onClick={onTogglePause}
-          className={`mt-3 w-full rounded-xl py-2.5 text-xs font-black transition ${
+          className={`mt-3 w-full rounded-xl py-2.5 text-xs font-black ${
             isCurrentUserPaused
               ? 'bg-[#DE754B] text-[#060708]'
-              : 'bg-[#252830] text-[#F3F4F6] hover:bg-[#30343E]'
+              : 'border border-[#2E323B] bg-[#131417] text-[#F3F4F6]'
           }`}
         >
           {isCurrentUserPaused
-            ? 'Jetzt wieder aktiv melden'
-            : 'Diesen Monat pausieren (Abmelden)'}
+            ? 'Wieder für Monatsliga anmelden'
+            : 'Für nächsten Monat pausieren'}
         </button>
       </div>
 
       <div className="rounded-2xl border border-[#24272D] bg-[#181A1E] p-4">
         <div className="flex items-center justify-between">
-          <span className="text-xs font-bold text-[#9CA3AF]">
-            Pausierte / Nur-CLUB Mitglieder ({pausedPlayers.length})
-          </span>
+          <div className="text-xs font-black text-[#F3F4F6]">
+            Aktuell pausiert / Nur CLUB ({pausedPlayers.length})
+          </div>
           <button
             type="button"
             onClick={onOpenAddMember}
-            className="text-xs font-bold text-[#DE754B] underline"
+            className="rounded-lg bg-[#252830] px-2.5 py-1 text-[11px] font-bold text-[#A8D0B1]"
           >
-            + Neues Mitglied
+            + Mitglied
           </button>
         </div>
 
-        <div className="mt-3 space-y-2">
-          {pausedPlayers.map((p) => {
-            const scheduleSummary = formatHallScheduleSummary(p);
-            return (
-              <div
-                key={p.id}
-                className="flex items-center justify-between gap-2 rounded-xl bg-[#131417] px-3 py-2"
-              >
-                <div className="min-w-0">
-                  <div className="truncate text-xs font-bold text-[#F3F4F6]">
-                    {p.nickname} ({p.firstName})
+        <div className="mt-2.5 space-y-2">
+          {pausedPlayers.map((p) => (
+            <div
+              key={p.id}
+              className="flex items-center justify-between rounded-xl bg-[#131417] px-3 py-2 text-xs"
+            >
+              <div className="flex items-center gap-2">
+                <PlayerAvatar
+                  player={p}
+                  sizeClass="h-7 w-7 text-[10px]"
+                  isConnectAccent={p.connectOnly}
+                />
+                <span className="font-bold text-[#F3F4F6]">{p.nickname}</span>
+              </div>
+              {p.id !== currentUser.id && (
+                <WhatsAppActionButton
+                  phone={p.phone}
+                  message={getContextWhatsAppMessage(
+                    'league_paused',
+                    currentUser,
+                    p
+                  )}
+                  label="Match anfragen"
+                  compact
+                />
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ConnectOverviewTab({
+  currentUser,
+  players,
+  playersById,
+  activeSeason,
+  connectRatings,
+  liveCheckins,
+  sessions,
+  challenges,
+  onOneTapCheckIn,
+  onUpdateMyLiveCheckin,
+  onExtendMyLiveCheckin,
+  onToggleComingToo,
+  onCheckOut,
+  onToggleJoinSession,
+  onOpenChallenge,
+  onRespondChallenge,
+  onOpenCreateSession,
+  onSelectMember,
+  onNavigateTab,
+}) {
+  const [onlyMyLevel, setOnlyMyLevel] = useState(false);
+  const [editingMyLive, setEditingMyLive] = useState(false);
+  const [customNoteInput, setCustomNoteInput] = useState('');
+
+  const myLiveEntry = liveCheckins.find((c) => c.playerId === currentUser.id);
+
+  const visibleChallenges = useMemo(() => {
+    return challenges.filter((c) => {
+      const isForMeOrAll =
+        c.targetId === null ||
+        c.targetId === currentUser.id ||
+        c.challengerId === currentUser.id;
+      if (!isForMeOrAll) return false;
+
+      if (
+        onlyMyLevel &&
+        !isMatchingLevel(currentUser, playersById[c.challengerId], activeSeason)
+      ) {
+        return false;
+      }
+
+      return true;
+    });
+  }, [challenges, onlyMyLevel, currentUser, playersById, activeSeason]);
+
+  const visibleSessions = useMemo(() => {
+    if (!onlyMyLevel) return sessions;
+    return sessions.filter((s) =>
+      isMatchingLevel(currentUser, playersById[s.authorId], activeSeason)
+    );
+  }, [sessions, onlyMyLevel, currentUser, playersById, activeSeason]);
+
+  const newMembers = useMemo(
+    () => players.filter((p) => p.isNewMember),
+    [players]
+  );
+
+  return (
+    <div className="space-y-4">
+      <div
+        id="club-live-section"
+        className="rounded-2xl border border-[#24272D] bg-[#14161A] p-3"
+      >
+        <div className="flex items-center justify-between gap-2">
+          <div>
+            <h2 className="text-xs font-black tracking-wide text-[#F3F4F6] uppercase">
+              Gerade LIVE in der Halle ({liveCheckins.length})
+            </h2>
+            <p className="text-[10px] text-[#8E95A2]">
+              Antippen für Player-Card oder direkt dazukommen
+            </p>
+          </div>
+          {!myLiveEntry && (
+            <button
+              type="button"
+              onClick={onOneTapCheckIn}
+              className="rounded-lg bg-[#6FB3A2] px-2.5 py-1.5 text-[11px] font-black text-[#060708]"
+            >
+              + Einchecken
+            </button>
+          )}
+        </div>
+
+        {liveCheckins.length === 0 ? (
+          <div className="mt-2.5 rounded-xl border border-[#22252B] bg-[#0F1114] p-3 text-center text-xs text-[#8E95A2]">
+            Aktuell ist noch niemand eingecheckt. Mach den Anfang!
+          </div>
+        ) : (
+          <div className="mt-2.5 grid grid-cols-2 gap-2">
+            {liveCheckins.map((item) => {
+              const p = playersById[item.playerId];
+              if (!p) return null;
+              const isMe = p.id === currentUser.id;
+              const league = activeSeason.leagues.find((l) =>
+                l.playerIds.includes(p.id)
+              );
+              const rating = connectRatings[p.id];
+              const comingIds = item.comingTooIds || [];
+              const iAmComing = comingIds.includes(currentUser.id);
+              const comingNames = comingIds
+                .map((id) => playersById[id]?.nickname)
+                .filter(Boolean);
+
+              return (
+                <div
+                  key={item.id}
+                  className={`flex flex-col justify-between rounded-xl border p-2.5 ${
+                    isMe && editingMyLive
+                      ? 'col-span-2 border-[#6FB3A2]/50 bg-[#152622]/40'
+                      : isMe
+                      ? 'border-[#6FB3A2]/45 bg-[#152622]/30'
+                      : 'border-[#24272D] bg-[#0F1114]'
+                  }`}
+                >
+                  <div>
+                    <div className="flex items-start justify-between gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => onSelectMember?.(p.id)}
+                        className="flex min-w-0 items-center gap-2 text-left hover:opacity-85"
+                      >
+                        <PlayerAvatar
+                          player={p}
+                          sizeClass="h-7 w-7 text-[10px]"
+                          isConnectAccent={p.connectOnly}
+                        />
+                        <div className="min-w-0">
+                          <div className="truncate text-xs font-black text-[#F3F4F6]">
+                            {p.nickname}
+                          </div>
+                          <div className="text-[10px] text-[#8E95A2]">
+                            {item.durationLabel}
+                          </div>
+                        </div>
+                      </button>
+
+                      <span className="shrink-0 rounded bg-[#181A1E] px-1.5 py-0.5 text-[9px] font-bold text-[#A8D0B1]">
+                        {league
+                          ? league.name
+                          : `${rating?.tier?.symbol || '○'} ${
+                              rating?.elo || 1200
+                            }`}
+                      </span>
+                    </div>
+
+                    {item.note && (
+                      <div className="mt-1.5 line-clamp-1 text-[10px] text-[#9CA3AF]">
+                        {item.note.replace(/^[^\w\s]+\s*/, '')}
+                      </div>
+                    )}
+
+                    {comingNames.length > 0 && (
+                      <div className="mt-1 truncate text-[10px] font-semibold text-[#A8D0B1]">
+                        Bin dabei: {comingNames.join(', ')}
+                      </div>
+                    )}
                   </div>
-                  {scheduleSummary && (
-                    <div className="truncate text-[10px] text-[#8E95A2]">
-                      Halle: {scheduleSummary}
+
+                  {isMe ? (
+                    <div className="mt-2 space-y-2 border-t border-[#22252B] pt-2">
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={onExtendMyLiveCheckin}
+                          className="flex-1 rounded-lg bg-[#181A1E] py-1 text-[10px] font-bold text-[#A8D0B1] ring-1 ring-[#2B2F37]"
+                        >
+                          +30m
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setCustomNoteInput(item.note || '');
+                            setEditingMyLive((v) => !v);
+                          }}
+                          className="flex-1 rounded-lg bg-[#181A1E] py-1 text-[10px] font-bold text-[#F3F4F6] ring-1 ring-[#2B2F37]"
+                        >
+                          Anpassen
+                        </button>
+                        <button
+                          type="button"
+                          onClick={onCheckOut}
+                          className="rounded-lg bg-[#181A1E] px-2 py-1 text-[10px] font-bold text-rose-300 ring-1 ring-[#2B2F37]"
+                        >
+                          Out
+                        </button>
+                      </div>
+
+                      {editingMyLive && (
+                        <div className="space-y-2 rounded-lg bg-[#0F1114] p-2">
+                          <div className="grid grid-cols-4 gap-1">
+                            {LIVE_DURATION_OPTIONS.map((opt) => (
+                              <button
+                                key={opt.id}
+                                type="button"
+                                onClick={() =>
+                                  onUpdateMyLiveCheckin({
+                                    minutes: opt.minutes,
+                                  })
+                                }
+                                className="rounded bg-[#181A1E] py-1 text-[10px] font-bold text-[#F4ECC2] hover:bg-[#6FB3A2] hover:text-[#060708]"
+                              >
+                                {opt.label}
+                              </button>
+                            ))}
+                          </div>
+                          <div className="flex flex-wrap gap-1">
+                            {LIVE_MOOD_PRESETS.map((preset) => (
+                              <button
+                                key={preset}
+                                type="button"
+                                onClick={() => {
+                                  onUpdateMyLiveCheckin({ note: preset });
+                                  setEditingMyLive(false);
+                                }}
+                                className="rounded bg-[#181A1E] px-2 py-1 text-[10px] text-[#D1D5DB] hover:bg-[#6FB3A2] hover:text-[#060708]"
+                              >
+                                {preset}
+                              </button>
+                            ))}
+                          </div>
+                          <div className="flex gap-1">
+                            <input
+                              type="text"
+                              value={customNoteInput}
+                              onChange={(e) =>
+                                setCustomNoteInput(e.target.value)
+                              }
+                              placeholder="Eigene Notiz..."
+                              className="min-w-0 flex-1 rounded bg-[#181A1E] px-2 py-1 text-[11px] text-[#F3F4F6]"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                onUpdateMyLiveCheckin({
+                                  note: customNoteInput.trim(),
+                                });
+                                setEditingMyLive(false);
+                              }}
+                              className="rounded bg-[#6FB3A2] px-2.5 py-1 text-[10px] font-black text-[#060708]"
+                            >
+                              OK
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="mt-2 flex items-center gap-1 border-t border-[#22252B] pt-2">
+                      <button
+                        type="button"
+                        onClick={() => onToggleComingToo(item.id)}
+                        className={`flex-1 rounded-lg py-1 text-[10px] font-bold transition ${
+                          iAmComing
+                            ? 'bg-[#152622] text-[#A8D0B1] ring-1 ring-[#6FB3A2]/50'
+                            : 'bg-[#181A1E] text-[#D1D5DB] ring-1 ring-[#2B2F37]'
+                        }`}
+                      >
+                        {iAmComing ? 'Dabei ✓' : 'Komme auch'}
+                      </button>
+                      <WhatsAppActionButton
+                        phone={p.phone}
+                        message={getContextWhatsAppMessage(
+                          'live_hall',
+                          currentUser,
+                          p,
+                          { durationLabel: item.durationLabel }
+                        )}
+                        label=""
+                        compact
+                      />
+                      <button
+                        type="button"
+                        onClick={() => onOpenChallenge(p.id)}
+                        className="rounded-lg bg-[#181A1E] px-2 py-1 text-[10px] font-bold text-[#F4ECC2] ring-1 ring-[#2B2F37]"
+                      >
+                        Duell
+                      </button>
                     </div>
                   )}
                 </div>
-                <div className="flex shrink-0 items-center gap-1.5">
-                  <PlayerBadge
-                    player={p}
-                    season={season}
-                    ratingInfo={connectRatings[p.id]}
-                  />
-                  {p.id !== currentUser.id && (
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      <div className="rounded-2xl border border-[#24272D] bg-[#14161A] p-3">
+        <div className="flex items-center justify-between gap-2">
+          <h2 className="text-xs font-black tracking-wide text-[#F3F4F6] uppercase">
+            Pinnwand ({visibleChallenges.length + visibleSessions.length})
+          </h2>
+
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => setOnlyMyLevel((v) => !v)}
+              className={`rounded-lg px-2 py-1 text-[10px] font-bold transition ${
+                onlyMyLevel
+                  ? 'bg-[#6FB3A2] text-[#060708]'
+                  : 'bg-[#0F1114] text-[#9CA3AF] ring-1 ring-[#2B2F37]'
+              }`}
+            >
+              Mein Niveau
+            </button>
+            <button
+              type="button"
+              onClick={() => onOpenCreateSession('announcement')}
+              className="rounded-lg bg-[#0F1114] px-2 py-1 text-[10px] font-bold text-[#A8D0B1] ring-1 ring-[#2B2F37]"
+            >
+              + Post
+            </button>
+          </div>
+        </div>
+
+        <div className="mt-2 space-y-1.5">
+          {visibleChallenges.map((ch) => {
+            const challenger = playersById[ch.challengerId];
+            const target = ch.targetId ? playersById[ch.targetId] : null;
+            if (!challenger) return null;
+            const canRespond =
+              ch.status === 'open' &&
+              (ch.targetId === currentUser.id ||
+                (ch.targetId === null && ch.challengerId !== currentUser.id));
+
+            return (
+              <div
+                key={ch.id}
+                className="flex items-center justify-between gap-2 rounded-xl border border-[#DE754B]/30 bg-[#0F1114] px-2.5 py-2"
+              >
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5 text-[11px]">
+                    <span className="font-black text-[#DE754B]">⚡</span>
+                    <button
+                      type="button"
+                      onClick={() => onSelectMember?.(challenger.id)}
+                      className="truncate font-black text-[#F3F4F6] hover:underline"
+                    >
+                      {challenger.nickname}
+                    </button>
+                    <span className="truncate text-[#8E95A2]">
+                      → {target ? target.nickname : 'Alle'} · {ch.format}
+                    </span>
+                  </div>
+                  <div className="mt-0.5 truncate text-[10px] text-[#9CA3AF]">
+                    {ch.whenLabel}
+                    {ch.note ? ` · ${ch.note}` : ''}
+                  </div>
+                </div>
+
+                <div className="flex shrink-0 items-center gap-1">
+                  {canRespond ? (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => onRespondChallenge(ch.id, 'accepted')}
+                        className="rounded bg-emerald-500/20 px-2 py-1 text-[10px] font-black text-emerald-300"
+                      >
+                        ✓
+                      </button>
+                      {ch.targetId === currentUser.id && (
+                        <button
+                          type="button"
+                          onClick={() => onRespondChallenge(ch.id, 'declined')}
+                          className="rounded bg-rose-500/20 px-2 py-1 text-[10px] font-black text-rose-300"
+                        >
+                          ✕
+                        </button>
+                      )}
+                    </>
+                  ) : (
+                    <span className="rounded bg-[#181A1E] px-1.5 py-0.5 text-[9px] font-bold text-[#F4ECC2]">
+                      {ch.status === 'accepted'
+                        ? 'Angenommen'
+                        : ch.status === 'declined'
+                        ? 'Abgelehnt'
+                        : 'Offen'}
+                    </span>
+                  )}
+
+                  {challenger.id !== currentUser.id && (
                     <WhatsAppActionButton
-                      phone={p.phone}
-                      message={getContextWhatsAppMessage('league_paused', currentUser, p)}
+                      phone={challenger.phone}
+                      message={getContextWhatsAppMessage(
+                        'challenge_reply',
+                        currentUser,
+                        challenger,
+                        { format: ch.format, whenLabel: ch.whenLabel }
+                      )}
+                      label=""
+                      compact
+                    />
+                  )}
+                </div>
+              </div>
+            );
+          })}
+
+          {visibleSessions.map((s) => {
+            const author = playersById[s.authorId];
+            if (!author) return null;
+            const joined = s.joinedIds.includes(currentUser.id);
+
+            return (
+              <div
+                key={s.id}
+                className="flex items-center justify-between gap-2 rounded-xl border border-[#24272D] bg-[#0F1114] px-2.5 py-2"
+              >
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5 text-[11px]">
+                    <button
+                      type="button"
+                      onClick={() => onSelectMember?.(author.id)}
+                      className="truncate font-black text-[#F3F4F6] hover:underline"
+                    >
+                      {author.nickname}
+                    </button>
+                    <span className="truncate font-semibold text-[#6FB3A2]">
+                      · {s.dateLabel}
+                    </span>
+                    <span className="shrink-0 text-[10px] text-[#8E95A2]">
+                      ({s.joinedIds.length})
+                    </span>
+                  </div>
+                  <div className="mt-0.5 truncate text-[10px] text-[#9CA3AF]">
+                    {s.note}
+                  </div>
+                </div>
+
+                <div className="flex shrink-0 items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => onToggleJoinSession(s.id)}
+                    className={`rounded px-2 py-1 text-[10px] font-black ${
+                      joined
+                        ? 'bg-[#6FB3A2] text-[#060708]'
+                        : 'bg-[#181A1E] text-[#D1D5DB] ring-1 ring-[#2B2F37]'
+                    }`}
+                  >
+                    {joined ? 'Dabei ✓' : '+ Dabei'}
+                  </button>
+                  {author.id !== currentUser.id && (
+                    <WhatsAppActionButton
+                      phone={author.phone}
+                      message={getContextWhatsAppMessage(
+                        'session_join',
+                        currentUser,
+                        author,
+                        { dateLabel: s.dateLabel }
+                      )}
                       label=""
                       compact
                     />
@@ -5663,6 +5197,620 @@ function LeagueStatusTab({
           })}
         </div>
       </div>
+
+      {newMembers.length > 0 && (
+        <div className="rounded-2xl border border-[#24272D] bg-[#14161A] p-3">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xs font-black tracking-wide text-[#F3F4F6] uppercase">
+              Neu im Club ({newMembers.length})
+            </h2>
+            <button
+              type="button"
+              onClick={() => onNavigateTab('players')}
+              className="text-[11px] font-bold text-[#6FB3A2]"
+            >
+              Alle Spieler →
+            </button>
+          </div>
+
+          <div className="mt-2 grid grid-cols-3 gap-2">
+            {newMembers.map((m) => (
+              <div
+                key={m.id}
+                className="flex flex-col justify-between rounded-xl border border-[#24272D] bg-[#0F1114] p-2"
+              >
+                <button
+                  type="button"
+                  onClick={() => onSelectMember?.(m.id)}
+                  className="flex w-full flex-col items-center gap-1 text-center"
+                >
+                  <PlayerAvatar
+                    player={m}
+                    sizeClass="h-9 w-9 text-[10px]"
+                    isConnectAccent
+                  />
+                  <div className="w-full min-w-0">
+                    <div className="truncate text-[11px] font-black text-[#F3F4F6]">
+                      {m.nickname}
+                    </div>
+                    <div className="truncate text-[9px] text-[#8E95A2]">
+                      {m.sttClass}
+                    </div>
+                  </div>
+                </button>
+                {m.id !== currentUser.id && (
+                  <div className="mt-2 flex items-center justify-center">
+                    <WhatsAppActionButton
+                      phone={m.phone}
+                      message={getContextWhatsAppMessage(
+                        'new_member',
+                        currentUser,
+                        m
+                      )}
+                      label="Hi"
+                      compact
+                    />
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ClubPlayersTab({
+  players,
+  currentUser,
+  activeSeason,
+  connectRatings,
+  connectMatches = [],
+  liveCheckins,
+  onOpenChallenge,
+  onSelectMember,
+}) {
+  const [search, setSearch] = useState('');
+  const [quickFilter, setQuickFilter] = useState('all');
+  const [styleTab, setStyleTab] = useState('ALL');
+  const [modeTab, setModeTab] = useState('ALL');
+  const [langTab, setLangTab] = useState('ALL');
+
+  const livePlayerIds = useMemo(
+    () => new Set(liveCheckins.map((c) => c.playerId)),
+    [liveCheckins]
+  );
+
+  const leaguePlayerIds = useMemo(() => {
+    const ids = new Set();
+    (activeSeason?.leagues || []).forEach((l) =>
+      l.playerIds.forEach((id) => ids.add(id))
+    );
+    return ids;
+  }, [activeSeason]);
+
+  const todayDayCode = useMemo(() => {
+    const jsDay = new Date().getDay();
+    return DAYS_OF_WEEK[(jsDay + 6) % 7] || 'Mi';
+  }, []);
+
+  const myScheduleDays = useMemo(() => {
+    const sched = getNormalizedHallSchedule(currentUser);
+    return new Set(
+      DAYS_OF_WEEK.filter((d) => Array.isArray(sched[d]) && sched[d].length > 0)
+    );
+  }, [currentUser]);
+
+  const { playedAgainstIds, lostLastAgainstIds } = useMemo(() => {
+    const played = new Set();
+    const lastOutcomeByOpp = {};
+    const chronological = [...(connectMatches || [])].reverse();
+
+    chronological.forEach((m) => {
+      if (m.player1Id === currentUser.id) {
+        played.add(m.player2Id);
+        lastOutcomeByOpp[m.player2Id] = m.winnerId === currentUser.id ? 'W' : 'L';
+      } else if (m.player2Id === currentUser.id) {
+        played.add(m.player1Id);
+        lastOutcomeByOpp[m.player1Id] = m.winnerId === currentUser.id ? 'W' : 'L';
+      }
+    });
+
+    const lostLast = new Set(
+      Object.entries(lastOutcomeByOpp)
+        .filter(([, outcome]) => outcome === 'L')
+        .map(([oppId]) => oppId)
+    );
+
+    return { playedAgainstIds: played, lostLastAgainstIds: lostLast };
+  }, [connectMatches, currentUser.id]);
+
+  const myElo = connectRatings[currentUser.id]?.elo || 1200;
+
+  const rankedPlayers = useMemo(() => {
+    return [...players].sort(
+      (a, b) =>
+        (connectRatings[b.id]?.elo || 1200) - (connectRatings[a.id]?.elo || 1200)
+    );
+  }, [players, connectRatings]);
+
+  const top5Ids = useMemo(
+    () => new Set(rankedPlayers.slice(0, 5).map((p) => p.id)),
+    [rankedPlayers]
+  );
+
+  const activeFilterCount =
+    (quickFilter !== 'all' ? 1 : 0) +
+    (styleTab !== 'ALL' ? 1 : 0) +
+    (modeTab !== 'ALL' ? 1 : 0) +
+    (langTab !== 'ALL' ? 1 : 0) +
+    (search.trim() ? 1 : 0);
+
+  const resetAllFilters = () => {
+    setSearch('');
+    setQuickFilter('all');
+    setStyleTab('ALL');
+    setModeTab('ALL');
+    setLangTab('ALL');
+  };
+
+  const sortedAndFilteredPlayers = useMemo(() => {
+    const q = search.trim().toLowerCase();
+
+    return rankedPlayers.filter((p) => {
+      const pDays = new Set(
+        DAYS_OF_WEEK.filter((d) => {
+          const sched = getNormalizedHallSchedule(p);
+          return Array.isArray(sched[d]) && sched[d].length > 0;
+        })
+      );
+      const pElo = connectRatings[p.id]?.elo || 1200;
+
+      if (quickFilter === 'live' && !livePlayerIds.has(p.id)) return false;
+      if (quickFilter === 'today' && !pDays.has(todayDayCode)) return false;
+      if (
+        quickFilter === 'samedays' &&
+        (p.id === currentUser.id ||
+          ![...pDays].some((d) => myScheduleDays.has(d)))
+      ) {
+        return false;
+      }
+      if (
+        quickFilter === 'mylevel' &&
+        !isMatchingLevel(currentUser, p, activeSeason)
+      ) {
+        return false;
+      }
+      if (
+        quickFilter === 'reachable' &&
+        (p.id === currentUser.id || pElo <= myElo || pElo > myElo + 65)
+      ) {
+        return false;
+      }
+      if (
+        quickFilter === 'unplayed' &&
+        (p.id === currentUser.id || playedAgainstIds.has(p.id))
+      ) {
+        return false;
+      }
+      if (quickFilter === 'rematch' && !lostLastAgainstIds.has(p.id)) {
+        return false;
+      }
+      if (quickFilter === 'top5' && !top5Ids.has(p.id)) return false;
+      if (quickFilter === 'new' && !p.isNewMember) return false;
+
+      if (styleTab !== 'ALL' && p.playstyle !== styleTab) return false;
+
+      if (modeTab === 'LEAGUE' && !leaguePlayerIds.has(p.id)) return false;
+      if (modeTab === 'CLUB_ONLY' && leaguePlayerIds.has(p.id)) return false;
+
+      if (langTab === 'DE' && p.language === 'Englisch') return false;
+      if (langTab === 'EN' && p.language === 'Deutsch') return false;
+
+      if (!q) return true;
+      return `${p.nickname} ${p.firstName} ${p.lastName} ${p.sttClass || ''} ${
+        p.playstyle || ''
+      } ${connectRatings[p.id]?.tier?.label || ''}`
+        .toLowerCase()
+        .includes(q);
+    });
+  }, [
+    rankedPlayers,
+    connectRatings,
+    search,
+    quickFilter,
+    styleTab,
+    modeTab,
+    langTab,
+    livePlayerIds,
+    todayDayCode,
+    myScheduleDays,
+    myElo,
+    playedAgainstIds,
+    lostLastAgainstIds,
+    top5Ids,
+    leaguePlayerIds,
+    currentUser,
+    activeSeason,
+  ]);
+
+  const primaryTabs = [
+    { id: 'all', label: 'Alle' },
+    { id: 'live', label: `⚡ LIVE (${livePlayerIds.size})` },
+    { id: 'today', label: `📅 Heute (${todayDayCode})` },
+    { id: 'samedays', label: '🤝 Gleiche Tage' },
+    { id: 'mylevel', label: '🎯 Mein Niveau' },
+    { id: 'reachable', label: '⛰️ +50 Elo' },
+    { id: 'unplayed', label: '🆕 Unbespielt' },
+    { id: 'rematch', label: '🔥 Revanche' },
+    { id: 'top5', label: '👑 Top 5' },
+    { id: 'new', label: '👋 Neu' },
+  ];
+
+  const secondaryTabs = [
+    {
+      group: 'style',
+      id: 'Abwehr / Noppen',
+      label: '🛡️ Noppen/Abwehr',
+      active: styleTab === 'Abwehr / Noppen',
+      onClick: () =>
+        setStyleTab((prev) =>
+          prev === 'Abwehr / Noppen' ? 'ALL' : 'Abwehr / Noppen'
+        ),
+    },
+    {
+      group: 'style',
+      id: 'Offensiv',
+      label: '🚀 Offensiv',
+      active: styleTab === 'Offensiv',
+      onClick: () =>
+        setStyleTab((prev) => (prev === 'Offensiv' ? 'ALL' : 'Offensiv')),
+    },
+    {
+      group: 'style',
+      id: 'Allround',
+      label: '⚖️ Allround',
+      active: styleTab === 'Allround',
+      onClick: () =>
+        setStyleTab((prev) => (prev === 'Allround' ? 'ALL' : 'Allround')),
+    },
+    {
+      group: 'mode',
+      id: 'LEAGUE',
+      label: '🏆 Liga',
+      active: modeTab === 'LEAGUE',
+      onClick: () =>
+        setModeTab((prev) => (prev === 'LEAGUE' ? 'ALL' : 'LEAGUE')),
+    },
+    {
+      group: 'mode',
+      id: 'CLUB_ONLY',
+      label: '🏓 Nur CLUB',
+      active: modeTab === 'CLUB_ONLY',
+      onClick: () =>
+        setModeTab((prev) => (prev === 'CLUB_ONLY' ? 'ALL' : 'CLUB_ONLY')),
+    },
+    {
+      group: 'lang',
+      id: 'EN',
+      label: '🇬🇧 English',
+      active: langTab === 'EN',
+      onClick: () => setLangTab((prev) => (prev === 'EN' ? 'ALL' : 'EN')),
+    },
+    {
+      group: 'lang',
+      id: 'DE',
+      label: '🇨🇭 Deutsch',
+      active: langTab === 'DE',
+      onClick: () => setLangTab((prev) => (prev === 'DE' ? 'ALL' : 'DE')),
+    },
+  ];
+
+  const resultCount = sortedAndFilteredPlayers.length;
+
+  return (
+    <div className="space-y-3">
+      <div className="space-y-2.5 rounded-2xl border border-[#24272D] bg-[#14161A] p-3">
+        <div className="flex items-center gap-2">
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Spieler suchen (Name, Klassierung, Stufe, Stil)..."
+            className="min-w-0 flex-1 rounded-xl border border-[#2B2F37] bg-[#0F1114] px-3 py-2 text-xs text-[#F3F4F6]"
+          />
+          {activeFilterCount > 0 && (
+            <button
+              type="button"
+              onClick={resetAllFilters}
+              className="shrink-0 rounded-xl border border-[#DE754B]/40 bg-[#23140F] px-2.5 py-2 text-[11px] font-bold text-[#F4ECC2]"
+            >
+              Reset ({activeFilterCount})
+            </button>
+          )}
+        </div>
+
+        <div className="flex items-center justify-between gap-2 rounded-xl border border-[#22252B] bg-[#0F1114] px-2.5 py-1.5">
+          <span className="text-[11px] font-bold text-[#F4ECC2]">
+            {resultCount} {resultCount === 1 ? 'Resultat' : 'Resultate'}
+            <span className="ml-1 font-normal text-[#8E95A2]">
+              von {players.length} Spielern
+            </span>
+          </span>
+          {activeFilterCount > 0 && (
+            <span className="rounded bg-[#152622] px-1.5 py-0.5 text-[10px] font-bold text-[#A8D0B1]">
+              Kombiniert aktiv
+            </span>
+          )}
+        </div>
+
+        <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-5">
+          {primaryTabs.map((f) => (
+            <button
+              key={f.id}
+              type="button"
+              onClick={() => setQuickFilter(f.id)}
+              className={`truncate rounded-lg px-2 py-1.5 text-center text-[11px] font-bold transition ${
+                quickFilter === f.id
+                  ? 'bg-[#6FB3A2] text-[#060708]'
+                  : 'bg-[#0F1114] text-[#9CA3AF] ring-1 ring-[#2B2F37] hover:text-[#F4ECC2]'
+              }`}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
+
+        <div className="grid grid-cols-2 gap-1.5 border-t border-[#22252B] pt-2 sm:grid-cols-4">
+          {secondaryTabs.map((tab) => (
+            <button
+              key={`${tab.group}-${tab.id}`}
+              type="button"
+              onClick={tab.onClick}
+              className={`truncate rounded-lg px-2 py-1 text-center text-[10px] font-bold transition ${
+                tab.active
+                  ? 'bg-[#F4ECC2] text-[#060708]'
+                  : 'bg-[#0F1114] text-[#8E95A2] ring-1 ring-[#262A31] hover:text-[#F3F4F6]'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {sortedAndFilteredPlayers.length === 0 ? (
+        <div className="rounded-2xl border border-[#24272D] bg-[#181A1E] p-5 text-center text-xs text-[#9CA3AF]">
+          Keine Spieler mit diesen Filterkriterien gefunden.{' '}
+          <button
+            type="button"
+            onClick={resetAllFilters}
+            className="font-bold text-[#6FB3A2] underline"
+          >
+            Filter zurücksetzen
+          </button>
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 gap-2">
+          {sortedAndFilteredPlayers.map((p, index) => {
+            const isLive = livePlayerIds.has(p.id);
+            const isMe = p.id === currentUser.id;
+            const rating = connectRatings[p.id];
+            const tier = rating?.tier;
+            const rank = index + 1;
+
+            return (
+              <div
+                key={p.id}
+                className={`flex flex-col justify-between rounded-2xl border p-2.5 transition ${
+                  isMe
+                    ? 'border-[#6FB3A2]/50 bg-[#152622]/55'
+                    : 'border-[#24272D] bg-[#181A1E] hover:border-[#6FB3A2]/40'
+                }`}
+              >
+                <div>
+                  <div className="flex items-center justify-between gap-1">
+                    <span
+                      className={`rounded-md px-1.5 py-0.5 text-[10px] font-black ${
+                        rank === 1
+                          ? 'bg-[#F4ECC2] text-[#060708]'
+                          : rank === 2
+                          ? 'bg-[#D1D5DB] text-[#060708]'
+                          : rank === 3
+                          ? 'bg-[#DE754B] text-[#060708]'
+                          : 'bg-[#131417] text-[#8E95A2]'
+                      }`}
+                    >
+                      #{rank}
+                    </span>
+
+                    {tier && (
+                      <span
+                        className={`rounded border px-1.5 py-0.5 text-[9px] font-bold leading-none ${tier.badgeClass}`}
+                        title={`${tier.label} · ${rating.elo} Punkte`}
+                      >
+                        {tier.symbol} {rating.elo}
+                      </span>
+                    )}
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => onSelectMember?.(p.id)}
+                    className="mt-2 flex w-full items-center gap-2 text-left transition hover:opacity-85"
+                  >
+                    <PlayerAvatar
+                      player={p}
+                      sizeClass="h-8 w-8 text-[10px]"
+                      isConnectAccent={p.connectOnly}
+                    />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1">
+                        <span className="truncate text-xs font-black text-[#F3F4F6] underline decoration-[#6FB3A2]/45 underline-offset-2">
+                          {p.nickname}
+                        </span>
+                        {isLive && (
+                          <span
+                            title="Jetzt LIVE in der Halle"
+                            className="h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-400"
+                          />
+                        )}
+                      </div>
+                      <div className="truncate text-[10px] text-[#8E95A2]">
+                        {p.firstName} {p.lastName}
+                      </div>
+                    </div>
+                  </button>
+
+                  <div className="mt-2 flex flex-wrap items-center gap-1">
+                    {p.sttClass && (
+                      <span className="rounded bg-[#131417] px-1.5 py-0.5 text-[9px] font-semibold text-[#9CA3AF]">
+                        {p.sttClass}
+                      </span>
+                    )}
+                    {p.playstyle && (
+                      <span className="rounded bg-[#131417] px-1.5 py-0.5 text-[9px] font-semibold text-[#F4ECC2]">
+                        {p.playstyle}
+                      </span>
+                    )}
+                    <span className="rounded bg-[#131417] px-1 py-0.5 text-[9px] font-bold text-[#A8D0B1]">
+                      {getLanguageShortLabel(p.language)}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="mt-2.5 flex items-center justify-between gap-1 border-t border-[#22252B] pt-2">
+                  <span className="text-[10px] text-[#8E95A2]">
+                    {rating && rating.played > 0
+                      ? `${rating.wins}S / ${rating.losses}N`
+                      : 'Neu'}
+                  </span>
+
+                  {!isMe ? (
+                    <div className="flex items-center gap-1">
+                      <WhatsAppActionButton
+                        phone={p.phone}
+                        message={getContextWhatsAppMessage(
+                          'rating_directory',
+                          currentUser,
+                          p
+                        )}
+                        label=""
+                        compact
+                        title={`${p.nickname} per WhatsApp anschreiben`}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => onOpenChallenge(p.id)}
+                        title={`${p.nickname} herausfordern`}
+                        className="rounded-lg bg-[#6FB3A2] px-2 py-1 text-[10px] font-black text-[#060708]"
+                      >
+                        ⚡ Duell
+                      </button>
+                    </div>
+                  ) : (
+                    <span className="rounded bg-[#1F2927] px-1.5 py-0.5 text-[9px] font-bold text-[#A8D0B1]">
+                      Du
+                    </span>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ConnectMatchesTab({
+  connectMatches = [],
+  matchDeltas = {},
+  playersById,
+  currentUser,
+  onOpenRecordConnectMatch,
+}) {
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between gap-2 rounded-2xl border border-[#24272D] bg-[#14161A] p-3">
+        <div>
+          <h2 className="text-xs font-black tracking-wide text-[#F3F4F6] uppercase">
+            Freie CLUB-Partien ({connectMatches.length})
+          </h2>
+          <p className="text-[10px] text-[#8E95A2]">
+            Dynamisches Elo-Rating · Revanche direkt per WhatsApp
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={onOpenRecordConnectMatch}
+          className="rounded-xl bg-[#6FB3A2] px-3 py-2 text-xs font-black text-[#060708]"
+        >
+          + Partie
+        </button>
+      </div>
+
+      {connectMatches.length === 0 ? (
+        <div className="rounded-2xl border border-[#24272D] bg-[#181A1E] p-5 text-center text-xs text-[#9CA3AF]">
+          Noch keine freien CLUB-Partien erfasst.
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {connectMatches.map((m) => {
+            const p1 = playersById[m.player1Id];
+            const p2 = playersById[m.player2Id];
+            if (!p1 || !p2) return null;
+            const delta = matchDeltas[m.id];
+            const involvesMe =
+              m.player1Id === currentUser.id || m.player2Id === currentUser.id;
+            const opp = m.player1Id === currentUser.id ? p2 : p1;
+
+            return (
+              <div
+                key={m.id}
+                className="flex items-center justify-between gap-2 rounded-2xl border border-[#24272D] bg-[#181A1E] p-3 text-xs"
+              >
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5 font-black text-[#F3F4F6]">
+                    <span className="truncate">{p1.nickname}</span>
+                    <span className="rounded bg-[#131417] px-2 py-0.5 text-[#F4ECC2]">
+                      {m.score}
+                    </span>
+                    <span className="truncate">{p2.nickname}</span>
+                  </div>
+                  <div className="mt-1 flex flex-wrap items-center gap-2 text-[10px] text-[#8E95A2]">
+                    <span>Sieger: {playersById[m.winnerId]?.nickname}</span>
+                    <span>· {m.dateLabel}</span>
+                    {delta && (
+                      <span className="font-bold text-[#A8D0B1]">
+                        ({p1.nickname}{' '}
+                        {delta.delta1 >= 0 ? `+${delta.delta1}` : delta.delta1}{' '}
+                        / {p2.nickname}{' '}
+                        {delta.delta2 >= 0 ? `+${delta.delta2}` : delta.delta2})
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {involvesMe && opp && (
+                  <WhatsAppActionButton
+                    phone={opp.phone}
+                    message={getContextWhatsAppMessage(
+                      'rematch',
+                      currentUser,
+                      opp,
+                      { score: m.score }
+                    )}
+                    label="Revanche"
+                    compact
+                  />
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
@@ -5672,523 +5820,133 @@ function HallDaysTab({
   currentUser,
   activeSeason,
   connectRatings,
-  onOpenEditProfile,
   onOpenChallenge,
   onSelectMember,
 }) {
-  const [selectedDay, setSelectedDay] = useState('Do');
-  const [selectedTimeSlot, setSelectedTimeSlot] = useState('Alle');
+  const [selectedDay, setSelectedDay] = useState(() => {
+    const jsDay = new Date().getDay();
+    return DAYS_OF_WEEK[(jsDay + 6) % 7] || 'Mi';
+  });
+  const [selectedSlot, setSelectedSlot] = useState('ALL');
 
   const matchingPlayers = useMemo(() => {
     return players.filter((p) => {
-      const schedule = getNormalizedHallSchedule(p);
-      const slots = schedule[selectedDay] || [];
+      const sched = getNormalizedHallSchedule(p);
+      const slots = sched[selectedDay] || [];
       if (slots.length === 0) return false;
-      if (selectedTimeSlot === 'Alle') return true;
-      return slots.includes(selectedTimeSlot);
+      if (selectedSlot === 'ALL') return true;
+      return slots.includes(selectedSlot);
     });
-  }, [players, selectedDay, selectedTimeSlot]);
+  }, [players, selectedDay, selectedSlot]);
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between">
-        <span className="text-xs font-bold text-[#9CA3AF]">
-          Wer ist wann in der Halle?
-        </span>
-        <button
-          type="button"
-          onClick={onOpenEditProfile}
-          className="text-[11px] font-bold text-[#A8D0B1] underline"
-        >
-          Meine Zeiten bearbeiten
-        </button>
-      </div>
-
-      <div className="grid grid-cols-7 gap-1">
-        {DAYS_OF_WEEK.map((d) => (
-          <button
-            key={d}
-            type="button"
-            onClick={() => setSelectedDay(d)}
-            className={`rounded-lg py-2 text-xs font-black ${
-              selectedDay === d
-                ? 'bg-[#6FB3A2] text-[#060708]'
-                : 'bg-[#181A1E] text-[#9CA3AF] ring-1 ring-[#24272D]'
-            }`}
-          >
-            {d}
-          </button>
-        ))}
-      </div>
-
-      <div className="grid grid-cols-4 gap-1.5">
-        {['Alle', ...HALL_TIME_SLOTS.map((s) => s.id)].map((slot) => (
-          <button
-            key={slot}
-            type="button"
-            onClick={() => setSelectedTimeSlot(slot)}
-            className={`rounded-lg py-1.5 text-[11px] font-bold transition ${
-              selectedTimeSlot === slot
-                ? 'bg-[#6FB3A2] text-[#060708]'
-                : 'bg-[#181A1E] text-[#9CA3AF] ring-1 ring-[#24272D] hover:text-[#F3F4F6]'
-            }`}
-          >
-            {slot === 'Alle' ? 'Alle Zeiten' : slot}
-          </button>
-        ))}
-      </div>
-
-      <div className="space-y-2">
-        <div className="text-xs font-bold text-[#9CA3AF]">
-          Oft am {selectedDay}
-          {selectedTimeSlot !== 'Alle' ? ` (${selectedTimeSlot})` : ''} in der
-          Halle ({matchingPlayers.length})
+      <div className="space-y-2.5 rounded-2xl border border-[#24272D] bg-[#14161A] p-3">
+        <div className="grid grid-cols-7 gap-1">
+          {DAYS_OF_WEEK.map((d) => (
+            <button
+              key={d}
+              type="button"
+              onClick={() => setSelectedDay(d)}
+              className={`rounded-lg py-2 text-xs font-black transition ${
+                selectedDay === d
+                  ? 'bg-[#6FB3A2] text-[#060708]'
+                  : 'bg-[#0F1114] text-[#8E95A2] ring-1 ring-[#262A31] hover:text-[#F4ECC2]'
+              }`}
+            >
+              {d}
+            </button>
+          ))}
         </div>
 
-        {matchingPlayers.length === 0 ? (
-          <div className="rounded-2xl border border-[#24272D] bg-[#181A1E] p-4 text-center text-xs text-[#8E95A2]">
-            Für {selectedDay}
-            {selectedTimeSlot !== 'Alle' ? ` · ${selectedTimeSlot}` : ''} ist
-            noch niemand eingetragen.
-          </div>
-        ) : (
-          matchingPlayers.map((p) => {
-            const schedule = getNormalizedHallSchedule(p);
-            const daySlots = schedule[selectedDay] || [];
-            const waMsg = getContextWhatsAppMessage('hall_day', currentUser, p, {
-              day: selectedDay,
-              timeSlot:
-                selectedTimeSlot !== 'Alle'
-                  ? selectedTimeSlot
-                  : daySlots.join(' / '),
-            });
+        <div className="grid grid-cols-4 gap-1.5">
+          {[
+            { id: 'ALL', label: 'Alle Zeiten' },
+            ...HALL_TIME_SLOTS.map((s) => ({ id: s.id, label: s.label })),
+          ].map((slot) => (
+            <button
+              key={slot.id}
+              type="button"
+              onClick={() => setSelectedSlot(slot.id)}
+              className={`rounded-lg py-1.5 text-[11px] font-bold transition ${
+                selectedSlot === slot.id
+                  ? 'bg-[#F4ECC2] text-[#060708]'
+                  : 'bg-[#0F1114] text-[#8E95A2] ring-1 ring-[#262A31] hover:text-[#F3F4F6]'
+              }`}
+            >
+              {slot.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {matchingPlayers.length === 0 ? (
+        <div className="rounded-2xl border border-[#24272D] bg-[#181A1E] p-5 text-center text-xs text-[#9CA3AF]">
+          Am {selectedDay} sind für diese Tageszeit noch keine Spieler eingetragen.
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 gap-2">
+          {matchingPlayers.map((p) => {
+            const sched = getNormalizedHallSchedule(p);
+            const daySlots = sched[selectedDay] || [];
+            const isMe = p.id === currentUser.id;
+            const rating = connectRatings[p.id];
+
             return (
               <div
                 key={p.id}
-                className="flex items-center justify-between gap-2 rounded-2xl border border-[#24272D] bg-[#181A1E] p-3"
+                className="flex flex-col justify-between rounded-2xl border border-[#24272D] bg-[#181A1E] p-2.5"
               >
-                <button
-                  type="button"
-                  onClick={() => onSelectMember?.(p.id)}
-                  className="flex min-w-0 flex-1 items-center gap-2.5 text-left transition hover:opacity-85"
-                >
-                  <PlayerAvatar
-                    player={p}
-                    sizeClass="h-8 w-8 text-[10px]"
-                    isConnectAccent={p.connectOnly}
-                  />
-                  <div className="min-w-0">
-                    <div className="truncate text-xs font-black text-[#F3F4F6] underline decoration-[#6FB3A2]/50 underline-offset-2">
-                      {p.nickname} ({p.firstName})
+                <div>
+                  <button
+                    type="button"
+                    onClick={() => onSelectMember?.(p.id)}
+                    className="flex w-full items-center gap-2 text-left"
+                  >
+                    <PlayerAvatar
+                      player={p}
+                      sizeClass="h-8 w-8 text-[10px]"
+                      isConnectAccent={p.connectOnly}
+                    />
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-xs font-black text-[#F3F4F6]">
+                        {p.nickname}
+                      </div>
+                      <div className="truncate text-[10px] text-[#6FB3A2]">
+                        {daySlots.join(', ')}
+                      </div>
                     </div>
-                    <div className="mt-1 flex flex-wrap items-center gap-1">
-                      {daySlots.map((slot) => (
-                        <span
-                          key={slot}
-                          className="rounded bg-[#152622] px-1.5 py-0.5 text-[10px] font-bold text-[#A8D0B1] ring-1 ring-[#6FB3A2]/35"
-                        >
-                          {selectedDay} · {slot}
-                        </span>
-                      ))}
-                      <PlayerBadge
-                        player={p}
-                        season={activeSeason}
-                        ratingInfo={connectRatings[p.id]}
-                      />
-                    </div>
-                  </div>
-                </button>
+                  </button>
 
-                {p.id !== currentUser.id && (
-                  <div className="flex shrink-0 items-center gap-1.5">
-                    <button
-                      type="button"
-                      onClick={() => onOpenChallenge(p.id)}
-                      className="rounded-lg bg-[#6FB3A2] px-2.5 py-1.5 text-[11px] font-black text-[#060708]"
-                    >
-                      ⚡ Duell
-                    </button>
-                    <WhatsAppActionButton
-                      phone={p.phone}
-                      message={waMsg}
-                      label="WhatsApp"
+                  <div className="mt-2">
+                    <PlayerBadge
+                      player={p}
+                      season={activeSeason}
+                      ratingInfo={rating}
                     />
                   </div>
-                )}
-              </div>
-            );
-          })
-        )}
-      </div>
-    </div>
-  );
-}
+                </div>
 
-function ClubPlayersTab({
-  players,
-  currentUser,
-  activeSeason,
-  liveCheckins,
-  connectRatings,
-  onOpenAddMember,
-  onOpenChallenge,
-  onOpenRecordConnectMatch,
-  onSelectMember,
-}) {
-  const [search, setSearch] = useState('');
-  const [quickFilter, setQuickFilter] = useState('all');
-
-  const livePlayerIds = useMemo(
-    () => new Set(liveCheckins.map((c) => c.playerId)),
-    [liveCheckins]
-  );
-
-  const sortedAndFilteredPlayers = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    return [...players]
-      .filter((p) => {
-        if (quickFilter === 'live' && !livePlayerIds.has(p.id)) return false;
-        if (
-          quickFilter === 'level' &&
-          p.id !== currentUser.id &&
-          !isMatchingLevel(currentUser, p, activeSeason)
-        ) {
-          return false;
-        }
-        if (quickFilter === 'offensiv' && p.playstyle !== 'Offensiv') return false;
-        if (quickFilter === 'allround' && p.playstyle !== 'Allround') return false;
-        if (quickFilter === 'abwehr' && p.playstyle !== 'Abwehr / Noppen') {
-          return false;
-        }
-        if (
-          quickFilter === 'english' &&
-          p.language !== 'Englisch' &&
-          p.language !== 'Beides'
-        ) {
-          return false;
-        }
-
-        if (!q) return true;
-        const tierLabel = connectRatings[p.id]?.tier?.label || '';
-        const haystack =
-          `${p.nickname} ${p.firstName} ${p.lastName} ${p.sttClass || ''} ${p.language || ''} ${p.playstyle || ''} ${tierLabel}`.toLowerCase();
-        return haystack.includes(q);
-      })
-      .sort((a, b) => {
-        const eloA = connectRatings[a.id]?.elo || 0;
-        const eloB = connectRatings[b.id]?.elo || 0;
-        if (eloB !== eloA) return eloB - eloA;
-        return a.nickname.localeCompare(b.nickname);
-      });
-  }, [
-    players,
-    search,
-    quickFilter,
-    livePlayerIds,
-    currentUser,
-    activeSeason,
-    connectRatings,
-  ]);
-
-  return (
-    <div className="space-y-2">
-      <div className="flex items-center justify-between gap-2">
-        <div>
-          <h2 className="text-xs font-black tracking-wide text-[#F3F4F6] uppercase">
-            CLUB-Rating ({sortedAndFilteredPlayers.length})
-          </h2>
-          <p className="text-[10px] text-[#8E95A2]">
-            Sortiert nach Rating · Partie erfassen oder herausfordern
-          </p>
-        </div>
-
-        <div className="flex items-center gap-1.5">
-          <button
-            type="button"
-            onClick={() => onOpenRecordConnectMatch('')}
-            className="rounded-lg bg-[#6FB3A2] px-2.5 py-1.5 text-[11px] font-black text-[#060708]"
-          >
-            + Partie eintragen
-          </button>
-          <button
-            type="button"
-            onClick={onOpenAddMember}
-            className="rounded-xl bg-[#22252C] px-3 py-2 text-xs font-bold text-[#E5E7EB]"
-          >
-            + Mitglied
-          </button>
-        </div>
-      </div>
-
-      <input
-        type="text"
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        placeholder="Spieler, Spielstil, Sprache oder Rating suchen..."
-        className="w-full rounded-lg border border-[#2B2F37] bg-[#181A1E] px-2.5 py-1.5 text-xs text-[#F3F4F6]"
-      />
-
-      <div className="flex gap-1.5 overflow-x-auto pb-0.5">
-        {[
-          { id: 'all', label: 'Alle' },
-          { id: 'live', label: `🟢 Jetzt LIVE (${liveCheckins.length})` },
-          { id: 'level', label: 'Mein Niveau' },
-          { id: 'offensiv', label: 'Offensiv' },
-          { id: 'allround', label: 'Allround' },
-          { id: 'abwehr', label: 'Abwehr / Noppen' },
-          { id: 'english', label: 'EN / Beides' },
-        ].map((chip) => (
-          <button
-            key={chip.id}
-            type="button"
-            onClick={() => setQuickFilter(chip.id)}
-            className={`whitespace-nowrap rounded-full px-2.5 py-1 text-[10px] font-bold transition ${
-              quickFilter === chip.id
-                ? 'bg-[#6FB3A2] text-[#060708]'
-                : 'bg-[#181A1E] text-[#9CA3AF] ring-1 ring-[#24272D] hover:text-[#F3F4F6]'
-            }`}
-          >
-            {chip.label}
-          </button>
-        ))}
-      </div>
-
-      <div className="overflow-hidden rounded-xl border border-[#24272D] bg-[#181A1E] divide-y divide-[#202329]">
-        {sortedAndFilteredPlayers.map((p, index) => {
-          const isLive = livePlayerIds.has(p.id);
-          const isMe = p.id === currentUser.id;
-          const rating = connectRatings[p.id];
-          const tier = rating?.tier;
-
-          return (
-            <div
-              key={p.id}
-              className={`flex items-center justify-between gap-2 px-2.5 py-1.5 text-xs ${
-                isMe ? 'bg-[#152622]/60' : 'hover:bg-[#1D2025]'
-              }`}
-            >
-              <button
-                type="button"
-                onClick={() => onSelectMember?.(p.id)}
-                className="flex min-w-0 flex-1 items-center gap-1.5 text-left transition hover:opacity-85"
-              >
-                <span className="w-4 shrink-0 text-right text-[10px] font-black text-[#6B7280]">
-                  {index + 1}
-                </span>
-
-                <PlayerAvatar
-                  player={p}
-                  sizeClass="h-5 w-5 text-[9px]"
-                  isConnectAccent={p.connectOnly}
-                />
-
-                <span className="truncate font-bold text-[#F3F4F6] underline decoration-[#6FB3A2]/45 underline-offset-2">
-                  {p.nickname}
-                </span>
-
-                {isLive && (
-                  <span
-                    title="Jetzt LIVE in der Halle"
-                    className="h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-400"
-                  />
-                )}
-
-                {p.sttClass && (
-                  <span className="shrink-0 text-[10px] text-[#6B7280]">
-                    {p.sttClass}
-                  </span>
-                )}
-
-                {p.playstyle && (
-                  <span className="hidden shrink-0 rounded bg-[#131417] px-1.5 py-0.5 text-[9px] font-semibold text-[#F4ECC2] sm:inline">
-                    {p.playstyle}
-                  </span>
-                )}
-
-                <span className="shrink-0 rounded bg-[#131417] px-1 py-0.5 text-[9px] font-bold text-[#A8D0B1]">
-                  {getLanguageShortLabel(p.language)}
-                </span>
-              </button>
-
-              <div className="flex shrink-0 items-center gap-1.5">
-                {rating && rating.played > 0 && (
-                  <span className="hidden text-[10px] text-[#6B7280] sm:inline">
-                    {rating.wins}/{rating.losses}
-                  </span>
-                )}
-
-                {tier && (
-                  <span
-                    className={`rounded border px-1.5 py-0.5 text-[10px] font-bold leading-none ${tier.badgeClass}`}
-                    title={`${tier.label} · ${rating.elo} Punkte`}
-                  >
-                    {tier.symbol} {rating.elo}
-                  </span>
-                )}
-
-                {!isMe ? (
-                  <div className="flex items-center gap-1">
+                {!isMe && (
+                  <div className="mt-2.5 flex items-center justify-end gap-1 border-t border-[#22252B] pt-2">
                     <WhatsAppActionButton
                       phone={p.phone}
                       message={getContextWhatsAppMessage(
-                        'rating_directory',
+                        'hall_day',
                         currentUser,
-                        p
+                        p,
+                        { day: selectedDay, timeSlot: daySlots.join(', ') }
                       )}
                       label=""
                       compact
-                      title={`${p.nickname} per WhatsApp anschreiben`}
                     />
                     <button
                       type="button"
                       onClick={() => onOpenChallenge(p.id)}
-                      title={`${p.nickname} herausfordern`}
-                      className="rounded bg-[#6FB3A2] px-2 py-0.5 text-[10px] font-black text-[#060708]"
+                      className="rounded-lg bg-[#6FB3A2] px-2 py-1 text-[10px] font-black text-[#060708]"
                     >
-                      ⚡
+                      ⚡ Duell
                     </button>
-                  </div>
-                ) : (
-                  <span className="w-6 text-center text-[10px] font-bold text-[#6FB3A2]">
-                    Du
-                  </span>
-                )}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-function ConnectMatchesTab({
-  connectMatches,
-  matchDeltas,
-  playersById,
-  currentUser,
-  connectRatings,
-}) {
-  const [onlyMine, setOnlyMine] = useState(false);
-
-  const visibleMatches = useMemo(() => {
-    if (!onlyMine) return connectMatches;
-    return connectMatches.filter(
-      (m) => m.player1Id === currentUser.id || m.player2Id === currentUser.id
-    );
-  }, [connectMatches, onlyMine, currentUser.id]);
-
-  return (
-    <div className="space-y-3">
-      <div className="flex items-center justify-between gap-2">
-        <div>
-          <h2 className="text-xs font-black tracking-wide text-[#F3F4F6] uppercase">
-            CLUB-Partien ({visibleMatches.length})
-          </h2>
-          <p className="text-[11px] text-[#8E95A2]">
-            Freie Spiele fliessen direkt in das CLUB-Rating ein
-          </p>
-        </div>
-
-        <button
-          type="button"
-          onClick={() => setOnlyMine((v) => !v)}
-          className="rounded-lg bg-[#181A1E] px-2.5 py-1.5 text-[11px] font-bold text-[#A8D0B1] ring-1 ring-[#2B2F37]"
-        >
-          {onlyMine ? 'Alle zeigen' : 'Nur meine'}
-        </button>
-      </div>
-
-      {visibleMatches.length === 0 ? (
-        <div className="rounded-2xl border border-[#24272D] bg-[#181A1E] p-5 text-center text-xs text-[#9CA3AF]">
-          Noch keine CLUB-Partien in dieser Ansicht eingetragen.
-        </div>
-      ) : (
-        <div className="space-y-2">
-          {visibleMatches.map((m) => {
-            const p1 = playersById[m.player1Id];
-            const p2 = playersById[m.player2Id];
-            if (!p1 || !p2) return null;
-
-            const p1Won = m.winnerId === p1.id;
-            const deltas = matchDeltas[m.id] || { delta1: 0, delta2: 0 };
-
-            return (
-              <div
-                key={m.id}
-                className="rounded-2xl border border-[#24272D] bg-[#181A1E] p-3"
-              >
-                <div className="flex items-center justify-between text-[10px] text-[#8E95A2]">
-                  <span className="font-bold text-[#6FB3A2]">CLUB-Partie</span>
-                  <span>{m.dateLabel}</span>
-                </div>
-
-                <div className="mt-2 flex items-center justify-between gap-2">
-                  <div className="min-w-0 flex-1">
-                    <div
-                      className={`truncate text-xs font-black ${
-                        p1Won ? 'text-emerald-300' : 'text-[#F3F4F6]'
-                      }`}
-                    >
-                      {p1.nickname} {p1Won ? '🏆' : ''}
-                    </div>
-                    <div className="mt-0.5 flex items-center gap-1 text-[10px]">
-                      <span className="text-[#8E95A2]">
-                        {connectRatings[p1.id]?.tier?.symbol} {connectRatings[p1.id]?.elo}
-                      </span>
-                      <span
-                        className={`font-bold ${
-                          deltas.delta1 >= 0 ? 'text-emerald-400' : 'text-rose-400'
-                        }`}
-                      >
-                        ({deltas.delta1 >= 0 ? `+${deltas.delta1}` : deltas.delta1})
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="shrink-0 rounded-xl bg-[#111215] px-3 py-1 text-center ring-1 ring-[#2B2F37]">
-                    <span className="text-xs font-black tracking-wider text-[#E6C79C]">
-                      {m.score}
-                    </span>
-                  </div>
-
-                  <div className="min-w-0 flex-1 text-right">
-                    <div
-                      className={`truncate text-xs font-black ${
-                        !p1Won ? 'text-emerald-300' : 'text-[#F3F4F6]'
-                      }`}
-                    >
-                      {!p1Won ? '🏆 ' : ''}
-                      {p2.nickname}
-                    </div>
-                    <div className="mt-0.5 flex items-center justify-end gap-1 text-[10px]">
-                      <span
-                        className={`font-bold ${
-                          deltas.delta2 >= 0 ? 'text-emerald-400' : 'text-rose-400'
-                        }`}
-                      >
-                        ({deltas.delta2 >= 0 ? `+${deltas.delta2}` : deltas.delta2})
-                      </span>
-                      <span className="text-[#8E95A2]">
-                        {connectRatings[p2.id]?.tier?.symbol} {connectRatings[p2.id]?.elo}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                {(p1.id === currentUser.id || p2.id === currentUser.id) && (
-                  <div className="mt-2.5 flex justify-end border-t border-[#22252B] pt-2">
-                    <WhatsAppActionButton
-                      phone={(p1.id === currentUser.id ? p2 : p1).phone}
-                      message={getContextWhatsAppMessage(
-                        'rematch',
-                        currentUser,
-                        p1.id === currentUser.id ? p2 : p1,
-                        { score: m.score }
-                      )}
-                      label="Revanche per WhatsApp"
-                      compact
-                    />
                   </div>
                 )}
               </div>
@@ -6213,19 +5971,35 @@ function RecordConnectMatchModal({
     [players, currentUser.id]
   );
 
+  const [opponentSearch, setOpponentSearch] = useState('');
   const [opponentId, setOpponentId] = useState(
     defaultOpponentId || opponents[0]?.id || ''
   );
   const [winnerSide, setWinnerSide] = useState('me');
   const [score, setScore] = useState('3:1');
 
-  const opponent = players.find((p) => p.id === opponentId);
+  const filteredOpponents = useMemo(() => {
+    const q = opponentSearch.trim().toLowerCase();
+    if (!q) return opponents;
+    return opponents.filter((p) =>
+      `${p.nickname} ${p.firstName} ${p.lastName} ${p.sttClass || ''}`
+        .toLowerCase()
+        .includes(q)
+    );
+  }, [opponents, opponentSearch]);
+
+  const effectiveOpponentId = useMemo(() => {
+    if (filteredOpponents.some((p) => p.id === opponentId)) return opponentId;
+    return filteredOpponents[0]?.id || '';
+  }, [filteredOpponents, opponentId]);
+
+  const opponent = players.find((p) => p.id === effectiveOpponentId);
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!opponentId) return;
-    const winnerId = winnerSide === 'me' ? currentUser.id : opponentId;
-    onSave(opponentId, winnerId, score);
+    if (!effectiveOpponentId) return;
+    const winnerId = winnerSide === 'me' ? currentUser.id : effectiveOpponentId;
+    onSave(effectiveOpponentId, winnerId, score);
   };
 
   return (
@@ -6247,24 +6021,38 @@ function RecordConnectMatchModal({
           </button>
         </div>
 
-        <div>
-          <label className="mb-1 block text-[11px] font-semibold text-[#8E95A2]">
-            1. Gegner auswählen
+        <div className="space-y-1.5">
+          <label className="block text-[11px] font-semibold text-[#8E95A2]">
+            1. Gegner suchen &amp; auswählen
           </label>
-          <select
-            value={opponentId}
-            onChange={(e) => setOpponentId(e.target.value)}
-            className="w-full rounded-xl border border-[#2E323B] bg-[#131417] px-3 py-2 text-xs font-bold text-[#F3F4F6]"
-          >
-            {opponents.map((p) => {
-              const r = connectRatings[p.id];
-              return (
-                <option key={p.id} value={p.id}>
-                  {p.nickname} ({p.firstName}) · {r?.tier?.symbol} {r?.elo}
-                </option>
-              );
-            })}
-          </select>
+          <input
+            type="text"
+            value={opponentSearch}
+            onChange={(e) => setOpponentSearch(e.target.value)}
+            placeholder="Name oder Nickname suchen..."
+            className="w-full rounded-xl border border-[#2E323B] bg-[#131417] px-3 py-2 text-base sm:text-xs text-[#F3F4F6] placeholder:text-[#6B7280] focus:border-[#6FB3A2] focus:outline-none"
+          />
+          {filteredOpponents.length === 0 ? (
+            <div className="rounded-xl border border-[#2E323B] bg-[#131417] px-3 py-2 text-xs text-[#8E95A2]">
+              Kein Spieler gefunden.
+            </div>
+          ) : (
+            <select
+              value={effectiveOpponentId}
+              onChange={(e) => setOpponentId(e.target.value)}
+              className="w-full rounded-xl border border-[#2E323B] bg-[#131417] px-3 py-2 text-base sm:text-xs font-bold text-[#F3F4F6]"
+            >
+              {filteredOpponents.map((p) => {
+                const r = connectRatings[p.id];
+                return (
+                  <option key={p.id} value={p.id}>
+                    {p.nickname} ({p.firstName} {p.lastName}) · {r?.tier?.symbol}{' '}
+                    {r?.elo}
+                  </option>
+                );
+              })}
+            </select>
+          )}
         </div>
 
         <div>
@@ -6285,8 +6073,9 @@ function RecordConnectMatchModal({
             </button>
             <button
               type="button"
+              disabled={!opponent}
               onClick={() => setWinnerSide('opponent')}
-              className={`rounded-xl py-2.5 text-xs font-black ${
+              className={`rounded-xl py-2.5 text-xs font-black disabled:opacity-40 ${
                 winnerSide === 'opponent'
                   ? 'bg-emerald-500 text-[#0F1012]'
                   : 'border border-[#2E323B] bg-[#131417] text-[#9CA3AF]'
@@ -6321,7 +6110,8 @@ function RecordConnectMatchModal({
 
         <button
           type="submit"
-          className="w-full rounded-xl bg-[#6FB3A2] py-2.5 text-xs font-black text-[#060708]"
+          disabled={!effectiveOpponentId}
+          className="w-full rounded-xl bg-[#6FB3A2] py-2.5 text-xs font-black text-[#060708] disabled:opacity-40"
         >
           Partie speichern &amp; Rating aktualisieren
         </button>
@@ -6340,14 +6130,33 @@ function ChallengeModal({
   onClose,
 }) {
   const [targetId, setTargetId] = useState(defaultTargetId || '');
-  const [format, setFormat] = useState('Best of 5 Match');
-  const [whenLabel, setWhenLabel] = useState('Jetzt in der Halle');
+  const [playerSearch, setPlayerSearch] = useState('');
+  const [onlyMyLevel, setOnlyMyLevel] = useState(false);
+  const [format, setFormat] = useState('Best of 5');
+  const [whenLabel, setWhenLabel] = useState('Jetzt');
   const [note, setNote] = useState('');
   const [sendWhatsApp, setSendWhatsApp] = useState(true);
 
-  const otherPlayers = useMemo(
-    () => players.filter((p) => p.id !== currentUser.id),
-    [players, currentUser.id]
+  const otherPlayers = useMemo(() => {
+    const q = playerSearch.trim().toLowerCase();
+    return players
+      .filter((p) => p.id !== currentUser.id)
+      .filter((p) => {
+        if (onlyMyLevel && !isMatchingLevel(currentUser, p, activeSeason)) {
+          return false;
+        }
+        if (!q) return true;
+        return `${p.nickname} ${p.firstName} ${p.lastName} ${p.sttClass || ''} ${
+          p.playstyle || ''
+        }`
+          .toLowerCase()
+          .includes(q);
+      });
+  }, [players, currentUser, activeSeason, playerSearch, onlyMyLevel]);
+
+  const selectedTarget = useMemo(
+    () => (targetId ? players.find((p) => p.id === targetId) || null : null),
+    [players, targetId]
   );
 
   const handleSubmit = (e) => {
@@ -6362,121 +6171,236 @@ function ChallengeModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/75 p-3 sm:items-center">
+    <div
+      onClick={onClose}
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/75 p-3 sm:items-center"
+    >
       <form
+        onClick={(e) => e.stopPropagation()}
         onSubmit={handleSubmit}
-        className="w-full max-w-md space-y-3 rounded-2xl border border-[#C8A26E]/40 bg-[#181A1E] p-4 shadow-2xl"
+        className="flex max-h-[88dvh] w-full max-w-md flex-col overflow-hidden rounded-2xl border border-[#6FB3A2]/40 bg-[#181A1E] shadow-2xl"
       >
-        <div className="flex items-center justify-between">
-          <h3 className="text-sm font-black text-[#E6C79C]">
-            ⚡ Spontan herausfordern
-          </h3>
+        <div className="flex shrink-0 items-center justify-between border-b border-[#24272D] px-4 py-3">
+          <div>
+            <h3 className="text-sm font-black text-[#F4ECC2]">
+              ⚡ Schnell herausfordern
+            </h3>
+            <p className="text-[10px] text-[#8E95A2]">
+              {selectedTarget
+                ? `Direktes Duell an ${selectedTarget.nickname}`
+                : 'Offen an den Club oder gezielt per 1-Tap wählen'}
+            </p>
+          </div>
           <button
             type="button"
             onClick={onClose}
-            className="text-xs font-bold text-[#8E95A2]"
+            className="rounded-lg bg-[#24272D] px-2.5 py-1 text-xs font-bold text-[#9CA3AF] hover:text-[#F3F4F6]"
           >
             ✕
           </button>
         </div>
 
-        <div>
-          <label className="mb-1 block text-[11px] font-semibold text-[#8E95A2]">
-            Wen forderst du heraus?
-          </label>
-          <select
-            value={targetId}
-            onChange={(e) => setTargetId(e.target.value)}
-            className="w-full rounded-xl border border-[#2E323B] bg-[#131417] px-3 py-2 text-xs font-bold text-[#F3F4F6]"
-          >
-            <option value="">Offene Challenge an alle im Club</option>
-            {otherPlayers.map((p) => {
-              const league = activeSeason.leagues.find((l) =>
-                l.playerIds.includes(p.id)
-              );
-              const r = connectRatings[p.id];
-              return (
-                <option key={p.id} value={p.id}>
-                  {p.nickname} ({p.firstName}) ·{' '}
-                  {league ? league.name : p.sttClass || 'CLUB'} ·{' '}
-                  {r?.tier?.symbol} {r?.elo}
-                </option>
-              );
-            })}
-          </select>
-        </div>
+        <div className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain p-4">
+          <div className="space-y-2">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-1.5">
+                <label className="text-[11px] font-semibold text-[#8E95A2]">
+                  Gegner
+                </label>
+                <span className="rounded bg-[#131417] px-1.5 py-0.5 text-[10px] font-bold text-[#9CA3AF]">
+                  {otherPlayers.length}
+                </span>
+              </div>
 
-        <div>
-          <label className="mb-1 block text-[11px] font-semibold text-[#8E95A2]">
-            Spielmodus
-          </label>
-          <div className="grid grid-cols-3 gap-1.5">
-            {['Best of 5 Match', '3 Sätze locker', '15m Warmup + Match'].map(
-              (opt) => (
+              <div className="flex items-center gap-1.5">
                 <button
-                  key={opt}
                   type="button"
-                  onClick={() => setFormat(opt)}
-                  className={`rounded-lg px-2 py-2 text-[11px] font-bold ${
-                    format === opt
-                      ? 'bg-[#6FB3A2] text-[#060708]'
-                      : 'border border-[#2E323B] bg-[#131417] text-[#9CA3AF]'
+                  onClick={() => setOnlyMyLevel((prev) => !prev)}
+                  className={`rounded-lg px-2.5 py-1 text-[10px] font-black transition ${
+                    onlyMyLevel
+                      ? 'bg-[#F4ECC2] text-[#060708]'
+                      : 'bg-[#131417] text-[#F4ECC2] ring-1 ring-[#2E323B] hover:border-[#6FB3A2]/50'
                   }`}
                 >
-                  {opt}
+                  {onlyMyLevel ? '🎯 Mein Niveau ✓' : '🎯 Mein Niveau'}
                 </button>
-              )
-            )}
-          </div>
-        </div>
+                <button
+                  type="button"
+                  onClick={() => setTargetId('')}
+                  className={`rounded-lg px-2.5 py-1 text-[10px] font-black transition ${
+                    !targetId
+                      ? 'bg-[#6FB3A2] text-[#060708]'
+                      : 'bg-[#131417] text-[#A8D0B1] ring-1 ring-[#2E323B]'
+                  }`}
+                >
+                  {!targetId ? '✓ An alle im Club' : 'Offen an alle'}
+                </button>
+              </div>
+            </div>
 
-        <div>
-          <label className="mb-1 block text-[11px] font-semibold text-[#8E95A2]">
-            Wann?
-          </label>
-          <div className="grid grid-cols-3 gap-1.5">
-            {['Jetzt in der Halle', 'Heute Abend', 'Diese Woche'].map((w) => (
-              <button
-                key={w}
-                type="button"
-                onClick={() => setWhenLabel(w)}
-                className={`rounded-lg px-2 py-1.5 text-[11px] font-bold ${
-                  whenLabel === w
-                    ? 'bg-[#6FB3A2] text-[#060708]'
-                    : 'border border-[#2E323B] bg-[#131417] text-[#9CA3AF]'
-                }`}
-              >
-                {w}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <input
-          type="text"
-          value={note}
-          onChange={(e) => setNote(e.target.value)}
-          placeholder="Kurze Kampfansage oder Info (optional)..."
-          className="w-full rounded-xl border border-[#2E323B] bg-[#131417] px-3 py-2 text-xs text-[#F3F4F6]"
-        />
-
-        {targetId && (
-          <label className="flex items-center gap-2 rounded-xl bg-[#131417] px-3 py-2 text-xs text-[#D1D5DB]">
             <input
-              type="checkbox"
-              checked={sendWhatsApp}
-              onChange={(e) => setSendWhatsApp(e.target.checked)}
+              type="text"
+              value={playerSearch}
+              onChange={(e) => setPlayerSearch(e.target.value)}
+              placeholder="Spieler suchen (Name, Nickname, Stil)..."
+              className="w-full rounded-xl border border-[#2E323B] bg-[#131417] px-3 py-2 text-base sm:text-xs text-[#F3F4F6] placeholder:text-[#6B7280] focus:border-[#6FB3A2] focus:outline-none"
             />
-            <span>Gleichzeitig per WhatsApp anpingen</span>
-          </label>
-        )}
 
-        <button
-          type="submit"
-          className="w-full rounded-xl bg-[#6FB3A2] py-2.5 text-xs font-black text-[#060708]"
-        >
-          ⚡ Herausforderung senden
-        </button>
+            <div className="max-h-36 space-y-1 overflow-y-auto rounded-xl border border-[#24272D] bg-[#131417] p-1.5">
+              {otherPlayers.length === 0 ? (
+                <div className="space-y-1.5 py-3 text-center text-[11px] text-[#8E95A2]">
+                  <div>Kein passender Spieler gefunden.</div>
+                  {(onlyMyLevel || playerSearch.trim()) && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setOnlyMyLevel(false);
+                        setPlayerSearch('');
+                      }}
+                      className="rounded-md bg-[#181A1E] px-2 py-1 text-[10px] font-bold text-[#6FB3A2] ring-1 ring-[#2E323B]"
+                    >
+                      Filter zurücksetzen
+                    </button>
+                  )}
+                </div>
+              ) : (
+                otherPlayers.map((p) => {
+                  const isSelected = targetId === p.id;
+                  const league = activeSeason.leagues.find((l) =>
+                    l.playerIds.includes(p.id)
+                  );
+                  const r = connectRatings[p.id];
+                  return (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() =>
+                        setTargetId((prev) => (prev === p.id ? '' : p.id))
+                      }
+                      className={`flex w-full items-center justify-between gap-2 rounded-lg px-2.5 py-1.5 text-left transition ${
+                        isSelected
+                          ? 'bg-[#6FB3A2] text-[#060708]'
+                          : 'text-[#F3F4F6] hover:bg-[#1C1F26]'
+                      }`}
+                    >
+                      <div className="flex min-w-0 items-center gap-2">
+                        <PlayerAvatar
+                          player={p}
+                          sizeClass="h-6 w-6 text-[9px]"
+                          isConnectAccent={p.connectOnly}
+                        />
+                        <div className="min-w-0">
+                          <div className="truncate text-xs font-black">
+                            {p.nickname}
+                          </div>
+                          <div
+                            className={`truncate text-[10px] ${
+                              isSelected ? 'text-[#060708]/80' : 'text-[#8E95A2]'
+                            }`}
+                          >
+                            {p.firstName} {p.lastName} ·{' '}
+                            {league ? league.name : p.sttClass || 'CLUB'}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex shrink-0 items-center gap-1.5">
+                        <span
+                          className={`rounded px-1.5 py-0.5 text-[10px] font-bold ${
+                            isSelected
+                              ? 'bg-[#060708]/15 text-[#060708]'
+                              : 'bg-[#181A1E] text-[#A8D0B1]'
+                          }`}
+                        >
+                          {r?.tier?.symbol} {r?.elo || 1200}
+                        </span>
+                        <span className="text-xs font-black">
+                          {isSelected ? '✓' : '+'}
+                        </span>
+                      </div>
+                    </button>
+                  );
+                })
+              )}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="mb-1 block text-[11px] font-semibold text-[#8E95A2]">
+                Modus
+              </label>
+              <div className="grid grid-cols-3 gap-1">
+                {['Best of 5', '3 Sätze', 'Locker'].map((opt) => (
+                  <button
+                    key={opt}
+                    type="button"
+                    onClick={() => setFormat(opt)}
+                    className={`truncate rounded-lg px-1.5 py-1.5 text-[10px] font-bold transition ${
+                      format === opt
+                        ? 'bg-[#6FB3A2] text-[#060708]'
+                        : 'border border-[#2E323B] bg-[#131417] text-[#9CA3AF]'
+                    }`}
+                  >
+                    {opt}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <label className="mb-1 block text-[11px] font-semibold text-[#8E95A2]">
+                Wann
+              </label>
+              <div className="grid grid-cols-3 gap-1">
+                {['Jetzt', 'Heute', 'Diese Wo.'].map((w) => (
+                  <button
+                    key={w}
+                    type="button"
+                    onClick={() => setWhenLabel(w)}
+                    className={`truncate rounded-lg px-1.5 py-1.5 text-[10px] font-bold transition ${
+                      whenLabel === w
+                        ? 'bg-[#6FB3A2] text-[#060708]'
+                        : 'border border-[#2E323B] bg-[#131417] text-[#9CA3AF]'
+                    }`}
+                  >
+                    {w}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <input
+            type="text"
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            placeholder="Kurze Notiz (optional)..."
+            className="w-full rounded-xl border border-[#2E323B] bg-[#131417] px-3 py-2 text-base sm:text-xs text-[#F3F4F6] placeholder:text-[#6B7280] focus:border-[#6FB3A2] focus:outline-none"
+          />
+
+          {targetId && (
+            <label className="flex items-center gap-2 rounded-xl bg-[#131417] px-3 py-2 text-xs text-[#D1D5DB]">
+              <input
+                type="checkbox"
+                checked={sendWhatsApp}
+                onChange={(e) => setSendWhatsApp(e.target.checked)}
+              />
+              <span>Auch per WhatsApp an {selectedTarget?.nickname} senden</span>
+            </label>
+          )}
+        </div>
+
+        <div className="shrink-0 border-t border-[#24272D] p-3">
+          <button
+            type="submit"
+            className="w-full rounded-xl bg-[#6FB3A2] py-2.5 text-xs font-black text-[#060708] transition hover:bg-[#82C1B1]"
+          >
+            {selectedTarget
+              ? `⚡ ${selectedTarget.nickname} herausfordern`
+              : '⚡ Offene Challenge senden'}
+          </button>
+        </div>
       </form>
     </div>
   );
