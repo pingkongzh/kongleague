@@ -2885,9 +2885,8 @@ export default function App() {
     readStorageJson(STORAGE_KEYS.currentUserId, null)
   );
   const [world, setWorld] = useState('connect');
-  const [leagueTab, setLeagueTab] = useState('matches');
+  const [leagueTab, setLeagueTab] = useState('overview');
   const [connectTab, setConnectTab] = useState('overview');
-  const [selectedSeasonId, setSelectedSeasonId] = useState('2026-11');
 
   const [liveCheckins, setLiveCheckins] = useState(() => {
     const stored = readStorageJson(STORAGE_KEYS.liveCheckins, null);
@@ -2928,9 +2927,6 @@ export default function App() {
   const [adminPinInput, setAdminPinInput] = useState('');
   const [adminPinError, setAdminPinError] = useState('');
   const [adminTab, setAdminTab] = useState('members');
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const [pullDistance, setPullDistance] = useState(0);
-  const pullStartYRef = useRef(null);
   const lastActiveTimestampRef = useRef(Date.now());
 
   // localStorage-Synchronisation für Kernzustände
@@ -3052,14 +3048,14 @@ export default function App() {
 
   const syncLiveAndAppState = useCallback(
     (notify = false) => {
-      setIsRefreshing(true);
       const currentNow = Date.now();
       setNowMs(currentNow);
       pruneExpiredItems(currentNow);
-      setTimeout(() => {
-        setIsRefreshing(false);
-        if (notify) showToast('✓ App & Ablaufzeiten aktualisiert');
-      }, 300);
+      if (notify) {
+        setTimeout(() => {
+          showToast('✓ App & Ablaufzeiten aktualisiert');
+        }, 300);
+      }
     },
     [pruneExpiredItems, showToast]
   );
@@ -3121,44 +3117,26 @@ export default function App() {
     };
   }, [syncLiveAndAppState]);
 
-  // Pull-to-Refresh Gestensteuerung
+  // Pull-to-Refresh auf Dokumentebene deaktivieren, damit Runterwischen keinen Browser-Reload auslöst
   useEffect(() => {
-    const handleTouchStart = (e) => {
-      if (window.scrollY <= 0 && e.touches.length === 1) {
-        pullStartYRef.current = e.touches[0].clientY;
-      } else {
-        pullStartYRef.current = null;
-      }
-    };
+    if (typeof document === 'undefined') return;
+    const prevHtmlOverscroll = document.documentElement.style.overscrollBehaviorY;
+    const prevBodyOverscroll = document.body.style.overscrollBehaviorY;
+    const prevHtmlOverscrollShorthand = document.documentElement.style.overscrollBehavior;
+    const prevBodyOverscrollShorthand = document.body.style.overscrollBehavior;
 
-    const handleTouchMove = (e) => {
-      if (pullStartYRef.current === null) return;
-      const deltaY = e.touches[0].clientY - pullStartYRef.current;
-      if (deltaY > 0 && window.scrollY <= 0) {
-        setPullDistance(Math.min(72, Math.round(deltaY * 0.45)));
-      } else {
-        setPullDistance(0);
-      }
-    };
-
-    const handleTouchEnd = () => {
-      if (pullDistance >= 54) {
-        syncLiveAndAppState(true);
-      }
-      pullStartYRef.current = null;
-      setPullDistance(0);
-    };
-
-    window.addEventListener('touchstart', handleTouchStart, { passive: true });
-    window.addEventListener('touchmove', handleTouchMove, { passive: true });
-    window.addEventListener('touchend', handleTouchEnd);
+    document.documentElement.style.overscrollBehaviorY = 'none';
+    document.body.style.overscrollBehaviorY = 'none';
+    document.documentElement.style.overscrollBehavior = 'none';
+    document.body.style.overscrollBehavior = 'none';
 
     return () => {
-      window.removeEventListener('touchstart', handleTouchStart);
-      window.removeEventListener('touchmove', handleTouchMove);
-      window.removeEventListener('touchend', handleTouchEnd);
+      document.documentElement.style.overscrollBehaviorY = prevHtmlOverscroll;
+      document.body.style.overscrollBehaviorY = prevBodyOverscroll;
+      document.documentElement.style.overscrollBehavior = prevHtmlOverscrollShorthand;
+      document.body.style.overscrollBehavior = prevBodyOverscrollShorthand;
     };
-  }, [pullDistance, syncLiveAndAppState]);
+  }, []);
 
   const playersById = useMemo(() => {
     const map = {};
@@ -3180,10 +3158,7 @@ export default function App() {
     [seasons]
   );
 
-  const viewedSeason = useMemo(
-    () => seasons.find((s) => s.id === selectedSeasonId) || activeSeason,
-    [seasons, selectedSeasonId, activeSeason]
-  );
+  const viewedSeason = activeSeason;
 
   const daysRemaining = useMemo(() => getDaysRemainingInMonth(), []);
   const isEndOfMonthReminderWindow = daysRemaining <= 3;
@@ -3195,6 +3170,17 @@ export default function App() {
         m.score1 === null &&
         (m.player1Id === currentUser.id || m.player2Id === currentUser.id)
     ).length;
+  }, [activeSeason, currentUser]);
+
+  const nextOpenLeagueMatch = useMemo(() => {
+    if (!currentUser) return null;
+    return (
+      activeSeason.matches.find(
+        (m) =>
+          m.score1 === null &&
+          (m.player1Id === currentUser.id || m.player2Id === currentUser.id)
+      ) || null
+    );
   }, [activeSeason, currentUser]);
 
   if (!currentUser) {
@@ -3487,7 +3473,7 @@ export default function App() {
   const handleAdminResetLeagueMatch = (matchId) => {
     setSeasons((prev) =>
       prev.map((s) =>
-        s.id !== viewedSeason.id
+        s.id !== activeSeason.id
           ? s
           : {
               ...s,
@@ -3508,7 +3494,7 @@ export default function App() {
   const handleSaveLeagueMatchScore = (matchId, score1, score2) => {
     setSeasons((prev) =>
       prev.map((s) =>
-        s.id !== viewedSeason.id
+        s.id !== activeSeason.id
           ? s
           : {
               ...s,
@@ -3522,27 +3508,7 @@ export default function App() {
     showToast('Liga-Resultat eingetragen');
   };
 
-  const handleRecordConnectMatch = (opponentId, winnerId, score) => {
-    const newMatch = {
-      id: `cm-${Date.now()}`,
-      player1Id: currentUser.id,
-      player2Id: opponentId,
-      winnerId,
-      score,
-      dateLabel: 'Gerade eben',
-    };
-    setConnectMatches((prev) => [newMatch, ...prev]);
-    setLogMatchTargetId(null);
-    showToast('Spontane Partie gespeichert & Rating aktualisiert!');
-  };
-
   const handleAdvanceMonth = () => {
-    const currentIdx = seasons.findIndex((s) => s.id === activeSeason.id);
-    if (currentIdx < seasons.length - 1) {
-      setSelectedSeasonId(seasons[currentIdx + 1].id);
-      return;
-    }
-
     const sortedLeagues = [...activeSeason.leagues].sort((a, b) => a.tier - b.tier);
     const standingsByTier = sortedLeagues.map((l) => ({
       league: l,
@@ -3627,7 +3593,6 @@ export default function App() {
         .map((s) => (s.id === activeSeason.id ? { ...s, status: 'completed' } : s))
         .concat(newSeason)
     );
-    setSelectedSeasonId(nextId);
     showToast(`${nextLabel} mit Auf-/Abstieg gestartet!`);
   };
 
@@ -3716,25 +3681,7 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-[#060708] pb-24 text-[#F3F4F6] antialiased selection:bg-[#DE754B] selection:text-[#060708]">
-      {(pullDistance > 12 || isRefreshing) && (
-        <div
-          style={{ height: isRefreshing ? 36 : pullDistance }}
-          className="flex items-center justify-center overflow-hidden bg-[#0C0E12] text-[11px] font-bold text-[#6FB3A2] transition-all"
-        >
-          <span className={isRefreshing ? 'animate-spin inline-block mr-1.5' : 'mr-1.5'}>
-            ↻
-          </span>
-          <span>
-            {isRefreshing
-              ? 'Aktualisiere...'
-              : pullDistance >= 54
-              ? 'Loslassen zum Aktualisieren'
-              : 'Nach unten ziehen zum Aktualisieren'}
-          </span>
-        </div>
-      )}
-
+    <div className="min-h-screen overscroll-none bg-[#060708] pb-24 text-[#F3F4F6] antialiased selection:bg-[#DE754B] selection:text-[#060708]">
       <header className="sticky top-0 z-30 border-b border-[#22252B] bg-[#060708]/95 backdrop-blur-md">
         <div className="mx-auto max-w-2xl px-4 pt-3 pb-2.5">
           <div className="flex items-center justify-between gap-2">
@@ -3781,16 +3728,6 @@ export default function App() {
             </div>
 
             <div className="flex items-center gap-1.5">
-              <button
-                type="button"
-                onClick={() => syncLiveAndAppState(true)}
-                title="Ansicht aktualisieren"
-                aria-label="Ansicht aktualisieren"
-                className="flex h-8 w-8 items-center justify-center rounded-full bg-[#15171B] text-xs font-black text-[#A8D0B1] ring-1 ring-[#2B2F37] transition hover:border-[#6FB3A2] hover:text-[#6FB3A2] sm:hidden"
-              >
-                <span className={isRefreshing ? 'animate-spin inline-block' : ''}>↻</span>
-              </button>
-
               <button
                 type="button"
                 onClick={() => setShowLiveCheckInModal(true)}
@@ -3854,30 +3791,30 @@ export default function App() {
             </div>
           </div>
 
-          <div className="mt-2.5 grid grid-cols-2 gap-2">
+          <div className="mt-4 grid grid-cols-2 gap-2.5 sm:mt-2.5 sm:gap-2">
             <button
               type="button"
               onClick={() => setWorld('connect')}
-              className={`relative flex items-center justify-between rounded-xl px-4 py-3.5 text-left transition sm:px-3.5 sm:py-2 ${
+              className={`relative flex items-center justify-between rounded-2xl px-4 py-4 text-left transition sm:rounded-xl sm:px-3.5 sm:py-2 ${
                 world === 'connect'
-                  ? 'bg-[#6FB3A2] text-[#060708] shadow-lg shadow-[#6FB3A2]/25'
-                  : 'bg-[#14161A] text-[#D1D5DB] ring-1 ring-[#6FB3A2]/35 hover:bg-[#16221F]'
+                  ? 'bg-[#6FB3A2] text-[#060708] shadow-lg shadow-[#6FB3A2]/25 ring-1 ring-[#A8D0B1]/40'
+                  : 'bg-[#14161A] text-[#D1D5DB] ring-1 ring-[#6FB3A2]/45 hover:bg-[#16221F]'
               }`}
             >
               <div>
-                <div className="text-sm font-black tracking-wide uppercase sm:text-xs">
+                <div className="text-base font-black tracking-wide uppercase sm:text-xs">
                   CLUB
                 </div>
                 <div
-                  className={`text-[11px] font-medium sm:text-[10px] ${
-                    world === 'connect' ? 'text-[#060708]/80' : 'text-[#8E95A2]'
+                  className={`text-xs font-semibold sm:text-[10px] sm:font-medium ${
+                    world === 'connect' ? 'text-[#060708]/85' : 'text-[#9CA3AF]'
                   }`}
                 >
                   {liveCheckins.length} LIVE · {players.length} Mitglieder
                 </div>
               </div>
               <span
-                className={`rounded-full px-2.5 py-1 text-[11px] font-black sm:px-2 sm:py-0.5 sm:text-[10px] ${
+                className={`rounded-full px-3 py-1 text-xs font-black sm:px-2 sm:py-0.5 sm:text-[10px] ${
                   world === 'connect'
                     ? 'bg-[#060708] text-[#A8D0B1]'
                     : 'bg-[#152622] text-[#A8D0B1]'
@@ -3890,19 +3827,19 @@ export default function App() {
             <button
               type="button"
               onClick={() => setWorld('league')}
-              className={`relative flex items-center justify-between rounded-xl px-4 py-3.5 text-left transition sm:px-3.5 sm:py-2 ${
+              className={`relative flex items-center justify-between rounded-2xl px-4 py-4 text-left transition sm:rounded-xl sm:px-3.5 sm:py-2 ${
                 world === 'league'
-                  ? 'bg-[#DE754B] text-[#060708] shadow-lg shadow-[#DE754B]/25'
-                  : 'bg-[#14161A] text-[#D1D5DB] ring-1 ring-[#DE754B]/35 hover:bg-[#231611]'
+                  ? 'bg-[#DE754B] text-[#060708] shadow-lg shadow-[#DE754B]/25 ring-1 ring-[#F4ECC2]/40'
+                  : 'bg-[#14161A] text-[#D1D5DB] ring-1 ring-[#DE754B]/45 hover:bg-[#231611]'
               }`}
             >
               <div>
-                <div className="text-sm font-black tracking-wide uppercase sm:text-xs">
+                <div className="text-base font-black tracking-wide uppercase sm:text-xs">
                   LEAGUE
                 </div>
                 <div
-                  className={`text-[11px] font-medium sm:text-[10px] ${
-                    world === 'league' ? 'text-[#060708]/80' : 'text-[#8E95A2]'
+                  className={`text-xs font-semibold sm:text-[10px] sm:font-medium ${
+                    world === 'league' ? 'text-[#060708]/85' : 'text-[#9CA3AF]'
                   }`}
                 >
                   {viewedSeason.shortLabel} ·{' '}
@@ -3915,7 +3852,7 @@ export default function App() {
               </div>
               {openLeagueMatchesCount > 0 ? (
                 <span
-                  className={`rounded-full px-2.5 py-1 text-[11px] font-black sm:px-2 sm:py-0.5 sm:text-[10px] ${
+                  className={`rounded-full px-3 py-1 text-xs font-black sm:px-2 sm:py-0.5 sm:text-[10px] ${
                     world === 'league'
                       ? 'bg-[#060708] text-[#F4ECC2]'
                       : 'bg-[#2C1912] text-[#F4ECC2] ring-1 ring-[#DE754B]/45'
@@ -3925,7 +3862,7 @@ export default function App() {
                 </span>
               ) : (
                 <span
-                  className={`rounded-full px-2.5 py-1 text-[11px] font-black sm:px-2 sm:py-0.5 sm:text-[10px] ${
+                  className={`rounded-full px-3 py-1 text-xs font-black sm:px-2 sm:py-0.5 sm:text-[10px] ${
                     world === 'league'
                       ? 'bg-[#060708] text-[#F4ECC2]'
                       : 'bg-[#2C1912] text-[#DE754B]'
@@ -3955,8 +3892,6 @@ export default function App() {
             currentUser={currentUser}
             activeSeason={activeSeason}
             viewedSeason={viewedSeason}
-            seasons={seasons}
-            setSelectedSeasonId={setSelectedSeasonId}
             connectRatings={ratingsByPlayer}
             connectMatches={connectMatches}
             liveCheckins={liveCheckins}
@@ -4012,36 +3947,68 @@ export default function App() {
 
         {world === 'league' && (
           <div className="space-y-4">
-            <div className="flex items-center justify-between gap-2 rounded-2xl border border-[#DE754B]/30 bg-[#14161A] p-2.5">
-              <div className="flex items-center gap-1.5 overflow-x-auto">
-                {seasons.map((s) => (
-                  <button
-                    key={s.id}
-                    type="button"
-                    onClick={() => setSelectedSeasonId(s.id)}
-                    className={`whitespace-nowrap rounded-lg px-2.5 py-1.5 text-xs font-bold transition ${
-                      s.id === viewedSeason.id
-                        ? 'bg-[#DE754B] text-[#060708]'
-                        : 'bg-[#0F1114] text-[#9CA3AF] hover:text-[#F4ECC2]'
-                    }`}
-                  >
-                    {s.label} {s.status === 'active' ? '• Aktiv' : ''}
-                  </button>
-                ))}
+            <div className="rounded-2xl border border-[#DE754B]/35 bg-[#14161A] p-3 shadow-lg shadow-black/25">
+              <div className="mb-2.5 flex items-center justify-between px-0.5">
+                <span className="text-[10px] font-black uppercase tracking-[0.14em] text-[#DE754B]">
+                  Schnellaktionen
+                </span>
+                <span className="text-[10px] font-medium text-[#8E95A2]">
+                  {activeSeason.label}
+                </span>
               </div>
 
-              {viewedSeason.status === 'active' && (
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                 <button
                   type="button"
-                  onClick={handleAdvanceMonth}
-                  className="shrink-0 rounded-lg border border-[#DE754B]/45 bg-[#291711] px-2.5 py-1.5 text-[11px] font-bold text-[#F4ECC2] hover:bg-[#361E16]"
+                  onClick={() => {
+                    if (nextOpenLeagueMatch) {
+                      setRecordingLeagueMatch(nextOpenLeagueMatch);
+                    } else {
+                      setLeagueTab('matches');
+                    }
+                  }}
+                  className="flex items-center justify-between gap-2 rounded-xl border border-[#DE754B]/50 bg-[#291711]/75 px-3.5 py-3 text-left text-xs font-black text-[#F3F4F6] transition hover:border-[#DE754B] hover:bg-[#331C14]"
                 >
-                  Monat abschliessen →
+                  <div className="min-w-0">
+                    <div className="truncate">Resultat eintragen</div>
+                    <div className="mt-0.5 truncate text-[10px] font-medium text-[#F4ECC2]/80">
+                      {nextOpenLeagueMatch
+                        ? `vs. ${
+                            playersById[
+                              nextOpenLeagueMatch.player1Id === currentUser.id
+                                ? nextOpenLeagueMatch.player2Id
+                                : nextOpenLeagueMatch.player1Id
+                            ]?.nickname || 'Gegner'
+                          } · Sätze erfassen`
+                        : `${openLeagueMatchesCount} offen · Zu meinen Spielen`}
+                    </div>
+                  </div>
+                  <span className="shrink-0 rounded-lg bg-[#DE754B] px-2 py-1 text-[10px] font-black text-[#060708]">
+                    + Sätze
+                  </span>
                 </button>
-              )}
+
+                <button
+                  type="button"
+                  onClick={() => setLeagueTab('standings')}
+                  className="flex items-center justify-between gap-2 rounded-xl border border-[#2B2F37] bg-[#0F1114] px-3.5 py-3 text-left text-xs font-black text-[#F3F4F6] transition hover:border-[#DE754B] hover:bg-[#191C21]"
+                >
+                  <div className="min-w-0">
+                    <div className="truncate">Tabelle &amp; Aufstieg</div>
+                    <div className="mt-0.5 truncate text-[10px] font-medium text-[#8E95A2]">
+                      {currentUserLeague
+                        ? `${currentUserLeague.name} · Gruppen & Ränge`
+                        : 'Alle Ligen & Gruppen ansehen'}
+                    </div>
+                  </div>
+                  <span className="shrink-0 text-sm font-black text-[#DE754B]">
+                    →
+                  </span>
+                </button>
+              </div>
             </div>
 
-            {viewedSeason.status === 'active' && isEndOfMonthReminderWindow && (
+            {isEndOfMonthReminderWindow && (
               <div className="rounded-2xl border border-amber-500/40 bg-amber-950/25 p-3">
                 <div className="flex items-center justify-between gap-2">
                   <div>
@@ -4050,25 +4017,17 @@ export default function App() {
                     </div>
                     <p className="mt-0.5 text-xs text-[#E5E7EB]">
                       {openLeagueMatchesCount > 0
-                        ? `Du hast noch ${openLeagueMatchesCount} offene Liga-Partie(n) in ${viewedSeason.label}.`
-                        : `Alle deine Liga-Partien im ${viewedSeason.label} sind eingetragen!`}
+                        ? `Du hast noch ${openLeagueMatchesCount} offene Liga-Partie(n) in ${activeSeason.label}.`
+                        : `Alle deine Liga-Partien im ${activeSeason.label} sind eingetragen!`}
                     </p>
                   </div>
-                  {openLeagueMatchesCount > 0 && (
-                    <button
-                      type="button"
-                      onClick={() => setLeagueTab('matches')}
-                      className="shrink-0 rounded-xl bg-amber-400 px-3 py-1.5 text-[11px] font-black text-[#0F1012]"
-                    >
-                      Offene Spiele
-                    </button>
-                  )}
                 </div>
               </div>
             )}
 
-            <div className="grid grid-cols-3 gap-1.5 rounded-xl bg-[#14161A] p-1 ring-1 ring-[#DE754B]/25">
+            <div className="grid grid-cols-4 gap-1 rounded-xl bg-[#14161A] p-1 ring-1 ring-[#DE754B]/25">
               {[
+                { id: 'overview', label: 'Übersicht' },
                 { id: 'matches', label: 'Meine Spiele' },
                 { id: 'standings', label: 'Tabelle & Aufstieg' },
                 { id: 'status', label: 'Monats-Status' },
@@ -4077,7 +4036,7 @@ export default function App() {
                   key={t.id}
                   type="button"
                   onClick={() => setLeagueTab(t.id)}
-                  className={`rounded-lg py-2 text-xs font-bold transition ${
+                  className={`truncate rounded-lg px-1 py-2 text-[11px] font-bold transition sm:text-xs ${
                     leagueTab === t.id
                       ? 'bg-[#DE754B] text-[#060708]'
                       : 'text-[#8E95A2] hover:text-[#F4ECC2]'
@@ -4088,9 +4047,21 @@ export default function App() {
               ))}
             </div>
 
+            {leagueTab === 'overview' && (
+              <LeagueOverviewTab
+                season={activeSeason}
+                currentUser={currentUser}
+                playersById={playersById}
+                daysRemaining={daysRemaining}
+                isCurrentUserPaused={isCurrentUserPaused}
+                onNavigateTab={(tab) => setLeagueTab(tab)}
+                onSelectMatchToRecord={(m) => setRecordingLeagueMatch(m)}
+              />
+            )}
+
             {leagueTab === 'matches' && (
               <LeagueMatchesTab
-                season={viewedSeason}
+                season={activeSeason}
                 currentUser={currentUser}
                 playersById={playersById}
                 connectRatings={ratingsByPlayer}
@@ -4102,7 +4073,7 @@ export default function App() {
 
             {leagueTab === 'standings' && (
               <LeagueStandingsTab
-                season={viewedSeason}
+                season={activeSeason}
                 playersById={playersById}
                 currentUser={currentUser}
                 connectRatings={ratingsByPlayer}
@@ -5492,6 +5463,224 @@ function LeagueMatchesTab({
   );
 }
 
+function LeagueOverviewTab({
+  season,
+  currentUser,
+  playersById,
+  daysRemaining,
+  isCurrentUserPaused,
+  onNavigateTab,
+  onSelectMatchToRecord,
+}) {
+  const sortedLeagues = useMemo(
+    () => [...(season?.leagues || [])].sort((a, b) => a.tier - b.tier),
+    [season]
+  );
+
+  const myLeague = useMemo(
+    () => sortedLeagues.find((l) => l.playerIds.includes(currentUser.id)) || sortedLeagues[0],
+    [sortedLeagues, currentUser.id]
+  );
+
+  const myStandings = useMemo(
+    () => (myLeague ? computeStandings(myLeague, season.matches || [], playersById) : []),
+    [myLeague, season.matches, playersById]
+  );
+
+  const myRowIndex = myStandings.findIndex((r) => r.playerId === currentUser.id);
+  const myRow = myRowIndex >= 0 ? myStandings[myRowIndex] : null;
+
+  const myOpenMatches = useMemo(
+    () =>
+      (season.matches || []).filter(
+        (m) =>
+          m.score1 === null &&
+          (m.player1Id === currentUser.id || m.player2Id === currentUser.id)
+      ),
+    [season.matches, currentUser.id]
+  );
+
+  const recentPlayedMatches = useMemo(
+    () =>
+      [...(season.matches || [])]
+        .filter((m) => m.score1 !== null && m.score2 !== null)
+        .reverse()
+        .slice(0, 3),
+    [season.matches]
+  );
+
+  const totalPlayedCount = useMemo(
+    () =>
+      (season.matches || []).filter((m) => m.score1 !== null && m.score2 !== null).length,
+    [season.matches]
+  );
+
+  return (
+    <div className="space-y-3.5">
+      {/* Kompakte Kennzahlen */}
+      <div className="grid grid-cols-3 gap-2">
+        <div className="rounded-xl border border-[#24272D] bg-[#181A1E] p-2.5 text-center">
+          <div className="text-sm font-black text-[#F4ECC2]">
+            {myLeague ? myLeague.name : isCurrentUserPaused ? 'Pause' : '–'}
+          </div>
+          <div className="mt-0.5 text-[10px] font-bold text-[#9CA3AF]">
+            {myRow ? `Rang #${myRowIndex + 1} · ${myRow.points} Pkt.` : 'Monatsstatus'}
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => onNavigateTab('matches')}
+          className="rounded-xl border border-[#DE754B]/35 bg-[#181A1E] p-2.5 text-center transition hover:border-[#DE754B]"
+        >
+          <div className="text-sm font-black text-[#DE754B]">
+            {myOpenMatches.length}
+          </div>
+          <div className="mt-0.5 text-[10px] font-bold text-[#9CA3AF]">
+            Meine offenen Spiele
+          </div>
+        </button>
+
+        <div className="rounded-xl border border-[#24272D] bg-[#181A1E] p-2.5 text-center">
+          <div className="text-sm font-black text-[#A8D0B1]">
+            {daysRemaining}d
+          </div>
+          <div className="mt-0.5 text-[10px] font-bold text-[#9CA3AF]">
+            Restzeit · {totalPlayedCount} gespielt
+          </div>
+        </div>
+      </div>
+
+      {/* Eigene Gruppe kompakt */}
+      {myLeague && (
+        <div className="rounded-2xl border border-[#24272D] bg-[#181A1E] p-3.5">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-xs font-black tracking-wide text-[#DE754B] uppercase">
+              Deine Gruppe · {myLeague.name}
+            </span>
+            <button
+              type="button"
+              onClick={() => onNavigateTab('standings')}
+              className="text-[11px] font-bold text-[#F4ECC2] underline"
+            >
+              Alle Tabellen →
+            </button>
+          </div>
+
+          <div className="mt-2.5 divide-y divide-[#22252B] overflow-hidden rounded-xl border border-[#22252B] bg-[#131417]">
+            {myStandings.map((row, idx) => {
+              const isMe = row.playerId === currentUser.id;
+              return (
+                <div
+                  key={row.playerId}
+                  className={`flex items-center justify-between gap-2 px-3 py-2 text-xs ${
+                    isMe ? 'bg-[#291711]' : ''
+                  }`}
+                >
+                  <div className="flex min-w-0 items-center gap-2">
+                    <span className="w-4 text-[11px] font-black text-[#9CA3AF]">
+                      {idx + 1}.
+                    </span>
+                    <span className="truncate font-bold text-[#F3F4F6]">
+                      {row.player?.nickname || 'Spieler'}
+                    </span>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-3 text-[11px]">
+                    <span className="text-[#8E95A2]">
+                      {row.won}S / {row.lost}N
+                    </span>
+                    <span className="text-[#8E95A2]">
+                      {row.setsWon}:{row.setsLost}
+                    </span>
+                    <span className="w-9 rounded bg-[#181A1E] py-0.5 text-center font-black text-[#F4ECC2]">
+                      {row.points}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Nächste offene Spiele des aktuellen Nutzers */}
+      <div className="rounded-2xl border border-[#24272D] bg-[#181A1E] p-3.5">
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-xs font-black tracking-wide text-[#F3F4F6] uppercase">
+            Offene Liga-Partien ({myOpenMatches.length})
+          </span>
+          <button
+            type="button"
+            onClick={() => onNavigateTab('matches')}
+            className="text-[11px] font-bold text-[#DE754B] underline"
+          >
+            Alle anzeigen →
+          </button>
+        </div>
+
+        {myOpenMatches.length === 0 ? (
+          <div className="mt-2.5 rounded-xl bg-[#131417] p-3 text-center text-xs text-[#A8D0B1]">
+            Keine offenen Spiele mehr für dich in {season.label}.
+          </div>
+        ) : (
+          <div className="mt-2.5 space-y-2">
+            {myOpenMatches.slice(0, 3).map((m) => {
+              const oppId = m.player1Id === currentUser.id ? m.player2Id : m.player1Id;
+              const opp = playersById[oppId];
+              return (
+                <div
+                  key={m.id}
+                  className="flex items-center justify-between gap-2 rounded-xl bg-[#131417] px-3 py-2 text-xs"
+                >
+                  <span className="truncate font-bold text-[#F3F4F6]">
+                    vs. {opp?.nickname || 'Mitspieler'}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => onSelectMatchToRecord(m)}
+                    className="shrink-0 rounded-lg bg-[#DE754B] px-2.5 py-1 text-[10px] font-black text-[#060708]"
+                  >
+                    Resultat
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* Letzte Liga-Ergebnisse */}
+      {recentPlayedMatches.length > 0 && (
+        <div className="rounded-2xl border border-[#24272D] bg-[#181A1E] p-3.5">
+          <div className="text-xs font-black tracking-wide text-[#F3F4F6] uppercase">
+            Letzte Ergebnisse ({season.shortLabel})
+          </div>
+          <div className="mt-2.5 space-y-1.5">
+            {recentPlayedMatches.map((m) => {
+              const p1 = playersById[m.player1Id];
+              const p2 = playersById[m.player2Id];
+              return (
+                <div
+                  key={m.id}
+                  className="flex items-center justify-between gap-2 rounded-xl bg-[#131417] px-3 py-2 text-xs"
+                >
+                  <span className="truncate text-[#D1D5DB]">
+                    <strong className="text-[#F3F4F6]">{p1?.nickname}</strong> vs.{' '}
+                    <strong className="text-[#F3F4F6]">{p2?.nickname}</strong>
+                  </span>
+                  <span className="shrink-0 rounded bg-[#181A1E] px-2 py-0.5 font-black text-[#F4ECC2]">
+                    {m.score1} : {m.score2}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function LeagueStandingsTab({ season, playersById, currentUser, connectRatings }) {
   const sortedLeagues = [...season.leagues].sort((a, b) => a.tier - b.tier);
 
@@ -6707,8 +6896,6 @@ function AdminPanelTab({
   currentUser,
   activeSeason,
   viewedSeason,
-  seasons,
-  setSelectedSeasonId,
   connectRatings,
   connectMatches,
   liveCheckins,
@@ -7194,21 +7381,8 @@ function AdminPanelTab({
 
       {adminTab === 'results' && (
         <div className="space-y-3">
-          <div className="flex items-center gap-1.5 overflow-x-auto">
-            {seasons.map((s) => (
-              <button
-                key={s.id}
-                type="button"
-                onClick={() => setSelectedSeasonId(s.id)}
-                className={`rounded-lg px-2.5 py-1 text-xs font-bold ${
-                  s.id === viewedSeason.id
-                    ? 'bg-[#DE754B] text-[#060708]'
-                    : 'bg-[#181A1E] text-[#9CA3AF]'
-                }`}
-              >
-                {s.label}
-              </button>
-            ))}
+          <div className="rounded-2xl border border-[#24272D] bg-[#181A1E] px-3.5 py-2.5 text-xs font-bold text-[#F4ECC2]">
+            Aktueller Monat: {viewedSeason.label}
           </div>
 
           <div className="rounded-2xl border border-[#24272D] bg-[#181A1E] p-3.5">
