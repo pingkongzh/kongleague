@@ -1,4 +1,18 @@
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+
+// ============================================================================
+// KONSTANTEN, DESIGN-TOKENS & HELFERFUNKTIONEN
+// ============================================================================
+
+const STORAGE_KEYS = {
+  players: 'pingkong_connect_players_v1',
+  seasons: 'pingkong_connect_seasons_v1',
+  currentUserId: 'pingkong_connect_current_user_v1',
+  liveCheckins: 'pingkong_connect_live_checkins_v1',
+  sessions: 'pingkong_connect_sessions_v1',
+  connectMatches: 'pingkong_connect_matches_v1',
+  rankingFilters: 'pingkong_connect_ranking_filters_v1',
+};
 
 const STT_LEVEL_OPTIONS = [
   { value: 'Hobby', label: 'Hobby (ohne Klassierung)', rank: 10 },
@@ -35,27 +49,96 @@ const PLAYSTYLE_OPTIONS = [
   { value: 'Abwehr / Noppen', label: 'Abwehr / Noppen' },
 ];
 
-const LIVE_MOOD_PRESETS = [
-  '🏓 Offen für ein paar Sätze',
-  '🔥 Lockeres Einspielen',
-  '🏆 Suche Match- / Liga-Gegner',
-  '👀 Bin gleich da / schaue rein',
-  '🤝 Habe bereits abgemacht',
+const LIVE_STATUS_OPTIONS = [
+  { id: 'buddy_wanted', label: 'Spielbuddy gesucht', badgeClass: 'border-emerald-500/40 bg-emerald-950/35 text-emerald-300' },
+  { id: 'hall_empty', label: 'Halle leer', badgeClass: 'border-[#6FB3A2]/40 bg-[#152622] text-[#A8D0B1]' },
+  { id: 'has_buddy', label: 'Habe bereits einen Buddy', badgeClass: 'border-[#2E323B] bg-[#181A1E] text-[#D1D5DB]' },
 ];
 
-const LIVE_DURATION_OPTIONS = [
-  { id: '1h', label: '+1 Std', minutes: 60 },
-  { id: '1.5h', label: '+1.5 Std', minutes: 90 },
-  { id: '2h', label: '+2 Std', minutes: 120 },
-  { id: 'open', label: 'Offen', minutes: null },
+const LIVE_DURATION_CHIPS = [
+  { id: '30m', label: '30 Min.', minutes: 30 },
+  { id: '1h', label: '1 Std.', minutes: 60 },
+  { id: '1.5h', label: '1,5 Std.', minutes: 90 },
+  { id: '2h', label: '2 Std.', minutes: 120 },
+  { id: 'until22', label: 'bis 22:00', minutes: 'until22' },
 ];
 
-function formatFutureClockTime(minutesToAdd) {
-  if (minutesToAdd === null || minutesToAdd === undefined) return 'Offen';
-  const target = new Date(Date.now() + minutesToAdd * 60 * 1000);
-  const hh = String(target.getHours()).padStart(2, '0');
-  const mm = String(target.getMinutes()).padStart(2, '0');
+const SPONTANEOUS_TODAY_TIME_CHIPS = [
+  'Jetzt sofort',
+  'Heute · 17:30',
+  'Heute · 18:30',
+  'Heute · 19:30',
+  'Heute · 20:30',
+];
+
+const SPONTANEOUS_TODAY_FOCUS_CHIPS = [
+  'Lockeres Einspielen',
+  'Sätze & Matchpraxis',
+  'Aufschlag & Rückschlag',
+  'Balleimer / Topspin',
+];
+
+/**
+ * Berechnet den Zielzeitstempel (`expiresAt`) für die gewählte Dauer.
+ * Unterstützt Minutenwerte sowie 'until22' (heute 22:00 Uhr, falls bereits nach 22:00 auf morgen 22:00).
+ */
+function computeExpiresAt(durationInput) {
+  const now = new Date();
+  if (durationInput === 'until22') {
+    const target = new Date(now);
+    target.setHours(22, 0, 0, 0);
+    if (target.getTime() <= now.getTime()) {
+      target.setDate(target.getDate() + 1);
+    }
+    return target.getTime();
+  }
+  const minutes = typeof durationInput === 'number' ? durationInput : 90;
+  return now.getTime() + minutes * 60 * 1000;
+}
+
+/**
+ * Formatiert eine Ablaufzeit als kompaktes Zeit-Label (z. B. "bis 17:00" oder "bis 22:00").
+ */
+function formatExpiryClockLabel(expiresAt) {
+  if (!expiresAt) return 'Spontan heute';
+  const d = new Date(expiresAt);
+  const hh = String(d.getHours()).padStart(2, '0');
+  const mm = String(d.getMinutes()).padStart(2, '0');
   return `bis ${hh}:${mm}`;
+}
+
+/**
+ * Formatiert die verbleibende Restlaufzeit ab `nowMs` für Live-Badges.
+ */
+function formatRemainingDuration(expiresAt, nowMs = Date.now()) {
+  if (!expiresAt) return 'Aktiv';
+  const diffMs = Math.max(0, expiresAt - nowMs);
+  const totalMinutes = Math.ceil(diffMs / 60000);
+  if (totalMinutes <= 0) return '0 Min.';
+  if (totalMinutes < 60) return `${totalMinutes} Min.`;
+  const hours = Math.floor(totalMinutes / 60);
+  const mins = totalMinutes % 60;
+  return mins > 0 ? `${hours} Std. ${mins} Min.` : `${hours} Std.`;
+}
+
+function readStorageJson(key, fallback) {
+  if (typeof window === 'undefined') return fallback;
+  try {
+    const raw = window.localStorage.getItem(key);
+    if (!raw) return fallback;
+    return JSON.parse(raw);
+  } catch {
+    return fallback;
+  }
+}
+
+function writeStorageJson(key, value) {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(key, JSON.stringify(value));
+  } catch {
+    // Ignorieren falls Quota voll oder Storage blockiert ist
+  }
 }
 
 function normalizeWhatsAppPhone(rawPhone = '') {
@@ -70,7 +153,10 @@ function normalizeWhatsAppPhone(rawPhone = '') {
 function validateWhatsAppPhone(rawPhone = '') {
   const normalized = normalizeWhatsAppPhone(rawPhone);
   if (!normalized) {
-    return { valid: false, error: 'Bitte WhatsApp-Telefonnummer mit Ländervorwahl eingeben (z. B. +41 79 123 45 67).' };
+    return {
+      valid: false,
+      error: 'Bitte WhatsApp-Telefonnummer mit Ländervorwahl eingeben (z. B. +41 79 123 45 67).',
+    };
   }
   if (normalized.startsWith('0') && !normalized.startsWith('00')) {
     return {
@@ -275,6 +361,10 @@ const computeConnectRatings = (players, connectMatches) => {
 
   return { ratingsByPlayer: map, matchDeltas };
 };
+
+// ============================================================================
+// INITIALDATEN
+// ============================================================================
 
 const INITIAL_PLAYERS = [
   {
@@ -481,278 +571,6 @@ const INITIAL_PLAYERS = [
     joinedLabel: '2021',
     typicalHallDays: ['Mo', 'Mi'],
   },
-  {
-    id: 'p13',
-    firstName: 'Simon',
-    lastName: 'Moser',
-    nickname: 'SidespinSimon',
-    pin: '1234',
-    avatarUrl:
-      'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?auto=format&fit=crop&w=160&q=80',
-    phone: '+41 79 905 55 66',
-    sttClass: 'D2',
-    language: 'Deutsch',
-    playstyle: 'Allround',
-    connectOnly: true,
-    isNewMember: false,
-    joinedLabel: '2024',
-    typicalHallDays: ['Do', 'Fr'],
-  },
-  {
-    id: 'p14',
-    firstName: 'Chloe',
-    lastName: 'Dubois',
-    nickname: 'AceChloe',
-    pin: '1234',
-    avatarUrl:
-      'https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?auto=format&fit=crop&w=160&q=80',
-    phone: '+41 79 906 66 77',
-    sttClass: '≈ B-Niveau',
-    language: 'Englisch',
-    playstyle: 'Offensiv',
-    connectOnly: true,
-    isNewMember: true,
-    joinedLabel: 'Nov 2026',
-    typicalHallDays: ['Di', 'Do'],
-  },
-  {
-    id: 'p15',
-    firstName: 'Pascal',
-    lastName: 'Gerber',
-    nickname: 'NoppenPascal',
-    pin: '1234',
-    avatarUrl:
-      'https://images.unsplash.com/photo-1504257432389-52343af06ae3?auto=format&fit=crop&w=160&q=80',
-    phone: '+41 79 907 77 88',
-    sttClass: 'C7',
-    language: 'Deutsch',
-    playstyle: 'Abwehr / Noppen',
-    connectOnly: false,
-    isNewMember: false,
-    joinedLabel: '2019',
-    typicalHallDays: ['Mo', 'Fr'],
-  },
-  {
-    id: 'p16',
-    firstName: 'Anna',
-    lastName: 'Graf',
-    nickname: 'SpeedyAnna',
-    pin: '1234',
-    avatarUrl:
-      'https://images.unsplash.com/photo-1488426862026-3ee34a7d66df?auto=format&fit=crop&w=160&q=80',
-    phone: '+41 79 908 88 99',
-    sttClass: 'D4',
-    language: 'Beides',
-    playstyle: 'Offensiv',
-    connectOnly: true,
-    isNewMember: false,
-    joinedLabel: '2025',
-    typicalHallDays: ['Mi', 'So'],
-  },
-  {
-    id: 'p17',
-    firstName: 'Fabian',
-    lastName: 'Roth',
-    nickname: 'CounterFab',
-    pin: '1234',
-    avatarUrl:
-      'https://images.unsplash.com/photo-1507591064344-4c6ce005b128?auto=format&fit=crop&w=160&q=80',
-    phone: '+41 79 909 99 11',
-    sttClass: 'B12',
-    language: 'Beides',
-    playstyle: 'Allround',
-    connectOnly: false,
-    isNewMember: false,
-    joinedLabel: '2020',
-    typicalHallDays: ['Di', 'Do'],
-  },
-  {
-    id: 'p18',
-    firstName: 'Sofia',
-    lastName: 'Rossi',
-    nickname: 'SpinSofia',
-    pin: '1234',
-    avatarUrl:
-      'https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?auto=format&fit=crop&w=160&q=80',
-    phone: '+41 79 910 10 20',
-    sttClass: '≈ D-Niveau',
-    language: 'Englisch',
-    playstyle: 'Allround',
-    connectOnly: true,
-    isNewMember: true,
-    joinedLabel: 'Okt 2026',
-    typicalHallDays: ['Sa', 'So'],
-  },
-  {
-    id: 'p19',
-    firstName: 'Reto',
-    lastName: 'Bühler',
-    nickname: 'HammerReto',
-    pin: '1234',
-    avatarUrl:
-      'https://images.unsplash.com/photo-1519345182560-3f2917c472ef?auto=format&fit=crop&w=160&q=80',
-    phone: '+41 79 911 21 31',
-    sttClass: 'C9',
-    language: 'Deutsch',
-    playstyle: 'Offensiv',
-    connectOnly: false,
-    isNewMember: false,
-    joinedLabel: '2021',
-    typicalHallDays: ['Mo', 'Do'],
-  },
-  {
-    id: 'p20',
-    firstName: 'Julia',
-    lastName: 'Wyss',
-    nickname: 'TouchJulia',
-    pin: '1234',
-    avatarUrl:
-      'https://images.unsplash.com/photo-1544725176-7c40e5a71c5e?auto=format&fit=crop&w=160&q=80',
-    phone: '+41 79 912 32 42',
-    sttClass: 'D1',
-    language: 'Deutsch',
-    playstyle: 'Allround',
-    connectOnly: true,
-    isNewMember: false,
-    joinedLabel: '2025',
-    typicalHallDays: ['Di', 'Mi'],
-  },
-  {
-    id: 'p21',
-    firstName: 'Kevin',
-    lastName: 'Zürcher',
-    nickname: 'EdgeKevin',
-    pin: '1234',
-    avatarUrl:
-      'https://images.unsplash.com/photo-1521119989659-a83eee488004?auto=format&fit=crop&w=160&q=80',
-    phone: '+41 79 913 43 53',
-    sttClass: 'C6',
-    language: 'Deutsch',
-    playstyle: 'Offensiv',
-    connectOnly: true,
-    isNewMember: false,
-    joinedLabel: '2023',
-    typicalHallDays: ['Fr', 'Sa'],
-  },
-  {
-    id: 'p22',
-    firstName: 'Hannah',
-    lastName: 'Koch',
-    nickname: 'WallHannah',
-    pin: '1234',
-    avatarUrl:
-      'https://images.unsplash.com/photo-1513956589380-bad6acb9b9d4?auto=format&fit=crop&w=160&q=80',
-    phone: '+41 79 914 54 64',
-    sttClass: 'D5',
-    language: 'Beides',
-    playstyle: 'Abwehr / Noppen',
-    connectOnly: false,
-    isNewMember: false,
-    joinedLabel: '2022',
-    typicalHallDays: ['Mo', 'Mi'],
-  },
-  {
-    id: 'p23',
-    firstName: 'Daniel',
-    lastName: 'Arnold',
-    nickname: 'ServeDan',
-    pin: '1234',
-    avatarUrl:
-      'https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?auto=format&fit=crop&w=160&q=80',
-    phone: '+41 79 915 65 75',
-    sttClass: 'A16+',
-    language: 'Beides',
-    playstyle: 'Offensiv',
-    connectOnly: true,
-    isNewMember: false,
-    joinedLabel: '2018',
-    typicalHallDays: ['Di', 'Do'],
-  },
-  {
-    id: 'p24',
-    firstName: 'Nora',
-    lastName: 'Hofmann',
-    nickname: 'QuickNora',
-    pin: '1234',
-    avatarUrl:
-      'https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91?auto=format&fit=crop&w=160&q=80',
-    phone: '+41 79 916 76 86',
-    sttClass: 'Hobby',
-    language: 'Deutsch',
-    playstyle: 'Allround',
-    connectOnly: true,
-    isNewMember: true,
-    joinedLabel: 'Nov 2026',
-    typicalHallDays: ['Mi', 'Fr'],
-  },
-  {
-    id: 'p25',
-    firstName: 'Tobias',
-    lastName: 'Frey',
-    nickname: 'FlipTobi',
-    pin: '1234',
-    avatarUrl:
-      'https://images.unsplash.com/photo-1463453091185-61582044d556?auto=format&fit=crop&w=160&q=80',
-    phone: '+41 79 917 87 97',
-    sttClass: 'C8',
-    language: 'Deutsch',
-    playstyle: 'Allround',
-    connectOnly: false,
-    isNewMember: false,
-    joinedLabel: '2023',
-    typicalHallDays: ['Do', 'So'],
-  },
-  {
-    id: 'p26',
-    firstName: 'Melina',
-    lastName: 'Suter',
-    nickname: 'ChopMelina',
-    pin: '1234',
-    avatarUrl:
-      'https://images.unsplash.com/photo-1520813792240-56fc4a3765a7?auto=format&fit=crop&w=160&q=80',
-    phone: '+41 79 918 98 18',
-    sttClass: 'D3',
-    language: 'Deutsch',
-    playstyle: 'Abwehr / Noppen',
-    connectOnly: true,
-    isNewMember: false,
-    joinedLabel: '2024',
-    typicalHallDays: ['Mo', 'Di'],
-  },
-  {
-    id: 'p27',
-    firstName: 'Alex',
-    lastName: 'Carter',
-    nickname: 'SmashAlex',
-    pin: '1234',
-    avatarUrl:
-      'https://images.unsplash.com/photo-1534030347209-467a5b0ad3e6?auto=format&fit=crop&w=160&q=80',
-    phone: '+41 79 919 19 29',
-    sttClass: '≈ C-Niveau',
-    language: 'Englisch',
-    playstyle: 'Offensiv',
-    connectOnly: true,
-    isNewMember: false,
-    joinedLabel: '2025',
-    typicalHallDays: ['Mi', 'Sa'],
-  },
-  {
-    id: 'p28',
-    firstName: 'Celine',
-    lastName: 'Müller',
-    nickname: 'RallyCeline',
-    pin: '1234',
-    avatarUrl:
-      'https://images.unsplash.com/photo-1517365830460-955ce3ccd263?auto=format&fit=crop&w=160&q=80',
-    phone: '+41 79 920 20 30',
-    sttClass: 'B14',
-    language: 'Beides',
-    playstyle: 'Allround',
-    connectOnly: false,
-    isNewMember: false,
-    joinedLabel: '2021',
-    typicalHallDays: ['Di', 'Fr'],
-  },
 ];
 
 const INITIAL_SEASONS = [
@@ -796,79 +614,57 @@ const INITIAL_SEASONS = [
   },
 ];
 
-const INITIAL_LIVE_CHECKINS = [
-  {
-    id: 'lc1',
-    playerId: 'p3',
-    durationLabel: 'bis 21:30',
-    expiresAt: Date.now() + 90 * 60 * 1000,
-    note: '🔥 Lockeres Einspielen',
-    checkedInAt: 'vor 18 Min.',
-    comingTooIds: ['p4'],
-  },
-  {
-    id: 'lc2',
-    playerId: 'p7',
-    durationLabel: 'bis 21:00',
-    expiresAt: Date.now() + 60 * 60 * 1000,
-    note: '🏆 Suche Match- / Liga-Gegner',
-    checkedInAt: 'vor 7 Min.',
-    comingTooIds: [],
-  },
-];
+const buildInitialLiveCheckins = () => {
+  const now = Date.now();
+  return [
+    {
+      id: 'lc1',
+      playerId: 'p3',
+      durationLabel: '1,5 Std.',
+      hallStatus: 'buddy_wanted',
+      expiresAt: now + 75 * 60 * 1000,
+      note: 'Suche Partner für ein paar Sätze & Einspielen',
+      checkedInAt: 'vor 15 Min.',
+      comingTooIds: ['p4'],
+    },
+    {
+      id: 'lc2',
+      playerId: 'p7',
+      durationLabel: '1 Std.',
+      hallStatus: 'hall_empty',
+      expiresAt: now + 45 * 60 * 1000,
+      note: 'Tische sind frei – wer kommt spontan vorbei?',
+      checkedInAt: 'vor 12 Min.',
+      comingTooIds: [],
+    },
+  ];
+};
 
-const INITIAL_SESSIONS = [
-  {
-    id: 's1',
-    type: 'announcement',
-    authorId: 'p2',
-    dateLabel: 'Morgen, Do · 19:30 Uhr',
-    note: 'Bin ab 19:30 in der Halle – wer hat Lust auf 3–4 Sätze Topspin-Training?',
-    joinedIds: ['p2', 'p4'],
-    createdAt: 'vor 1 Std.',
-  },
-  {
-    id: 's2',
-    type: 'spontaneous',
-    authorId: 'p1',
-    dateLabel: 'Heute · 19:00 Uhr',
-    note: 'Spontan ab 19:00 in der Halle – noch 1 Platz frei!',
-    joinedIds: ['p1'],
-    createdAt: 'vor 25 Min.',
-  },
-  {
-    id: 's3',
-    type: 'announcement',
-    authorId: 'p8',
-    dateLabel: 'Sonntag · 10:30 Uhr',
-    note: 'Sonntags-Session für alle, die entspannt Bälle schlagen wollen.',
-    joinedIds: ['p8', 'p5'],
-    createdAt: 'Gestern',
-  },
-];
-
-const INITIAL_CHALLENGES = [
-  {
-    id: 'ch1',
-    challengerId: 'p3',
-    targetId: 'p1',
-    format: 'Best of 5 Match',
-    whenLabel: 'Jetzt in der Halle',
-    note: 'Revanche für letzten Monat! Bist du heute noch da?',
-    status: 'open',
-    createdAt: 'vor 9 Min.',
-  },
-  {
-    id: 'ch2',
-    challengerId: 'p7',
-    targetId: null,
-    format: '3 Sätze locker',
-    whenLabel: 'Heute Abend ab 20:00 Uhr',
-    note: 'Offene Challenge an alle im Club – wer traut sich?',
-    status: 'open',
-    createdAt: 'vor 22 Min.',
-  },
-];
+const buildInitialSessions = () => {
+  const now = Date.now();
+  return [
+    {
+      id: 's1',
+      type: 'spontaneous',
+      authorId: 'p1',
+      dateLabel: 'Heute · 18:30',
+      expiresAt: now + 3.5 * 60 * 60 * 1000,
+      note: 'Lockeres Einspielen – noch 1 Platz frei!',
+      joinedIds: ['p1'],
+      createdAt: 'vor 20 Min.',
+    },
+    {
+      id: 's2',
+      type: 'spontaneous',
+      authorId: 'p4',
+      dateLabel: 'Heute · 19:30',
+      expiresAt: now + 4.5 * 60 * 60 * 1000,
+      note: 'Sätze & Matchpraxis für heute Abend.',
+      joinedIds: ['p4', 'p2'],
+      createdAt: 'vor 35 Min.',
+    },
+  ];
+};
 
 const INITIAL_CONNECT_MATCHES = [
   {
@@ -933,9 +729,9 @@ function getNextMonthLabel(currentLabel = 'November 2026') {
 const DAYS_OF_WEEK = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
 
 const HALL_TIME_SLOTS = [
-  { id: 'Morgen', label: 'Morgen', shortLabel: 'Mo.' },
-  { id: 'Nachmittag', label: 'Nachmittag', shortLabel: 'Na.' },
-  { id: 'Abend', label: 'Abend', shortLabel: 'Ab.' },
+  { id: 'Morgen', label: 'Morgen' },
+  { id: 'Nachmittag', label: 'Nachmittag' },
+  { id: 'Abend', label: 'Abend' },
 ];
 
 function getNormalizedHallSchedule(player) {
@@ -1232,13 +1028,9 @@ function getContextWhatsAppMessage(context, currentUser, targetPlayer, extra = {
       return `Hoi ${targetName}, danke nochmals für unser letztes Match (${
         extra.score || ''
       })! Wann spielen wir die Revanche in der Halle?`;
-    case 'challenge_reply':
-      return `Hoi ${targetName}, ich bin ${myName} – habe deine Challenge (${
-        extra.format || 'Match'
-      } · ${extra.whenLabel || ''}) gesehen! Passt es dir in der Halle?`;
     case 'session_join':
-      return `Hoi ${targetName}, ich bin ${myName} – habe deine Session (${
-        extra.dateLabel || ''
+      return `Hoi ${targetName}, ich bin ${myName} – habe deine Spontan-Session (${
+        extra.dateLabel || 'heute'
       }) gesehen und wäre gern dabei!`;
     default:
       return `Hoi ${targetName}, ich bin ${myName} aus unserem Tischtennis-Club!`;
@@ -1344,26 +1136,14 @@ function PingkongLogo({ className = 'h-12 w-12', accentHead = false, animated = 
       {animated && (
         <style>{`
           @keyframes pingkongPowerStance {
-            0%, 100% {
-              transform: translateY(0px) scale(1, 1);
-            }
-            45% {
-              transform: translateY(-7px) scale(1.035, 1.045);
-            }
-            75% {
-              transform: translateY(2px) scale(1.02, 0.985);
-            }
+            0%, 100% { transform: translateY(0px) scale(1, 1); }
+            45% { transform: translateY(-7px) scale(1.035, 1.045); }
+            75% { transform: translateY(2px) scale(1.02, 0.985); }
           }
           @keyframes pingkongHeadAssert {
-            0%, 100% {
-              transform: rotate(0deg) translate(0px, 0px);
-            }
-            30% {
-              transform: rotate(-7deg) translate(-1.5px, -2px);
-            }
-            65% {
-              transform: rotate(4deg) translate(1px, 1.5px);
-            }
+            0%, 100% { transform: rotate(0deg) translate(0px, 0px); }
+            30% { transform: rotate(-7deg) translate(-1.5px, -2px); }
+            65% { transform: rotate(4deg) translate(1px, 1.5px); }
           }
           @keyframes pingkongBurstPop {
             0% { transform: scale(1); }
@@ -1403,26 +1183,11 @@ function PingkongLogo({ className = 'h-12 w-12', accentHead = false, animated = 
             points="24.2,3.4 39.8,14.8 24.4,44.0 14.8,37.2 17.6,23.6 14.6,20.0"
             fill={accentHead ? '#DE754B' : 'currentColor'}
           />
-          <polygon
-            points="42.4,15.6 56.0,21.0 32.8,96.6 4.0,96.6"
-            fill="currentColor"
-          />
-          <polygon
-            points="40.6,72.4 49.4,74.8 47.0,96.6 35.6,96.6"
-            fill="currentColor"
-          />
-          <polygon
-            points="56.6,31.2 66.8,54.6 78.6,56.6 64.0,74.8 42.0,69.6"
-            fill="currentColor"
-          />
-          <polygon
-            points="80.8,58.8 92.6,68.2 78.4,84.4 81.4,96.6 71.8,96.6 66.2,78.0"
-            fill="currentColor"
-          />
-          <polygon
-            points="93.2,71.4 96.4,96.6 88.2,96.6 81.6,84.6"
-            fill="currentColor"
-          />
+          <polygon points="42.4,15.6 56.0,21.0 32.8,96.6 4.0,96.6" fill="currentColor" />
+          <polygon points="40.6,72.4 49.4,74.8 47.0,96.6 35.6,96.6" fill="currentColor" />
+          <polygon points="56.6,31.2 66.8,54.6 78.6,56.6 64.0,74.8 42.0,69.6" fill="currentColor" />
+          <polygon points="80.8,58.8 92.6,68.2 78.4,84.4 81.4,96.6 71.8,96.6 66.2,78.0" fill="currentColor" />
+          <polygon points="93.2,71.4 96.4,96.6 88.2,96.6 81.6,84.6" fill="currentColor" />
         </svg>
       </div>
     </>
@@ -1481,7 +1246,7 @@ function PlatformInfoModal({ onClose }) {
             </div>
             <ul className="mt-1.5 space-y-1 text-[11px] text-[#E5E7EB]">
               <li>• Sieh per 1-Tap LIVE, wer gerade in der Halle steht</li>
-              <li>• Plane Trainings, Sessions &amp; spontane Herausforderungen</li>
+              <li>• Starte spontane Sessions &amp; trage freie Partien ein</li>
               <li>• Finde Trainingspartner nach Spielstärke, Spielstil, Sprache &amp; Hallentagen</li>
               <li>• Sammle Punkte im freien CLUB-Rating – ganz ohne Ligapflicht</li>
             </ul>
@@ -1511,6 +1276,10 @@ function PlatformInfoModal({ onClose }) {
   );
 }
 
+// ============================================================================
+// AUTH / REGISTRIERUNG (KEINE VORAUSGEWÄHLTEN HALLENTAGE)
+// ============================================================================
+
 function AuthGateScreen({
   players,
   activeSeason,
@@ -1534,18 +1303,16 @@ function AuthGateScreen({
   const [connectOnly, setConnectOnly] = useState(true);
   const [leagueJoinTiming, setLeagueJoinTiming] = useState('next');
   const [avatarUrl, setAvatarUrl] = useState('');
-  const [hallSchedule, setHallSchedule] = useState({
-    Mi: ['Abend'],
-    Fr: ['Abend'],
-  });
+  // Bewusst leer: keine vorausgewählten Hallentage bei der Registrierung
+  const [hallSchedule, setHallSchedule] = useState({});
 
   const [pendingProfile, setPendingProfile] = useState(null);
   const [loginPin, setLoginPin] = useState('');
   const [loginPinError, setLoginPinError] = useState('');
   const [viewportBox, setViewportBox] = useState({ height: null, offsetTop: 0 });
-  const pinInputRef = React.useRef(null);
+  const pinInputRef = useRef(null);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (!(mode === 'select' && pendingProfile)) {
       setViewportBox({ height: null, offsetTop: 0 });
       return;
@@ -1588,7 +1355,6 @@ function AuthGateScreen({
     updateViewport();
     const t1 = setTimeout(updateViewport, 120);
     const t2 = setTimeout(updateViewport, 320);
-    const t3 = setTimeout(updateViewport, 550);
 
     const vv = window.visualViewport;
     if (vv) {
@@ -1602,7 +1368,6 @@ function AuthGateScreen({
     return () => {
       clearTimeout(t1);
       clearTimeout(t2);
-      clearTimeout(t3);
       if (vv) {
         vv.removeEventListener('resize', updateViewport);
         vv.removeEventListener('scroll', updateViewport);
@@ -1761,43 +1526,17 @@ function AuthGateScreen({
       }`}
     >
       <style>{`
-        :root {
-          color-scheme: dark;
-        }
+        :root { color-scheme: dark; }
         .pk-dark-scroll {
           color-scheme: dark;
           scrollbar-width: thin;
           scrollbar-color: #2B2F37 #0F1114;
         }
-        .pk-dark-scroll::-webkit-scrollbar {
-          width: 4px;
-          height: 4px;
-        }
-        .pk-dark-scroll::-webkit-scrollbar-track {
-          background: #0F1114;
-          border-radius: 9999px;
-        }
-        .pk-dark-scroll::-webkit-scrollbar-thumb {
-          background: #2B2F37;
-          border-radius: 9999px;
-        }
-        .pk-dark-scroll::-webkit-scrollbar-thumb:hover {
-          background: #3E434E;
-        }
+        .pk-dark-scroll::-webkit-scrollbar { width: 4px; height: 4px; }
+        .pk-dark-scroll::-webkit-scrollbar-track { background: #0F1114; border-radius: 9999px; }
+        .pk-dark-scroll::-webkit-scrollbar-thumb { background: #2B2F37; border-radius: 9999px; }
         @media (max-width: 639px) {
-          .pk-dark-scroll {
-            scrollbar-width: none;
-            -ms-overflow-style: none;
-          }
-          .pk-dark-scroll::-webkit-scrollbar {
-            display: none;
-            width: 0;
-            height: 0;
-          }
-          .pk-mobile-nozoom-wrap {
-            height: 36px;
-            overflow: hidden;
-          }
+          .pk-mobile-nozoom-wrap { height: 36px; overflow: hidden; }
           .pk-mobile-nozoom-input {
             font-size: 16px !important;
             line-height: 20px !important;
@@ -1807,9 +1546,6 @@ function AuthGateScreen({
             padding-top: 10px !important;
             padding-bottom: 10px !important;
           }
-          .pk-mobile-nozoom-input::placeholder {
-            font-size: 15px !important;
-          }
           .pk-mobile-pin-input {
             font-size: 16px !important;
             line-height: 20px !important;
@@ -1818,11 +1554,6 @@ function AuthGateScreen({
             transform-origin: left top;
             padding-top: 12px !important;
             padding-bottom: 12px !important;
-          }
-          .pk-mobile-pin-input::placeholder {
-            font-size: 14px !important;
-            letter-spacing: 0.01em !important;
-            font-weight: 700 !important;
           }
         }
       `}</style>
@@ -1839,10 +1570,7 @@ function AuthGateScreen({
           }`}
         >
           <div className="flex flex-col items-center">
-            <PingkongFullLogo
-              className="w-32 max-w-full sm:w-36"
-              customSrc={customLogoUrl}
-            />
+            <PingkongFullLogo className="w-32 max-w-full sm:w-36" customSrc={customLogoUrl} />
 
             <h1
               style={{
@@ -2071,9 +1799,7 @@ function AuthGateScreen({
                 <span className="text-[11px] font-black uppercase tracking-wider text-[#F4ECC2]">
                   1. Wie möchtest du mitmachen? *
                 </span>
-                <span className="text-[10px] text-[#8E95A2]">
-                  Jederzeit änderbar
-                </span>
+                <span className="text-[10px] text-[#8E95A2]">Jederzeit änderbar</span>
               </div>
 
               <div className="grid grid-cols-2 gap-2">
@@ -2094,11 +1820,9 @@ function AuthGateScreen({
                       {connectOnly ? '✓' : '○'}
                     </span>
                   </div>
-                  <div className="mt-2 text-xs font-black text-[#F3F4F6]">
-                    Nur CLUB
-                  </div>
+                  <div className="mt-2 text-xs font-black text-[#F3F4F6]">Nur CLUB</div>
                   <div className="mt-0.5 text-[10px] leading-snug text-[#9CA3AF]">
-                    Halle, Sessions &amp; freie Spiele – ohne Monatsliga
+                    Halle, Spontan-Sessions &amp; freie Spiele – ohne Monatsliga
                   </div>
                 </button>
 
@@ -2172,9 +1896,7 @@ function AuthGateScreen({
               <span className="text-[11px] font-black uppercase tracking-wider text-[#A8D0B1]">
                 2. Profil-Pflichtfelder (*)
               </span>
-              <span className="text-[10px] text-[#8E95A2]">
-                Inkl. eigenem 4-stelligen PIN
-              </span>
+              <span className="text-[10px] text-[#8E95A2]">Inkl. eigenem 4-stelligen PIN</span>
             </div>
 
             <div className="flex items-center gap-3 rounded-xl border border-[#24272E] bg-[#0F1114] p-2.5">
@@ -2220,27 +1942,23 @@ function AuthGateScreen({
               />
             </div>
 
-            <div className="space-y-1">
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  required
-                  value={nickname}
-                  onChange={(e) => setNickname(e.target.value)}
-                  placeholder="Nickname *"
-                  className="min-w-0 flex-1 rounded-xl border border-[#2B2F37] bg-[#0F1114] px-3 py-2 text-base sm:text-xs font-bold text-[#F3F4F6]"
-                />
-                <button
-                  type="button"
-                  onClick={() =>
-                    setNickname(generateFunnyNickname(firstName, nickname))
-                  }
-                  className="inline-flex shrink-0 items-center justify-center gap-1 rounded-xl border border-[#DE754B]/40 bg-[#23140F] px-3 py-2 text-[11px] font-bold text-[#F4ECC2] transition hover:border-[#DE754B] hover:bg-[#2F1B14]"
-                >
-                  <span>🎲</span>
-                  <span>Lustiger Vorschlag</span>
-                </button>
-              </div>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                required
+                value={nickname}
+                onChange={(e) => setNickname(e.target.value)}
+                placeholder="Nickname *"
+                className="min-w-0 flex-1 rounded-xl border border-[#2B2F37] bg-[#0F1114] px-3 py-2 text-base sm:text-xs font-bold text-[#F3F4F6]"
+              />
+              <button
+                type="button"
+                onClick={() => setNickname(generateFunnyNickname(firstName, nickname))}
+                className="inline-flex shrink-0 items-center justify-center gap-1 rounded-xl border border-[#DE754B]/40 bg-[#23140F] px-3 py-2 text-[11px] font-bold text-[#F4ECC2] transition hover:border-[#DE754B] hover:bg-[#2F1B14]"
+              >
+                <span>🎲</span>
+                <span>Vorschlag</span>
+              </button>
             </div>
 
             <WhatsAppPhoneField
@@ -2313,13 +2031,13 @@ function AuthGateScreen({
             </div>
 
             <div>
-              <label className="mb-1 block text-[11px] font-semibold text-[#8E95A2]">
-                Typische Hallentage &amp; Tageszeit (min. 1 Tag) *
-              </label>
-              <HallSchedulePicker
-                schedule={hallSchedule}
-                onChange={setHallSchedule}
-              />
+              <div className="mb-1 flex items-center justify-between">
+                <label className="text-[11px] font-semibold text-[#8E95A2]">
+                  Typische Hallentage &amp; Tageszeit (min. 1 Tag) *
+                </label>
+                <span className="text-[10px] text-[#6B7280]">Keine Vorauswahl</span>
+              </div>
+              <HallSchedulePicker schedule={hallSchedule} onChange={setHallSchedule} />
             </div>
 
             <div className="rounded-xl border border-[#DE754B]/40 bg-[#0F1114] p-2.5">
@@ -2334,9 +2052,7 @@ function AuthGateScreen({
                     maxLength={4}
                     required
                     value={pin}
-                    onChange={(e) =>
-                      setPin(e.target.value.replace(/\D/g, '').slice(0, 4))
-                    }
+                    onChange={(e) => setPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
                     placeholder="PIN (4 Ziffern) *"
                     className="pk-mobile-pin-input w-full bg-transparent px-2.5 py-2 text-center text-xs font-black tracking-[0.2em] placeholder:font-semibold placeholder:tracking-normal text-[#F4ECC2] focus:outline-none"
                   />
@@ -2379,6 +2095,10 @@ function AuthGateScreen({
   );
 }
 
+// ============================================================================
+// MITGLIED-DETAIL-MODAL
+// ============================================================================
+
 function MemberDetailModal({
   player,
   currentUser,
@@ -2388,7 +2108,7 @@ function MemberDetailModal({
   ratingInfo,
   connectMatches,
   liveCheckin,
-  onChallenge,
+  nowMs,
   onRecordMatch,
   onClose,
 }) {
@@ -2396,9 +2116,7 @@ function MemberDetailModal({
 
   const isMe = player.id === currentUser.id;
   const scheduleSummary = formatHallScheduleSummary(player);
-  const league = activeSeason?.leagues?.find((l) =>
-    l.playerIds.includes(player.id)
-  );
+  const league = activeSeason?.leagues?.find((l) => l.playerIds.includes(player.id));
 
   const memberMetrics = useMemo(() => {
     const playerConnectGames = connectMatches.filter(
@@ -2465,14 +2183,12 @@ function MemberDetailModal({
     const mySchedule = getNormalizedHallSchedule(currentUser);
     const theirSchedule = getNormalizedHallSchedule(player);
     const sharedDays = DAYS_OF_WEEK.filter(
-      (d) =>
-        (mySchedule[d] || []).length > 0 && (theirSchedule[d] || []).length > 0
+      (d) => (mySchedule[d] || []).length > 0 && (theirSchedule[d] || []).length > 0
     );
 
     const totalGames = (ratingInfo?.played || 0) + leagueWins + leagueLosses;
     const totalWins = (ratingInfo?.wins || 0) + leagueWins;
-    const winRate =
-      totalGames > 0 ? Math.round((totalWins / totalGames) * 100) : null;
+    const winRate = totalGames > 0 ? Math.round((totalWins / totalGames) * 100) : null;
 
     return {
       recentConnectGames,
@@ -2514,7 +2230,7 @@ function MemberDetailModal({
                 {liveCheckin && (
                   <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/20 px-2 py-0.5 text-[10px] font-black text-emerald-300 ring-1 ring-emerald-500/40">
                     <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" />
-                    LIVE · {liveCheckin.durationLabel}
+                    LIVE · {formatRemainingDuration(liveCheckin.expiresAt, nowMs)}
                   </span>
                 )}
               </div>
@@ -2664,8 +2380,7 @@ function MemberDetailModal({
             </div>
             <div className="space-y-1">
               {memberMetrics.recentConnectGames.map((m) => {
-                const oppId =
-                  m.player1Id === player.id ? m.player2Id : m.player1Id;
+                const oppId = m.player1Id === player.id ? m.player2Id : m.player1Id;
                 const opp = playersById?.[oppId];
                 const won = m.winnerId === player.id;
                 return (
@@ -2675,9 +2390,7 @@ function MemberDetailModal({
                   >
                     <span className="truncate text-[#D1D5DB]">
                       vs. <strong className="text-[#F3F4F6]">{opp?.nickname || 'Spieler'}</strong>{' '}
-                      <span className="text-[10px] text-[#6B7280]">
-                        ({m.dateLabel})
-                      </span>
+                      <span className="text-[10px] text-[#6B7280]">({m.dateLabel})</span>
                     </span>
                     <span
                       className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] font-black ${
@@ -2696,26 +2409,16 @@ function MemberDetailModal({
         )}
 
         {!isMe && (
-          <div className="grid grid-cols-3 gap-2 pt-0.5">
-            <button
-              type="button"
-              onClick={() => {
-                onClose();
-                onChallenge(player.id);
-              }}
-              className="rounded-xl bg-[#6FB3A2] py-2.5 text-xs font-black text-[#060708] transition hover:bg-[#82C1B1]"
-            >
-              ⚡ Duell
-            </button>
+          <div className="grid grid-cols-2 gap-2 pt-0.5">
             <button
               type="button"
               onClick={() => {
                 onClose();
                 onRecordMatch(player.id);
               }}
-              className="rounded-xl border border-[#2E323B] bg-[#181A1E] py-2.5 text-xs font-bold text-[#F4ECC2] transition hover:border-[#6FB3A2]"
+              className="rounded-xl bg-[#6FB3A2] py-2.5 text-xs font-black text-[#060708] transition hover:bg-[#82C1B1]"
             >
-              + Partie
+              + Spontan Partie
             </button>
             <a
               href={buildWhatsAppLink(
@@ -2736,28 +2439,486 @@ function MemberDetailModal({
   );
 }
 
+// ============================================================================
+// LIVE CHECK-IN MODAL (DAUER-CHIPS & HALLEN-STATUS-CHIPS)
+// ============================================================================
+
+function LiveCheckInModal({
+  currentUser,
+  existingCheckin,
+  onSave,
+  onCheckOut,
+  onClose,
+}) {
+  const [selectedDurationId, setSelectedDurationId] = useState('1.5h');
+  const [hallStatus, setHallStatus] = useState(
+    existingCheckin?.hallStatus || 'buddy_wanted'
+  );
+  const [note, setNote] = useState(existingCheckin?.note || '');
+
+  const chosenDuration =
+    LIVE_DURATION_CHIPS.find((d) => d.id === selectedDurationId) ||
+    LIVE_DURATION_CHIPS[2];
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    const expiresAt = computeExpiresAt(chosenDuration.minutes);
+    const statusObj =
+      LIVE_STATUS_OPTIONS.find((s) => s.id === hallStatus) || LIVE_STATUS_OPTIONS[0];
+
+    onSave({
+      durationLabel: chosenDuration.label,
+      hallStatus,
+      expiresAt,
+      note: note.trim() || statusObj.label,
+    });
+  };
+
+  return (
+    <div
+      onClick={onClose}
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/80 p-3 backdrop-blur-xs sm:items-center"
+    >
+      <form
+        onSubmit={handleSubmit}
+        onClick={(e) => e.stopPropagation()}
+        className="w-full max-w-md space-y-3.5 rounded-2xl border border-[#6FB3A2]/45 bg-[#14161A] p-4 shadow-2xl"
+      >
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-emerald-400" />
+            <h3 className="text-sm font-black text-[#F3F4F6]">
+              {existingCheckin ? 'LIVE Check-in aktualisieren' : 'LIVE in die Halle einchecken'}
+            </h3>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-lg bg-[#202329] px-2.5 py-1 text-xs font-bold text-[#9CA3AF] hover:text-[#F4ECC2]"
+          >
+            ✕
+          </button>
+        </div>
+
+        <div>
+          <label className="mb-1.5 block text-[11px] font-semibold text-[#8E95A2]">
+            1. Für wie lange bist du in der Halle?
+          </label>
+          <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-5">
+            {LIVE_DURATION_CHIPS.map((dur) => {
+              const active = selectedDurationId === dur.id;
+              return (
+                <button
+                  key={dur.id}
+                  type="button"
+                  onClick={() => setSelectedDurationId(dur.id)}
+                  className={`rounded-xl py-2 text-[11px] font-black transition ${
+                    active
+                      ? 'bg-[#6FB3A2] text-[#060708] shadow-sm'
+                      : 'border border-[#2B2F37] bg-[#0F1114] text-[#D1D5DB] hover:border-[#6FB3A2]/50'
+                  }`}
+                >
+                  {dur.label}
+                </button>
+              );
+            })}
+          </div>
+          <div className="mt-1 text-[10px] text-[#8E95A2]">
+            Automatischer Check-out um{' '}
+            <span className="font-bold text-[#A8D0B1]">
+              {formatExpiryClockLabel(computeExpiresAt(chosenDuration.minutes))}
+            </span>
+          </div>
+        </div>
+
+        <div>
+          <label className="mb-1.5 block text-[11px] font-semibold text-[#8E95A2]">
+            2. Hallen- &amp; Buddy-Status
+          </label>
+          <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-3">
+            {LIVE_STATUS_OPTIONS.map((st) => {
+              const active = hallStatus === st.id;
+              return (
+                <button
+                  key={st.id}
+                  type="button"
+                  onClick={() => setHallStatus(st.id)}
+                  className={`rounded-xl border px-2.5 py-2 text-left text-[11px] font-bold transition ${
+                    active
+                      ? 'border-[#6FB3A2] bg-[#152622] text-[#F3F4F6] ring-1 ring-[#6FB3A2]/50'
+                      : 'border-[#262A32] bg-[#0F1114] text-[#9CA3AF] hover:text-[#F3F4F6]'
+                  }`}
+                >
+                  <span className="block truncate">{st.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        <div>
+          <label className="mb-1 block text-[11px] font-semibold text-[#8E95A2]">
+            3. Kurze Notiz (optional)
+          </label>
+          <input
+            type="text"
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            placeholder={`z. B. Tisch 2 frei, ${currentUser.nickname} spielt ein...`}
+            className="w-full rounded-xl border border-[#2B2F37] bg-[#0F1114] px-3 py-2 text-xs text-[#F3F4F6] focus:border-[#6FB3A2] focus:outline-none"
+          />
+        </div>
+
+        <div className="flex items-center gap-2 pt-0.5">
+          {existingCheckin && (
+            <button
+              type="button"
+              onClick={() => {
+                onCheckOut();
+                onClose();
+              }}
+              className="rounded-xl border border-rose-500/35 bg-rose-950/30 px-3 py-2.5 text-xs font-bold text-rose-300 transition hover:bg-rose-950/50"
+            >
+              Auschecken
+            </button>
+          )}
+          <button
+            type="submit"
+            className="flex-1 rounded-xl bg-[#6FB3A2] py-2.5 text-xs font-black text-[#060708] transition hover:bg-[#82C1B1]"
+          >
+            {existingCheckin ? 'Status speichern ✓' : 'Jetzt LIVE gehen ✓'}
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+}
+
+// ============================================================================
+// SPONTAN PARTIE EINTRAGEN (LOGMATCHMODAL)
+// ============================================================================
+
+function LogMatchModal({
+  players,
+  currentUser,
+  connectRatings,
+  defaultOpponentId = '',
+  onSave,
+  onClose,
+}) {
+  const opponents = useMemo(
+    () => players.filter((p) => p.id !== currentUser.id),
+    [players, currentUser.id]
+  );
+
+  const [opponentSearch, setOpponentSearch] = useState('');
+  const [opponentId, setOpponentId] = useState(
+    defaultOpponentId || opponents[0]?.id || ''
+  );
+  const [winnerSide, setWinnerSide] = useState('me');
+  const [score, setScore] = useState('3:1');
+
+  const filteredOpponents = useMemo(() => {
+    const q = opponentSearch.trim().toLowerCase();
+    if (!q) return opponents;
+    return opponents.filter((p) =>
+      `${p.nickname} ${p.firstName} ${p.lastName} ${p.sttClass || ''}`
+        .toLowerCase()
+        .includes(q)
+    );
+  }, [opponents, opponentSearch]);
+
+  const effectiveOpponentId = useMemo(() => {
+    if (filteredOpponents.some((p) => p.id === opponentId)) return opponentId;
+    return filteredOpponents[0]?.id || '';
+  }, [filteredOpponents, opponentId]);
+
+  const opponent = players.find((p) => p.id === effectiveOpponentId);
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (!effectiveOpponentId) return;
+    const winnerId = winnerSide === 'me' ? currentUser.id : effectiveOpponentId;
+    onSave(effectiveOpponentId, winnerId, score);
+  };
+
+  return (
+    <div
+      onClick={onClose}
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/80 p-3 backdrop-blur-xs sm:items-center"
+    >
+      <form
+        onSubmit={handleSubmit}
+        onClick={(e) => e.stopPropagation()}
+        className="w-full max-w-md space-y-3 rounded-2xl border border-[#6FB3A2]/45 bg-[#14161A] p-4 shadow-2xl"
+      >
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm font-black text-[#F3F4F6]">
+            Spontan Partie eintragen
+          </h3>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-lg bg-[#202329] px-2.5 py-1 text-xs font-bold text-[#9CA3AF]"
+          >
+            ✕
+          </button>
+        </div>
+
+        <div className="space-y-1.5">
+          <label className="block text-[11px] font-semibold text-[#8E95A2]">
+            1. Mitspieler suchen &amp; wählen
+          </label>
+          <input
+            type="text"
+            value={opponentSearch}
+            onChange={(e) => setOpponentSearch(e.target.value)}
+            placeholder="Name oder Nickname suchen..."
+            className="w-full rounded-xl border border-[#2B2F37] bg-[#0F1114] px-3 py-2 text-base sm:text-xs text-[#F3F4F6] placeholder:text-[#6B7280] focus:border-[#6FB3A2] focus:outline-none"
+          />
+          {filteredOpponents.length === 0 ? (
+            <div className="rounded-xl border border-[#2B2F37] bg-[#0F1114] px-3 py-2 text-xs text-[#8E95A2]">
+              Kein Spieler gefunden.
+            </div>
+          ) : (
+            <select
+              value={effectiveOpponentId}
+              onChange={(e) => setOpponentId(e.target.value)}
+              className="w-full rounded-xl border border-[#2B2F37] bg-[#0F1114] px-3 py-2 text-base sm:text-xs font-bold text-[#F3F4F6]"
+            >
+              {filteredOpponents.map((p) => {
+                const r = connectRatings[p.id];
+                return (
+                  <option key={p.id} value={p.id}>
+                    {p.nickname} ({p.firstName} {p.lastName}) · {r?.tier?.symbol}{' '}
+                    {r?.elo}
+                  </option>
+                );
+              })}
+            </select>
+          )}
+        </div>
+
+        <div>
+          <label className="mb-1 block text-[11px] font-semibold text-[#8E95A2]">
+            2. Gewinner antippen
+          </label>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={() => setWinnerSide('me')}
+              className={`rounded-xl py-2.5 text-xs font-black transition ${
+                winnerSide === 'me'
+                  ? 'bg-emerald-500 text-[#060708]'
+                  : 'border border-[#2B2F37] bg-[#0F1114] text-[#9CA3AF]'
+              }`}
+            >
+              {currentUser.nickname}
+            </button>
+            <button
+              type="button"
+              disabled={!opponent}
+              onClick={() => setWinnerSide('opponent')}
+              className={`rounded-xl py-2.5 text-xs font-black transition disabled:opacity-40 ${
+                winnerSide === 'opponent'
+                  ? 'bg-emerald-500 text-[#060708]'
+                  : 'border border-[#2B2F37] bg-[#0F1114] text-[#9CA3AF]'
+              }`}
+            >
+              {opponent?.nickname || 'Mitspieler'}
+            </button>
+          </div>
+        </div>
+
+        <div>
+          <label className="mb-1 block text-[11px] font-semibold text-[#8E95A2]">
+            3. Satzergebnis wählen
+          </label>
+          <div className="grid grid-cols-5 gap-1.5">
+            {['3:0', '3:1', '3:2', '2:0', '2:1'].map((preset) => (
+              <button
+                key={preset}
+                type="button"
+                onClick={() => setScore(preset)}
+                className={`rounded-xl py-2 text-xs font-black transition ${
+                  score === preset
+                    ? 'bg-[#6FB3A2] text-[#060708]'
+                    : 'border border-[#2B2F37] bg-[#0F1114] text-[#9CA3AF]'
+                }`}
+              >
+                {preset}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <button
+          type="submit"
+          disabled={!effectiveOpponentId}
+          className="w-full rounded-xl bg-[#6FB3A2] py-2.5 text-xs font-black text-[#060708] transition hover:bg-[#82C1B1] disabled:opacity-40"
+        >
+          Spontane Partie speichern ✓
+        </button>
+      </form>
+    </div>
+  );
+}
+
+// ============================================================================
+// SPONTAN-SESSION MODAL (NUR SPONTAN HEUTE)
+// ============================================================================
+
+function CreateSpontaneousSessionModal({ onSubmit, onClose }) {
+  const [dateLabel, setDateLabel] = useState(SPONTANEOUS_TODAY_TIME_CHIPS[0]);
+  const [focus, setFocus] = useState(SPONTANEOUS_TODAY_FOCUS_CHIPS[0]);
+  const [note, setNote] = useState('');
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    const finalNote = note.trim() ? `${focus} · ${note.trim()}` : focus;
+    onSubmit({
+      type: 'spontaneous',
+      dateLabel: dateLabel.trim() || 'Heute spontan',
+      note: finalNote,
+      expiresAt: computeExpiresAt(180), // Läuft nach 3 Stunden automatisch ab
+    });
+  };
+
+  return (
+    <div
+      onClick={onClose}
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/80 p-3 backdrop-blur-xs sm:items-center"
+    >
+      <form
+        onSubmit={handleSubmit}
+        onClick={(e) => e.stopPropagation()}
+        className="w-full max-w-md space-y-3 rounded-2xl border border-[#6FB3A2]/45 bg-[#14161A] p-4 shadow-2xl"
+      >
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm font-black text-[#F3F4F6]">
+            Spontan-Session für heute posten
+          </h3>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-lg bg-[#202329] px-2.5 py-1 text-xs font-bold text-[#9CA3AF]"
+          >
+            ✕
+          </button>
+        </div>
+
+        <div>
+          <label className="mb-1.5 block text-[11px] font-semibold text-[#8E95A2]">
+            1. Zeitfenster heute
+          </label>
+          <div className="flex flex-wrap gap-1.5">
+            {SPONTANEOUS_TODAY_TIME_CHIPS.map((t) => (
+              <button
+                key={t}
+                type="button"
+                onClick={() => setDateLabel(t)}
+                className={`rounded-xl px-2.5 py-1.5 text-[11px] font-bold transition ${
+                  dateLabel === t
+                    ? 'bg-[#6FB3A2] text-[#060708]'
+                    : 'border border-[#2B2F37] bg-[#0F1114] text-[#D1D5DB]'
+                }`}
+              >
+                {t}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <label className="mb-1.5 block text-[11px] font-semibold text-[#8E95A2]">
+            2. Fokus
+          </label>
+          <div className="grid grid-cols-2 gap-1.5">
+            {SPONTANEOUS_TODAY_FOCUS_CHIPS.map((item) => (
+              <button
+                key={item}
+                type="button"
+                onClick={() => setFocus(item)}
+                className={`rounded-xl px-2.5 py-2 text-left text-[11px] font-bold transition ${
+                  focus === item
+                    ? 'bg-[#6FB3A2] text-[#060708]'
+                    : 'border border-[#2B2F37] bg-[#0F1114] text-[#D1D5DB]'
+                }`}
+              >
+                {item}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <input
+          type="text"
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+          placeholder="Zusätzliche Info (z. B. noch 1 Platz frei)..."
+          className="w-full rounded-xl border border-[#2B2F37] bg-[#0F1114] px-3 py-2 text-xs text-[#F3F4F6] focus:border-[#6FB3A2] focus:outline-none"
+        />
+
+        <button
+          type="submit"
+          className="w-full rounded-xl bg-[#6FB3A2] py-2.5 text-xs font-black text-[#060708] transition hover:bg-[#82C1B1]"
+        >
+          Spontan-Session posten ✓
+        </button>
+      </form>
+    </div>
+  );
+}
+
+// ============================================================================
+// HAUPTKOMPONENTE APP
+// ============================================================================
+
 export default function App() {
-  const [players, setPlayers] = useState(INITIAL_PLAYERS);
-  const [seasons, setSeasons] = useState(INITIAL_SEASONS);
-  const [currentUserId, setCurrentUserId] = useState(null);
+  const [players, setPlayers] = useState(() =>
+    readStorageJson(STORAGE_KEYS.players, INITIAL_PLAYERS)
+  );
+  const [seasons, setSeasons] = useState(() =>
+    readStorageJson(STORAGE_KEYS.seasons, INITIAL_SEASONS)
+  );
+  const [currentUserId, setCurrentUserId] = useState(() =>
+    readStorageJson(STORAGE_KEYS.currentUserId, null)
+  );
   const [world, setWorld] = useState('connect');
   const [leagueTab, setLeagueTab] = useState('matches');
   const [connectTab, setConnectTab] = useState('overview');
   const [selectedSeasonId, setSelectedSeasonId] = useState('2026-11');
 
-  const [liveCheckins, setLiveCheckins] = useState(INITIAL_LIVE_CHECKINS);
-  const [sessions, setSessions] = useState(INITIAL_SESSIONS);
-  const [challenges, setChallenges] = useState(INITIAL_CHALLENGES);
-  const [connectMatches, setConnectMatches] = useState(INITIAL_CONNECT_MATCHES);
+  const [liveCheckins, setLiveCheckins] = useState(() => {
+    const stored = readStorageJson(STORAGE_KEYS.liveCheckins, null);
+    const list = Array.isArray(stored) ? stored : buildInitialLiveCheckins();
+    const now = Date.now();
+    return list.filter((item) => !item.expiresAt || item.expiresAt > now);
+  });
+
+  const [sessions, setSessions] = useState(() => {
+    const stored = readStorageJson(STORAGE_KEYS.sessions, null);
+    const list = Array.isArray(stored) ? stored : buildInitialSessions();
+    const now = Date.now();
+    return list
+      .filter((s) => s.type === 'spontaneous')
+      .filter((s) => !s.expiresAt || s.expiresAt > now);
+  });
+
+  const [connectMatches, setConnectMatches] = useState(() =>
+    readStorageJson(STORAGE_KEYS.connectMatches, INITIAL_CONNECT_MATCHES)
+  );
+
+  const [nowMs, setNowMs] = useState(() => Date.now());
 
   const [showPlatformInfo, setShowPlatformInfo] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [selectedMemberId, setSelectedMemberId] = useState(null);
   const [showAddMemberModal, setShowAddMemberModal] = useState(false);
-  const [createSessionType, setCreateSessionType] = useState(null);
+  const [showLiveCheckInModal, setShowLiveCheckInModal] = useState(false);
+  const [showSpontaneousSessionModal, setShowSpontaneousSessionModal] = useState(false);
   const [recordingLeagueMatch, setRecordingLeagueMatch] = useState(null);
-  const [recordConnectTargetId, setRecordConnectTargetId] = useState(null);
-  const [challengeTargetId, setChallengeTargetId] = useState(undefined);
+  const [logMatchTargetId, setLogMatchTargetId] = useState(null);
   const [toastMessage, setToastMessage] = useState('');
   const customLogoUrl = '';
 
@@ -2769,13 +2930,37 @@ export default function App() {
   const [adminTab, setAdminTab] = useState('members');
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [pullDistance, setPullDistance] = useState(0);
-  const pullStartYRef = React.useRef(null);
-  const lastActiveTimestampRef = React.useRef(Date.now());
+  const pullStartYRef = useRef(null);
+  const lastActiveTimestampRef = useRef(Date.now());
 
-  // Seitentitel & Home-Bildschirm App-Icon ("PINGKONG") automatisch generieren und registrieren
-  React.useEffect(() => {
+  // localStorage-Synchronisation für Kernzustände
+  useEffect(() => {
+    writeStorageJson(STORAGE_KEYS.players, players);
+  }, [players]);
+
+  useEffect(() => {
+    writeStorageJson(STORAGE_KEYS.seasons, seasons);
+  }, [seasons]);
+
+  useEffect(() => {
+    writeStorageJson(STORAGE_KEYS.currentUserId, currentUserId);
+  }, [currentUserId]);
+
+  useEffect(() => {
+    writeStorageJson(STORAGE_KEYS.liveCheckins, liveCheckins);
+  }, [liveCheckins]);
+
+  useEffect(() => {
+    writeStorageJson(STORAGE_KEYS.sessions, sessions);
+  }, [sessions]);
+
+  useEffect(() => {
+    writeStorageJson(STORAGE_KEYS.connectMatches, connectMatches);
+  }, [connectMatches]);
+
+  // Seitentitel & Home-Bildschirm App-Icon ("PINGKONG") registrieren
+  useEffect(() => {
     if (typeof document === 'undefined') return;
-
     document.title = 'PINGKONG';
 
     const upsertMeta = (name, content) => {
@@ -2806,7 +2991,6 @@ export default function App() {
     upsertMeta('apple-mobile-web-app-status-bar-style', 'black-translucent');
     upsertMeta('theme-color', '#060708');
 
-    // Hochauflösendes 512x512 PNG-Icon mit dem PINGKONG-Signet rendern (für iOS & Android Home-Screen)
     let manifestBlobUrl = null;
     try {
       const size = 512;
@@ -2814,82 +2998,9 @@ export default function App() {
       canvas.width = size;
       canvas.height = size;
       const ctx = canvas.getContext('2d');
-
       if (ctx) {
-        // Dunkler Hintergrund
         ctx.fillStyle = '#060708';
         ctx.fillRect(0, 0, size, size);
-
-        // Dezenter Rahmen-Glow
-        ctx.strokeStyle = 'rgba(222, 117, 75, 0.25)';
-        ctx.lineWidth = 8;
-        ctx.strokeRect(16, 16, size - 32, size - 32);
-
-        // PINGKONG-Signet zentriert skalieren
-        const scale = 3.5;
-        const offsetX = (size - 100 * scale) / 2;
-        const offsetY = (size - 102 * scale) / 2;
-
-        ctx.save();
-        ctx.translate(offsetX, offsetY);
-        ctx.scale(scale, scale);
-        ctx.fillStyle = '#DE754B';
-
-        const polygons = [
-          [
-            [24.2, 3.4],
-            [39.8, 14.8],
-            [24.4, 44.0],
-            [14.8, 37.2],
-            [17.6, 23.6],
-            [14.6, 20.0],
-          ],
-          [
-            [42.4, 15.6],
-            [56.0, 21.0],
-            [32.8, 96.6],
-            [4.0, 96.6],
-          ],
-          [
-            [40.6, 72.4],
-            [49.4, 74.8],
-            [47.0, 96.6],
-            [35.6, 96.6],
-          ],
-          [
-            [56.6, 31.2],
-            [66.8, 54.6],
-            [78.6, 56.6],
-            [64.0, 74.8],
-            [42.0, 69.6],
-          ],
-          [
-            [80.8, 58.8],
-            [92.6, 68.2],
-            [78.4, 84.4],
-            [81.4, 96.6],
-            [71.8, 96.6],
-            [66.2, 78.0],
-          ],
-          [
-            [93.2, 71.4],
-            [96.4, 96.6],
-            [88.2, 96.6],
-            [81.6, 84.6],
-          ],
-        ];
-
-        polygons.forEach((pts) => {
-          ctx.beginPath();
-          pts.forEach(([x, y], idx) => {
-            if (idx === 0) ctx.moveTo(x, y);
-            else ctx.lineTo(x, y);
-          });
-          ctx.closePath();
-          ctx.fill();
-        });
-        ctx.restore();
-
         const pngDataUrl = canvas.toDataURL('image/png');
         upsertLink('apple-touch-icon', pngDataUrl, { sizes: '512x512' });
         upsertLink('icon', pngDataUrl, { type: 'image/png', sizes: '512x512' });
@@ -2901,14 +3012,6 @@ export default function App() {
           display: 'standalone',
           background_color: '#060708',
           theme_color: '#060708',
-          icons: [
-            {
-              src: pngDataUrl,
-              sizes: '512x512',
-              type: 'image/png',
-              purpose: 'any maskable',
-            },
-          ],
         };
         const blob = new Blob([JSON.stringify(manifest)], {
           type: 'application/manifest+json',
@@ -2917,7 +3020,7 @@ export default function App() {
         upsertLink('manifest', manifestBlobUrl);
       }
     } catch {
-      // Fallback falls Canvas blockiert ist
+      // Fallback
     }
 
     return () => {
@@ -2927,28 +3030,54 @@ export default function App() {
     };
   }, []);
 
-  const showToast = (msg) => {
+  const showToast = useCallback((msg) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(''), 2600);
-  };
+  }, []);
 
-  const syncLiveAndAppState = React.useCallback((notify = false) => {
-    setIsRefreshing(true);
-    const now = Date.now();
+  const pruneExpiredItems = useCallback((referenceNow = Date.now()) => {
     setLiveCheckins((prev) => {
       const filtered = prev.filter(
-        (item) => !item.expiresAt || item.expiresAt > now
+        (item) => !item.expiresAt || item.expiresAt > referenceNow
       );
       return filtered.length === prev.length ? prev : filtered;
     });
-    setTimeout(() => {
-      setIsRefreshing(false);
-      if (notify) showToast('✓ App aktualisiert');
-    }, 350);
+    setSessions((prev) => {
+      const filtered = prev.filter(
+        (item) => !item.expiresAt || item.expiresAt > referenceNow
+      );
+      return filtered.length === prev.length ? prev : filtered;
+    });
   }, []);
 
-  // Automatische Aktualisierung beim Öffnen vom Home-Bildschirm / Zurückkehren aus dem Hintergrund
-  React.useEffect(() => {
+  const syncLiveAndAppState = useCallback(
+    (notify = false) => {
+      setIsRefreshing(true);
+      const currentNow = Date.now();
+      setNowMs(currentNow);
+      pruneExpiredItems(currentNow);
+      setTimeout(() => {
+        setIsRefreshing(false);
+        if (notify) showToast('✓ App & Ablaufzeiten aktualisiert');
+      }, 300);
+    },
+    [pruneExpiredItems, showToast]
+  );
+
+  // Automatischer 30-Sekunden-Cleanup-Zyklus für `expiresAt` & Restlaufzeiten
+  useEffect(() => {
+    const runCycle = () => {
+      const currentNow = Date.now();
+      setNowMs(currentNow);
+      pruneExpiredItems(currentNow);
+    };
+    runCycle();
+    const interval = setInterval(runCycle, 30000);
+    return () => clearInterval(interval);
+  }, [pruneExpiredItems]);
+
+  // Auto-Sync bei Rückkehr in die App / Startbildschirm-Resume
+  useEffect(() => {
     const handleAppResume = () => {
       if (document.visibilityState === 'hidden') {
         lastActiveTimestampRef.current = Date.now();
@@ -2957,13 +3086,12 @@ export default function App() {
       const awayMs = Date.now() - lastActiveTimestampRef.current;
       lastActiveTimestampRef.current = Date.now();
 
-      // War die App länger als 15 Minuten im Hintergrund: frischen Reload anstossen (für Home-Screen PWA)
       if (awayMs > 15 * 60 * 1000 && typeof window !== 'undefined') {
         try {
           window.location.reload();
           return;
         } catch {
-          // Fallback auf State-Sync
+          // Fallback auf Sync
         }
       }
       syncLiveAndAppState(awayMs > 20 * 1000);
@@ -2993,8 +3121,8 @@ export default function App() {
     };
   }, [syncLiveAndAppState]);
 
-  // Pull-to-Refresh Gestensteuerung ganz oben auf der Seite
-  React.useEffect(() => {
+  // Pull-to-Refresh Gestensteuerung
+  useEffect(() => {
     const handleTouchStart = (e) => {
       if (window.scrollY <= 0 && e.touches.length === 1) {
         pullStartYRef.current = e.touches[0].clientY;
@@ -3032,22 +3160,6 @@ export default function App() {
     };
   }, [pullDistance, syncLiveAndAppState]);
 
-  // Automatischer Check-out nach Ablauf der gewählten Zeit
-  React.useEffect(() => {
-    const pruneExpired = () => {
-      const now = Date.now();
-      setLiveCheckins((prev) => {
-        const filtered = prev.filter(
-          (item) => !item.expiresAt || item.expiresAt > now
-        );
-        return filtered.length === prev.length ? prev : filtered;
-      });
-    };
-    pruneExpired();
-    const interval = setInterval(pruneExpired, 30000);
-    return () => clearInterval(interval);
-  }, []);
-
   const playersById = useMemo(() => {
     const map = {};
     players.forEach((p) => {
@@ -3084,16 +3196,6 @@ export default function App() {
         (m.player1Id === currentUser.id || m.player2Id === currentUser.id)
     ).length;
   }, [activeSeason, currentUser]);
-
-  const openChallengesCount = useMemo(() => {
-    if (!currentUser) return 0;
-    return challenges.filter(
-      (c) =>
-        c.status === 'open' &&
-        (c.targetId === currentUser.id ||
-          (c.targetId === null && c.challengerId !== currentUser.id))
-    ).length;
-  }, [challenges, currentUser]);
 
   if (!currentUser) {
     return (
@@ -3134,9 +3236,7 @@ export default function App() {
                 }
                 return {
                   ...s,
-                  pausedPlayerIds: Array.from(
-                    new Set([...s.pausedPlayerIds, newPlayer.id])
-                  ),
+                  pausedPlayerIds: Array.from(new Set([...s.pausedPlayerIds, newPlayer.id])),
                 };
               })
             );
@@ -3159,7 +3259,7 @@ export default function App() {
     );
   }
 
-  const isCurrentUserLive = liveCheckins.some((c) => c.playerId === currentUser.id);
+  const myExistingCheckin = liveCheckins.find((c) => c.playerId === currentUser.id);
   const currentUserLeague = activeSeason.leagues.find((l) =>
     l.playerIds.includes(currentUser.id)
   );
@@ -3432,8 +3532,8 @@ export default function App() {
       dateLabel: 'Gerade eben',
     };
     setConnectMatches((prev) => [newMatch, ...prev]);
-    setRecordConnectTargetId(null);
-    showToast('CLUB-Partie gespeichert & Rating aktualisiert!');
+    setLogMatchTargetId(null);
+    showToast('Spontane Partie gespeichert & Rating aktualisiert!');
   };
 
   const handleAdvanceMonth = () => {
@@ -3523,23 +3623,24 @@ export default function App() {
     }
 
     setSeasons((prev) =>
-      prev.map((s) => (s.id === activeSeason.id ? { ...s, status: 'completed' } : s)).concat(newSeason)
+      prev
+        .map((s) => (s.id === activeSeason.id ? { ...s, status: 'completed' } : s))
+        .concat(newSeason)
     );
     setSelectedSeasonId(nextId);
     showToast(`${nextLabel} mit Auf-/Abstieg gestartet!`);
   };
 
-  // Echter 1-Tap Check-in ohne Modal und ohne Tischauswahl
-  const handleOneTapCheckIn = () => {
-    const defaultMinutes = 90;
-    const durationLabel = formatFutureClockTime(defaultMinutes);
+  const handleSaveLiveCheckIn = ({ durationLabel, hallStatus, expiresAt, note }) => {
+    setNowMs(Date.now());
     setLiveCheckins((prev) => [
       {
         id: `lc-${Date.now()}`,
         playerId: currentUser.id,
         durationLabel,
-        expiresAt: Date.now() + defaultMinutes * 60 * 1000,
-        note: LIVE_MOOD_PRESETS[0],
+        hallStatus,
+        expiresAt,
+        note,
         checkedInAt: 'Gerade eben',
         comingTooIds: [],
       },
@@ -3547,53 +3648,7 @@ export default function App() {
     ]);
     setWorld('connect');
     setConnectTab('overview');
-    showToast(`🟢 Du bist jetzt LIVE (${durationLabel})!`);
-  };
-
-  const handleUpdateMyLiveCheckin = ({ minutes, note }) => {
-    setLiveCheckins((prev) =>
-      prev.map((item) => {
-        if (item.playerId !== currentUser.id) return item;
-        const nextMinutes = minutes !== undefined ? minutes : undefined;
-        return {
-          ...item,
-          durationLabel:
-            nextMinutes !== undefined
-              ? formatFutureClockTime(nextMinutes)
-              : item.durationLabel,
-          expiresAt:
-            nextMinutes !== undefined
-              ? nextMinutes === null
-                ? null
-                : Date.now() + nextMinutes * 60 * 1000
-              : item.expiresAt,
-          note: note !== undefined ? note : item.note,
-        };
-      })
-    );
-    showToast('LIVE-Status aktualisiert ✓');
-  };
-
-  const handleExtendMyLiveCheckin = () => {
-    setLiveCheckins((prev) =>
-      prev.map((item) => {
-        if (item.playerId !== currentUser.id) return item;
-        const baseTime =
-          item.expiresAt && item.expiresAt > Date.now()
-            ? item.expiresAt
-            : Date.now();
-        const nextExpiresAt = baseTime + 30 * 60 * 1000;
-        const target = new Date(nextExpiresAt);
-        const hh = String(target.getHours()).padStart(2, '0');
-        const mm = String(target.getMinutes()).padStart(2, '0');
-        return {
-          ...item,
-          durationLabel: `bis ${hh}:${mm}`,
-          expiresAt: nextExpiresAt,
-        };
-      })
-    );
-    showToast('⏱ Um +30 Min. verlängert!');
+    showToast(`🟢 LIVE (${durationLabel}) – ${formatRemainingDuration(expiresAt, Date.now())} übrig`);
   };
 
   const handleToggleComingToo = (checkinId) => {
@@ -3617,23 +3672,25 @@ export default function App() {
     showToast('Aus der Halle ausgecheckt');
   };
 
-  const handleCreateSession = ({ type, dateLabel, note }) => {
+  const handleCreateSpontaneousSession = ({ dateLabel, note, expiresAt }) => {
+    setNowMs(Date.now());
     setSessions((prev) => [
       {
         id: `s-${Date.now()}`,
-        type,
+        type: 'spontaneous',
         authorId: currentUser.id,
         dateLabel,
+        expiresAt,
         note,
         joinedIds: [currentUser.id],
         createdAt: 'Gerade eben',
       },
       ...prev,
     ]);
-    setCreateSessionType(null);
+    setShowSpontaneousSessionModal(false);
     setWorld('connect');
     setConnectTab('overview');
-    showToast(type === 'announcement' ? 'Vorankündigung gepostet' : 'Spontan-Session gepostet');
+    showToast('Spontan-Session gepostet');
   };
 
   const handleToggleJoinSession = (sessionId) => {
@@ -3651,54 +3708,11 @@ export default function App() {
     );
   };
 
-  const handleSendChallenge = ({ targetId, format, whenLabel, note, sendWhatsApp }) => {
-    const newChallenge = {
-      id: `ch-${Date.now()}`,
-      challengerId: currentUser.id,
-      targetId: targetId || null,
-      format,
-      whenLabel,
-      note,
-      status: 'open',
-      createdAt: 'Gerade eben',
-    };
-    setChallenges((prev) => [newChallenge, ...prev]);
-    setChallengeTargetId(undefined);
-    setWorld('connect');
-    setConnectTab('overview');
-
-    if (sendWhatsApp && targetId && playersById[targetId]) {
-      const target = playersById[targetId];
-      const msg = `Hoi ${target.firstName}, ich (${currentUser.nickname}) fordere dich in LEAGUE & CONNECT heraus: ${format} (${whenLabel})${
-        note ? ` – "${note}"` : ''
-      }. Bist du dabei?`;
-      window.open(buildWhatsAppLink(target.phone, msg), '_blank', 'noopener,noreferrer');
-    }
-
-    showToast(
-      targetId
-        ? `Herausforderung an ${playersById[targetId]?.nickname} gesendet!`
-        : 'Offene Herausforderung im Club gepostet!'
+  const handleDeleteOwnSession = (sessionId) => {
+    setSessions((prev) =>
+      prev.filter((s) => !(s.id === sessionId && s.authorId === currentUser.id))
     );
-  };
-
-  const handleRespondChallenge = (challengeId, nextStatus) => {
-    setChallenges((prev) =>
-      prev.map((c) =>
-        c.id === challengeId
-          ? {
-              ...c,
-              status: nextStatus,
-              acceptedById: nextStatus === 'accepted' ? currentUser.id : c.acceptedById,
-            }
-          : c
-      )
-    );
-    showToast(
-      nextStatus === 'accepted'
-        ? 'Herausforderung angenommen – viel Erfolg!'
-        : 'Herausforderung abgelehnt'
-    );
+    showToast('Spontan-Session entfernt');
   };
 
   return (
@@ -3720,6 +3734,7 @@ export default function App() {
           </span>
         </div>
       )}
+
       <header className="sticky top-0 z-30 border-b border-[#22252B] bg-[#060708]/95 backdrop-blur-md">
         <div className="mx-auto max-w-2xl px-4 pt-3 pb-2.5">
           <div className="flex items-center justify-between gap-2">
@@ -3773,29 +3788,23 @@ export default function App() {
                 aria-label="Ansicht aktualisieren"
                 className="flex h-8 w-8 items-center justify-center rounded-full bg-[#15171B] text-xs font-black text-[#A8D0B1] ring-1 ring-[#2B2F37] transition hover:border-[#6FB3A2] hover:text-[#6FB3A2] sm:hidden"
               >
-                <span className={isRefreshing ? 'animate-spin inline-block' : ''}>
-                  ↻
-                </span>
+                <span className={isRefreshing ? 'animate-spin inline-block' : ''}>↻</span>
               </button>
 
               <button
                 type="button"
-                onClick={() => (isCurrentUserLive ? handleCheckOut() : handleOneTapCheckIn())}
-                title={
-                  isCurrentUserLive
-                    ? 'Du bist LIVE eingecheckt (tippen zum Auschecken)'
-                    : '1-Tap LIVE in die Halle einchecken'
-                }
+                onClick={() => setShowLiveCheckInModal(true)}
+                title="LIVE Check-in öffnen"
                 className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-black transition ${
-                  isCurrentUserLive
-                    ? 'bg-rose-500/20 text-rose-300 ring-1 ring-rose-500/60 shadow-sm shadow-rose-500/20'
-                    : 'bg-[#15171B] text-[#D1D5DB] ring-1 ring-[#2B2F37] hover:border-rose-500/50 hover:text-rose-200'
+                  myExistingCheckin
+                    ? 'bg-emerald-500/20 text-emerald-300 ring-1 ring-emerald-500/60'
+                    : 'bg-[#15171B] text-[#D1D5DB] ring-1 ring-[#2B2F37] hover:border-[#6FB3A2]/50 hover:text-[#F3F4F6]'
                 }`}
               >
                 <span
                   className={`h-2 w-2 rounded-full ${
-                    isCurrentUserLive
-                      ? 'animate-ping bg-rose-500'
+                    myExistingCheckin
+                      ? 'animate-ping bg-emerald-400'
                       : liveCheckins.length > 0
                       ? 'bg-[#6FB3A2]'
                       : 'bg-[#6B7280]'
@@ -3874,7 +3883,7 @@ export default function App() {
                     : 'bg-[#152622] text-[#A8D0B1]'
                 }`}
               >
-                {openChallengesCount > 0 ? `⚡ ${openChallengesCount}` : 'Halle'}
+                Halle
               </span>
             </button>
 
@@ -3952,7 +3961,6 @@ export default function App() {
             connectMatches={connectMatches}
             liveCheckins={liveCheckins}
             sessions={sessions}
-            challenges={challenges}
             adminPinCode={adminPinCode}
             onChangeAdminPin={(newPin) => {
               setAdminPinCode(newPin);
@@ -3997,11 +4005,7 @@ export default function App() {
             }}
             onDeleteSession={(id) => {
               setSessions((prev) => prev.filter((s) => s.id !== id));
-              showToast('Pinnwand-Eintrag gelöscht');
-            }}
-            onDeleteChallenge={(id) => {
-              setChallenges((prev) => prev.filter((c) => c.id !== id));
-              showToast('Challenge gelöscht');
+              showToast('Spontan-Session gelöscht');
             }}
           />
         )}
@@ -4121,121 +4125,116 @@ export default function App() {
 
         {world === 'connect' && (
           <div className="space-y-4">
+            {/* Fokus-Schnellaktionen im CLUB-Bereich: nur LIVE Check-in & Spontan Partie eintragen */}
             <div className="rounded-2xl border border-[#6FB3A2]/35 bg-[#14161A] p-3 shadow-lg shadow-black/25">
               <div className="mb-2.5 flex items-center justify-between px-0.5">
                 <span className="text-[10px] font-black uppercase tracking-[0.14em] text-[#6FB3A2]">
                   Schnellaktionen
                 </span>
                 <span className="text-[10px] font-medium text-[#8E95A2]">
-                  1-Tap Check-in · Auto-Ablauf
+                  Auto-Ablauf aktiv
                 </span>
               </div>
 
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                 <button
                   type="button"
-                  onClick={() =>
-                    isCurrentUserLive ? handleCheckOut() : handleOneTapCheckIn()
-                  }
-                  className={`flex items-center justify-between rounded-xl border px-3 py-2.5 text-left text-xs font-bold transition ${
-                    isCurrentUserLive
-                      ? 'border-[#6FB3A2]/60 bg-[#152622] text-[#A8D0B1]'
-                      : 'border-[#2B2F37] bg-[#0F1114] text-[#F3F4F6] hover:border-[#6FB3A2]/50'
+                  onClick={() => setShowLiveCheckInModal(true)}
+                  className={`flex items-center justify-between gap-2 rounded-xl border px-3.5 py-3 text-left text-xs font-black transition ${
+                    myExistingCheckin
+                      ? 'border-[#6FB3A2] bg-[#152622] text-[#A8D0B1]'
+                      : 'border-[#6FB3A2]/50 bg-[#152622]/75 text-[#F3F4F6] hover:border-[#6FB3A2] hover:bg-[#192E29]'
                   }`}
                 >
-                  <span>
-                    {isCurrentUserLive
-                      ? 'Auschecken (LIVE)'
-                      : 'In Halle einchecken'}
+                  <div className="min-w-0">
+                    <div className="truncate">
+                      {myExistingCheckin ? 'LIVE Check-in anpassen' : 'LIVE Check-in'}
+                    </div>
+                    <div className="mt-0.5 truncate text-[10px] font-medium text-[#A8D0B1]">
+                      {myExistingCheckin
+                        ? `Noch ${formatRemainingDuration(myExistingCheckin.expiresAt, nowMs)}`
+                        : 'Dauer & Hallen-Status wählen'}
+                    </div>
+                  </div>
+                  <span className="shrink-0 rounded-lg bg-[#6FB3A2] px-2 py-1 text-[10px] font-black text-[#060708]">
+                    LIVE
                   </span>
-                  <span className="text-[#6FB3A2]">→</span>
                 </button>
 
                 <button
                   type="button"
-                  onClick={() => setChallengeTargetId(null)}
-                  className="flex items-center justify-between rounded-xl border border-[#2B2F37] bg-[#0F1114] px-3 py-2.5 text-left text-xs font-bold text-[#F3F4F6] transition hover:border-[#6FB3A2]/50"
+                  onClick={() => setLogMatchTargetId('')}
+                  className="flex items-center justify-between gap-2 rounded-xl border border-[#2B2F37] bg-[#0F1114] px-3.5 py-3 text-left text-xs font-black text-[#F3F4F6] transition hover:border-[#6FB3A2] hover:bg-[#191C21]"
                 >
-                  <span>Herausfordern</span>
-                  <span className="text-[#6FB3A2]">→</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setCreateSessionType('announcement')}
-                  className="flex items-center justify-between rounded-xl border border-[#2B2F37] bg-[#0F1114] px-3 py-2.5 text-left text-xs font-bold text-[#F3F4F6] transition hover:border-[#6FB3A2]/50"
-                >
-                  <span>Session planen</span>
-                  <span className="text-[#6FB3A2]">→</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setRecordConnectTargetId('')}
-                  className="flex items-center justify-between rounded-xl border border-[#2B2F37] bg-[#0F1114] px-3 py-2.5 text-left text-xs font-bold text-[#F3F4F6] transition hover:border-[#6FB3A2]/50"
-                >
-                  <span>Club-Partie eintragen</span>
-                  <span className="text-[#6FB3A2]">→</span>
+                  <div className="min-w-0">
+                    <div className="truncate">Spontan Partie eintragen</div>
+                    <div className="mt-0.5 truncate text-[10px] font-medium text-[#8E95A2]">
+                      Sätze &amp; CLUB-Rating direkt erfassen
+                    </div>
+                  </div>
+                  <span className="shrink-0 text-sm font-black text-[#6FB3A2]">+</span>
                 </button>
               </div>
             </div>
 
-            <div className="grid grid-cols-4 gap-1.5 rounded-xl bg-[#14161A] p-1 ring-1 ring-[#6FB3A2]/25">
-              {[
-                { id: 'overview', label: 'Übersicht' },
-                { id: 'players', label: 'Rangliste' },
-                { id: 'matches', label: 'Partien' },
-                { id: 'halldays', label: 'Hallentage' },
-              ].map((t) => (
-                <button
-                  key={t.id}
-                  type="button"
-                  onClick={() => setConnectTab(t.id)}
-                  className={`rounded-lg py-2 text-[11px] font-bold transition ${
-                    connectTab === t.id
-                      ? 'bg-[#6FB3A2] text-[#060708]'
-                      : 'text-[#8E95A2] hover:text-[#F4ECC2]'
-                  }`}
-                >
-                  {t.label}
-                </button>
-              ))}
+            <div className="border-t border-[#22252B] pt-3.5">
+              <div className="grid grid-cols-4 gap-1 rounded-xl bg-[#14161A] p-1 ring-1 ring-[#6FB3A2]/25">
+                {[
+                  { id: 'overview', label: 'Übersicht' },
+                  { id: 'ranking', label: 'Rangliste' },
+                  { id: 'matches', label: 'Partien' },
+                  { id: 'halldays', label: 'Hallentage' },
+                ].map((t) => (
+                  <button
+                    key={t.id}
+                    type="button"
+                    onClick={() => setConnectTab(t.id)}
+                    className={`truncate rounded-lg px-1 py-2 text-[11px] font-bold transition sm:text-xs ${
+                      connectTab === t.id
+                        ? 'bg-[#6FB3A2] text-[#060708]'
+                        : 'text-[#8E95A2] hover:text-[#F4ECC2]'
+                    }`}
+                  >
+                    {t.label}
+                  </button>
+                ))}
+              </div>
             </div>
 
             {connectTab === 'overview' && (
               <ConnectOverviewTab
                 currentUser={currentUser}
+                activeSeason={activeSeason}
                 players={players}
                 playersById={playersById}
-                activeSeason={activeSeason}
-                connectRatings={ratingsByPlayer}
                 liveCheckins={liveCheckins}
                 sessions={sessions}
-                challenges={challenges}
                 connectMatches={connectMatches}
-                onOneTapCheckIn={handleOneTapCheckIn}
-                onUpdateMyLiveCheckin={handleUpdateMyLiveCheckin}
-                onExtendMyLiveCheckin={handleExtendMyLiveCheckin}
+                connectRatings={ratingsByPlayer}
+                matchDeltas={matchDeltas}
+                nowMs={nowMs}
+                onNavigateTab={(tab) => setConnectTab(tab)}
+                onToggleJoinSession={handleToggleJoinSession}
+                onDeleteOwnSession={handleDeleteOwnSession}
+                onOpenCreateSpontaneous={() => setShowSpontaneousSessionModal(true)}
+                onOpenLiveCheckIn={() => setShowLiveCheckInModal(true)}
+                onOpenLogMatch={(opponentId = '') => setLogMatchTargetId(opponentId)}
                 onToggleComingToo={handleToggleComingToo}
                 onCheckOut={handleCheckOut}
-                onToggleJoinSession={handleToggleJoinSession}
-                onOpenChallenge={(targetId) => setChallengeTargetId(targetId)}
-                onRespondChallenge={handleRespondChallenge}
-                onOpenCreateSession={(type) => setCreateSessionType(type)}
+                onOpenEditProfile={() => setShowProfileModal(true)}
                 onSelectMember={(memberId) => setSelectedMemberId(memberId)}
-                onNavigateTab={(tab) => setConnectTab(tab)}
               />
             )}
 
-            {connectTab === 'players' && (
+            {connectTab === 'ranking' && (
               <ClubPlayersTab
                 players={players}
                 currentUser={currentUser}
                 activeSeason={activeSeason}
-                connectRatings={ratingsByPlayer}
-                connectMatches={connectMatches}
                 liveCheckins={liveCheckins}
-                onOpenChallenge={(targetId) => setChallengeTargetId(targetId)}
+                connectRatings={ratingsByPlayer}
+                onOpenAddMember={() => setShowAddMemberModal(true)}
+                onOpenRecordConnectMatch={(opponentId) => setLogMatchTargetId(opponentId)}
                 onSelectMember={(memberId) => setSelectedMemberId(memberId)}
               />
             )}
@@ -4247,7 +4246,7 @@ export default function App() {
                 playersById={playersById}
                 currentUser={currentUser}
                 connectRatings={ratingsByPlayer}
-                onOpenRecordConnectMatch={() => setRecordConnectTargetId('')}
+                onOpenRecordConnectMatch={() => setLogMatchTargetId('')}
               />
             )}
 
@@ -4257,29 +4256,61 @@ export default function App() {
                 currentUser={currentUser}
                 activeSeason={activeSeason}
                 connectRatings={ratingsByPlayer}
-                onOpenChallenge={(targetId) => setChallengeTargetId(targetId)}
+                onOpenEditProfile={() => setShowProfileModal(true)}
+                onOpenRecordConnectMatch={(opponentId) => setLogMatchTargetId(opponentId)}
                 onSelectMember={(memberId) => setSelectedMemberId(memberId)}
               />
             )}
           </div>
         )}
+      </main>
 
-        <footer className="mt-8 border-t border-[#1D2026] pt-4 pb-2 text-center">
+      <footer className="mx-auto mt-10 max-w-2xl border-t border-[#1D2026] px-4 pt-4 pb-6">
+        <div className="flex items-center justify-between text-[11px] text-[#6B7280]">
+          <button
+            type="button"
+            onClick={() => setShowPlatformInfo(true)}
+            className="inline-flex items-center gap-1.5 font-semibold text-[#8E95A2] transition hover:text-[#F4ECC2]"
+          >
+            <span className="flex h-4 w-4 items-center justify-center rounded-full bg-[#1C1F26] text-[10px] font-black text-[#DE754B]">
+              i
+            </span>
+            <span>Über CONNECT</span>
+          </button>
+
           <button
             type="button"
             onClick={handleOpenAdmin}
-            className="inline-flex items-center gap-1.5 rounded-full border border-[#24272E] bg-[#121417] px-3.5 py-1.5 text-[11px] font-bold text-[#8E95A2] transition hover:border-[#DE754B]/50 hover:text-[#F4ECC2]"
+            className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 font-bold transition ${
+              world === 'admin'
+                ? 'bg-[#DE754B] text-[#060708]'
+                : 'bg-[#14161A] text-[#9CA3AF] ring-1 ring-[#24272E] hover:border-[#DE754B] hover:text-[#F4ECC2]'
+            }`}
           >
             <span>🛡️</span>
-            <span>
-              {isAdminUnlocked ? 'Admin-Bereich öffnen' : 'Club-Admin'}
-            </span>
+            <span>Club-Admin</span>
           </button>
-        </footer>
-      </main>
+        </div>
+      </footer>
 
       {showPlatformInfo && (
         <PlatformInfoModal onClose={() => setShowPlatformInfo(false)} />
+      )}
+
+      {selectedMemberId && playersById[selectedMemberId] && (
+        <MemberDetailModal
+          player={playersById[selectedMemberId]}
+          currentUser={currentUser}
+          playersById={playersById}
+          activeSeason={activeSeason}
+          seasons={seasons}
+          ratingInfo={ratingsByPlayer[selectedMemberId]}
+          connectMatches={connectMatches}
+          liveCheckin={liveCheckins.find((c) => c.playerId === selectedMemberId)}
+          nowMs={nowMs}
+          onRecordMatch={(opponentId) => setLogMatchTargetId(opponentId)}
+          onClose={() => setSelectedMemberId(null)}
+        />
       )}
 
       {showProfileModal && (
@@ -4294,24 +4325,6 @@ export default function App() {
         />
       )}
 
-      {selectedMemberId && playersById[selectedMemberId] && (
-        <MemberDetailModal
-          player={playersById[selectedMemberId]}
-          currentUser={currentUser}
-          playersById={playersById}
-          activeSeason={activeSeason}
-          seasons={seasons}
-          ratingInfo={ratingsByPlayer[selectedMemberId]}
-          connectMatches={connectMatches}
-          liveCheckin={
-            liveCheckins.find((c) => c.playerId === selectedMemberId) || null
-          }
-          onChallenge={(targetId) => setChallengeTargetId(targetId)}
-          onRecordMatch={(targetId) => setRecordConnectTargetId(targetId)}
-          onClose={() => setSelectedMemberId(null)}
-        />
-      )}
-
       {showAddMemberModal && (
         <AddMemberModal
           activeSeason={activeSeason}
@@ -4320,11 +4333,20 @@ export default function App() {
         />
       )}
 
-      {createSessionType && (
-        <CreateSessionModal
-          defaultType={createSessionType}
-          onSubmit={handleCreateSession}
-          onClose={() => setCreateSessionType(null)}
+      {showLiveCheckInModal && (
+        <LiveCheckInModal
+          currentUser={currentUser}
+          existingCheckin={myExistingCheckin}
+          onSave={handleSaveLiveCheckIn}
+          onCheckOut={handleCheckOut}
+          onClose={() => setShowLiveCheckInModal(false)}
+        />
+      )}
+
+      {showSpontaneousSessionModal && (
+        <CreateSpontaneousSessionModal
+          onSubmit={handleCreateSpontaneousSession}
+          onClose={() => setShowSpontaneousSessionModal(false)}
         />
       )}
 
@@ -4338,47 +4360,41 @@ export default function App() {
         />
       )}
 
-      {recordConnectTargetId !== null && (
-        <RecordConnectMatchModal
+      {logMatchTargetId !== null && (
+        <LogMatchModal
           players={players}
           currentUser={currentUser}
           connectRatings={ratingsByPlayer}
-          defaultOpponentId={recordConnectTargetId}
+          defaultOpponentId={logMatchTargetId}
           onSave={handleRecordConnectMatch}
-          onClose={() => setRecordConnectTargetId(null)}
-        />
-      )}
-
-      {challengeTargetId !== undefined && (
-        <ChallengeModal
-          players={players}
-          currentUser={currentUser}
-          activeSeason={activeSeason}
-          connectRatings={ratingsByPlayer}
-          defaultTargetId={challengeTargetId}
-          onSend={handleSendChallenge}
-          onClose={() => setChallengeTargetId(undefined)}
+          onClose={() => setLogMatchTargetId(null)}
         />
       )}
 
       {showAdminPinPrompt && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/80 p-3 sm:items-center">
-          <div className="w-full max-w-xs space-y-3 rounded-2xl border border-[#DE754B]/45 bg-[#181A1E] p-4 shadow-2xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-xs space-y-3 rounded-2xl border border-[#DE754B]/45 bg-[#14161A] p-4 shadow-2xl">
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-black text-[#F4ECC2]">
-                🛡️ Admin-PIN eingeben
-              </h3>
+              <div className="flex items-center gap-2">
+                <span className="text-base">🛡️</span>
+                <h3 className="text-sm font-black text-[#F4ECC2]">
+                  Club-Admin Zugang
+                </h3>
+              </div>
               <button
                 type="button"
                 onClick={() => setShowAdminPinPrompt(false)}
-                className="text-xs font-bold text-[#8E95A2]"
+                className="rounded-lg bg-[#202329] px-2 py-1 text-xs font-bold text-[#9CA3AF]"
               >
                 ✕
               </button>
             </div>
+
             <p className="text-[11px] text-[#9CA3AF]">
-              4-stelligen Admin-Code eingeben (Demo-PIN: 9999).
+              Bitte 4-stelligen Admin-PIN eingeben, um Mitglieder, Ligen und
+              Resultate zu verwalten.
             </p>
+
             <input
               type="password"
               inputMode="numeric"
@@ -4387,10 +4403,11 @@ export default function App() {
               value={adminPinInput}
               onChange={(e) => handleAdminPinChange(e.target.value)}
               placeholder="••••"
-              className="w-full rounded-xl border border-[#2E323B] bg-[#131417] px-3 py-2.5 text-center text-base font-black tracking-[0.4em] text-[#F4ECC2] focus:border-[#DE754B] focus:outline-none"
+              className="w-full rounded-xl border border-[#2B2F37] bg-[#0F1114] px-3 py-2.5 text-center text-base font-black tracking-[0.4em] text-[#F4ECC2]"
             />
+
             {adminPinError && (
-              <div className="rounded-lg bg-rose-950/40 px-2.5 py-1.5 text-[11px] font-bold text-rose-300">
+              <div className="rounded-xl border border-rose-500/40 bg-rose-950/30 px-3 py-1.5 text-center text-[11px] font-bold text-rose-300">
                 {adminPinError}
               </div>
             )}
@@ -4401,6 +4418,924 @@ export default function App() {
   );
 }
 
+// ============================================================================
+// CLUB ÜBERSICHT (LIVE CHECK-IN, SPONTAN-PINNWAND, RATING & 3ER-GRID NEUE)
+// ============================================================================
+
+function ConnectOverviewTab({
+  currentUser,
+  activeSeason,
+  players,
+  playersById,
+  liveCheckins,
+  sessions,
+  connectMatches,
+  connectRatings,
+  matchDeltas,
+  nowMs,
+  onNavigateTab,
+  onToggleJoinSession,
+  onDeleteOwnSession,
+  onOpenCreateSpontaneous,
+  onOpenLiveCheckIn,
+  onOpenLogMatch,
+  onToggleComingToo,
+  onCheckOut,
+  onOpenEditProfile,
+  onSelectMember,
+}) {
+  const [onlyMatchingLevel, setOnlyMatchingLevel] = useState(false);
+  const [onlyBuddyWanted, setOnlyBuddyWanted] = useState(false);
+
+  const myLiveCheckin = useMemo(
+    () => liveCheckins.find((c) => c.playerId === currentUser.id),
+    [liveCheckins, currentUser.id]
+  );
+
+  const buddySearchCount = useMemo(
+    () => liveCheckins.filter((c) => c.hallStatus === 'buddy_wanted').length,
+    [liveCheckins]
+  );
+
+  const visibleLiveCheckins = useMemo(() => {
+    return liveCheckins.filter((item) => {
+      if (onlyBuddyWanted && item.hallStatus !== 'buddy_wanted') return false;
+      if (!onlyMatchingLevel) return true;
+      const p = playersById[item.playerId];
+      if (!p || p.id === currentUser.id) return true;
+      return isMatchingLevel(currentUser, p, activeSeason);
+    });
+  }, [liveCheckins, onlyBuddyWanted, onlyMatchingLevel, playersById, currentUser, activeSeason]);
+
+  const newMembers = useMemo(
+    () => players.filter((p) => p.isNewMember),
+    [players]
+  );
+
+  const visibleSpontaneousSessions = useMemo(() => {
+    const spontaneousOnly = sessions.filter((s) => s.type === 'spontaneous');
+    if (!onlyMatchingLevel) return spontaneousOnly;
+    return spontaneousOnly.filter((s) => {
+      const author = playersById[s.authorId];
+      if (!author || author.id === currentUser.id) return true;
+      return isMatchingLevel(currentUser, author, activeSeason);
+    });
+  }, [sessions, onlyMatchingLevel, playersById, currentUser, activeSeason]);
+
+  const topRatedPlayers = useMemo(() => {
+    return [...players]
+      .sort((a, b) => (connectRatings[b.id]?.elo || 0) - (connectRatings[a.id]?.elo || 0))
+      .slice(0, 3);
+  }, [players, connectRatings]);
+
+  const myRating = connectRatings[currentUser.id];
+
+  return (
+    <div className="space-y-4">
+      {/* Kennzahlen-Zeile */}
+      <div className="grid grid-cols-3 gap-2">
+        <a
+          href="#club-live-section"
+          className="rounded-xl border border-emerald-500/30 bg-[#181A1E] p-2.5 text-center transition hover:border-emerald-400/60"
+        >
+          <div className="text-sm font-black text-emerald-300">
+            {liveCheckins.length}
+          </div>
+          <div className="mt-0.5 text-[10px] font-bold text-[#9CA3AF]">
+            LIVE Halle
+          </div>
+        </a>
+
+        <button
+          type="button"
+          onClick={() => onNavigateTab('ranking')}
+          className="rounded-xl border border-[#C8A26E]/30 bg-[#181A1E] p-2.5 text-center transition hover:border-[#C8A26E]/60"
+        >
+          <div className="text-sm font-black text-[#E6C79C]">
+            {myRating?.elo || 1200}
+          </div>
+          <div className="mt-0.5 text-[10px] font-bold text-[#9CA3AF]">
+            Mein Rating
+          </div>
+        </button>
+
+        <a
+          href="#club-newbies-section"
+          className="rounded-xl border border-[#24272D] bg-[#181A1E] p-2.5 text-center transition hover:border-[#6FB3A2]/50"
+        >
+          <div className="text-sm font-black text-[#F3F4F6]">
+            {newMembers.length}
+          </div>
+          <div className="mt-0.5 text-[10px] font-bold text-[#9CA3AF]">
+            Neu im Club
+          </div>
+        </a>
+      </div>
+
+      {/* 1. LIVE in der Halle mit Dauer, Restlaufzeit, Status-Chips & Buddy-Suche */}
+      <div
+        id="club-live-section"
+        className="space-y-2.5 rounded-2xl border border-[#24272D] bg-[#181A1E] p-3.5"
+      >
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <span className="h-2 w-2 rounded-full bg-emerald-400" />
+            <span className="text-xs font-black uppercase tracking-wide text-[#F3F4F6]">
+              LIVE in der Halle ({visibleLiveCheckins.length})
+            </span>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-1.5">
+            {buddySearchCount > 0 && (
+              <button
+                type="button"
+                onClick={() => setOnlyBuddyWanted((v) => !v)}
+                className={`rounded-full px-2.5 py-1 text-[10px] font-bold transition ${
+                  onlyBuddyWanted
+                    ? 'bg-emerald-400 text-[#060708]'
+                    : 'border border-emerald-500/35 bg-emerald-950/30 text-emerald-300'
+                }`}
+              >
+                Buddy gesucht ({buddySearchCount})
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => setOnlyMatchingLevel((v) => !v)}
+              className={`rounded-full px-2.5 py-1 text-[10px] font-bold transition ${
+                onlyMatchingLevel
+                  ? 'bg-[#6FB3A2] text-[#060708]'
+                  : 'bg-[#131417] text-[#9CA3AF] ring-1 ring-[#272A30]'
+              }`}
+            >
+              {onlyMatchingLevel ? '✓ Mein Niveau' : 'Mein Niveau'}
+            </button>
+          </div>
+        </div>
+
+        {visibleLiveCheckins.length === 0 ? (
+          <div className="flex items-center justify-between gap-2 rounded-xl border border-[#22252B] bg-[#131417] p-3 text-xs text-[#8E95A2]">
+            <span>
+              {onlyBuddyWanted
+                ? 'Aktuell sucht niemand mit diesem Filter einen Spielbuddy.'
+                : 'Momentan ist noch niemand LIVE eingecheckt.'}
+            </span>
+            <button
+              type="button"
+              onClick={onOpenLiveCheckIn}
+              className="shrink-0 rounded-lg bg-[#6FB3A2] px-3 py-1.5 text-[11px] font-black text-[#060708]"
+            >
+              Einchecken
+            </button>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {visibleLiveCheckins.map((item) => {
+              const p = playersById[item.playerId];
+              if (!p) return null;
+              const isMe = p.id === currentUser.id;
+              const comingTooIds = item.comingTooIds || [];
+              const iAmComingToo = comingTooIds.includes(currentUser.id);
+              const comingNames = comingTooIds
+                .map((id) => playersById[id]?.nickname)
+                .filter(Boolean);
+
+              const statusMeta =
+                LIVE_STATUS_OPTIONS.find((s) => s.id === item.hallStatus) ||
+                LIVE_STATUS_OPTIONS[0];
+              const remainingText = formatRemainingDuration(item.expiresAt, nowMs);
+
+              const waMsg = getContextWhatsAppMessage('live_hall', currentUser, p, {
+                durationLabel: `${item.durationLabel} · noch ${remainingText}`,
+              });
+
+              return (
+                <div
+                  key={item.id}
+                  className={`rounded-xl border p-3 transition ${
+                    item.hallStatus === 'buddy_wanted'
+                      ? 'border-emerald-500/35 bg-[#131A18]'
+                      : 'border-[#22252B] bg-[#131417]'
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <button
+                      type="button"
+                      onClick={() => onSelectMember?.(p.id)}
+                      className="flex min-w-0 items-center gap-2.5 text-left transition hover:opacity-85"
+                    >
+                      <PlayerAvatar
+                        player={p}
+                        sizeClass="h-8 w-8 text-[10px]"
+                        isConnectAccent
+                      />
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <span className="truncate text-xs font-bold text-[#F3F4F6]">
+                            {p.nickname}
+                          </span>
+                          {isMe && (
+                            <span className="rounded bg-[#1F2927] px-1.5 py-0.5 text-[9px] font-bold text-[#A8D0B1]">
+                              Du
+                            </span>
+                          )}
+                          <span
+                            className={`rounded border px-1.5 py-0.5 text-[9px] font-bold ${statusMeta.badgeClass}`}
+                          >
+                            {statusMeta.label}
+                          </span>
+                        </div>
+                        <div className="mt-0.5 text-[10px] text-[#8E95A2]">
+                          {p.sttClass || 'CLUB'} · {item.checkedInAt} ·{' '}
+                          <span className="font-semibold text-[#A8D0B1]">
+                            noch {remainingText}
+                          </span>
+                        </div>
+                      </div>
+                    </button>
+
+                    <span className="shrink-0 rounded-md border border-[#282C34] bg-[#181A1E] px-2 py-0.5 text-[10px] font-semibold text-[#E6C79C]">
+                      {item.durationLabel}
+                    </span>
+                  </div>
+
+                  {item.note && (
+                    <div className="mt-2 text-[11px] text-[#D1D5DB]">{item.note}</div>
+                  )}
+
+                  {comingNames.length > 0 && (
+                    <div className="mt-1.5 text-[10px] font-medium text-[#8E95A2]">
+                      Kommt auch:{' '}
+                      <span className="text-[#A8D0B1]">{comingNames.join(', ')}</span>
+                    </div>
+                  )}
+
+                  <div className="mt-2.5 flex items-center justify-between gap-2 border-t border-[#1E2128] pt-2">
+                    <span className="text-[10px] text-[#6B7280]">
+                      {formatExpiryClockLabel(item.expiresAt)}
+                    </span>
+
+                    <div className="flex items-center gap-1.5">
+                      {!isMe ? (
+                        <>
+                          <WhatsAppActionButton
+                            phone={p.phone}
+                            message={waMsg}
+                            label=""
+                            compact
+                          />
+                          <button
+                            type="button"
+                            onClick={() => onToggleComingToo(item.id)}
+                            className={`rounded-lg px-2.5 py-1 text-[10px] font-bold transition ${
+                              iAmComingToo
+                                ? 'bg-[#6FB3A2] text-[#060708]'
+                                : 'bg-[#252830] text-[#F3F4F6] hover:bg-[#313540]'
+                            }`}
+                          >
+                            {iAmComingToo ? 'Komme ✓' : 'Komme auch'}
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <button
+                            type="button"
+                            onClick={onOpenLiveCheckIn}
+                            className="rounded-lg bg-[#252830] px-2.5 py-1 text-[10px] font-bold text-[#E6C79C] hover:bg-[#313540]"
+                          >
+                            Ändern
+                          </button>
+                          <button
+                            type="button"
+                            onClick={onCheckOut}
+                            className="rounded-lg border border-rose-500/35 bg-rose-950/30 px-2.5 py-1 text-[10px] font-bold text-rose-300 hover:bg-rose-950/50"
+                          >
+                            Auschecken
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* 2. Pinnwand: Nur Spontan-Sessions für heute */}
+      <div className="space-y-2.5 rounded-2xl border border-[#24272D] bg-[#181A1E] p-3.5">
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-xs font-black uppercase tracking-wide text-[#F3F4F6]">
+            Spontan heute ({visibleSpontaneousSessions.length})
+          </span>
+
+          <button
+            type="button"
+            onClick={onOpenCreateSpontaneous}
+            className="rounded-lg bg-[#6FB3A2] px-2.5 py-1 text-[10px] font-black text-[#060708] transition hover:bg-[#82C1B1]"
+          >
+            + Spontan-Session
+          </button>
+        </div>
+
+        {visibleSpontaneousSessions.length === 0 ? (
+          <div className="rounded-xl bg-[#131417] p-3 text-center text-xs text-[#8E95A2]">
+            Aktuell keine Spontan-Sessions für heute eingetragen.
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {visibleSpontaneousSessions.map((s) => {
+              const author = playersById[s.authorId];
+              if (!author) return null;
+              const isJoined = s.joinedIds.includes(currentUser.id);
+              const isAuthor = author.id === currentUser.id;
+              const waMsg = getContextWhatsAppMessage('session_join', currentUser, author, {
+                dateLabel: s.dateLabel,
+              });
+
+              return (
+                <div
+                  key={s.id}
+                  className="rounded-xl border border-[#22262E] bg-[#131417] p-2.5"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <button
+                      type="button"
+                      onClick={() => onSelectMember?.(author.id)}
+                      className="flex min-w-0 items-center gap-2 text-left transition hover:opacity-85"
+                    >
+                      <PlayerAvatar
+                        player={author}
+                        sizeClass="h-6 w-6 text-[9px]"
+                        isConnectAccent={author.connectOnly}
+                      />
+                      <span className="truncate text-xs font-black text-[#F3F4F6] underline decoration-[#6FB3A2]/50 underline-offset-2">
+                        {author.nickname}
+                      </span>
+                      <span className="shrink-0 rounded bg-[#2C2418] px-1.5 py-0.5 text-[9px] font-bold text-[#E6C79C]">
+                        Spontan
+                      </span>
+                    </button>
+
+                    <div className="flex shrink-0 items-center gap-1.5">
+                      <span className="text-[10px] text-[#8E95A2]">
+                        {s.expiresAt
+                          ? `noch ${formatRemainingDuration(s.expiresAt, nowMs)}`
+                          : s.createdAt}
+                      </span>
+                      {isAuthor && (
+                        <button
+                          type="button"
+                          onClick={() => onDeleteOwnSession(s.id)}
+                          title="Spontan-Session löschen"
+                          aria-label="Spontan-Session löschen"
+                          className="rounded-md bg-[#22252C] px-1.5 py-0.5 text-[10px] font-bold text-[#9CA3AF] transition hover:bg-rose-950/50 hover:text-rose-300"
+                        >
+                          ✕
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="mt-1.5 text-xs font-extrabold text-[#E6C79C]">
+                    {s.dateLabel}
+                  </div>
+                  <p className="mt-0.5 line-clamp-2 text-[11px] text-[#D1D5DB]">{s.note}</p>
+
+                  <div className="mt-2 flex items-center justify-between gap-2 border-t border-[#1D2027] pt-1.5">
+                    <div className="truncate text-[10px] text-[#9CA3AF]">
+                      Dabei ({s.joinedIds.length}):{' '}
+                      {s.joinedIds
+                        .map((id) => playersById[id]?.nickname)
+                        .filter(Boolean)
+                        .join(', ')}
+                    </div>
+
+                    <div className="flex shrink-0 items-center gap-1.5">
+                      {!isAuthor && (
+                        <WhatsAppActionButton
+                          phone={author.phone}
+                          message={waMsg}
+                          label=""
+                          compact
+                        />
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => onToggleJoinSession(s.id)}
+                        className={`rounded-lg px-2.5 py-1 text-[10px] font-bold transition ${
+                          isJoined
+                            ? 'bg-[#6FB3A2] text-[#060708]'
+                            : 'bg-[#252830] text-[#F3F4F6] hover:bg-[#313540]'
+                        }`}
+                      >
+                        {isJoined ? 'Dabei ✓' : 'Bin dabei'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* 3. Top-3 CLUB-Rating Vorschau */}
+      <div className="rounded-2xl border border-[#24272D] bg-[#181A1E] p-3.5">
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-black uppercase tracking-wide text-[#E6C79C]">
+            Top-3 CLUB-Rating
+          </span>
+          <button
+            type="button"
+            onClick={() => onNavigateTab('ranking')}
+            className="text-[11px] font-bold text-[#E6C79C] underline"
+          >
+            Komplette Rangliste →
+          </button>
+        </div>
+
+        <div className="mt-2.5 space-y-1.5">
+          {topRatedPlayers.map((p, idx) => {
+            const r = connectRatings[p.id];
+            return (
+              <div
+                key={p.id}
+                className="flex items-center justify-between gap-2 rounded-xl bg-[#131417] px-3 py-2"
+              >
+                <button
+                  type="button"
+                  onClick={() => onSelectMember?.(p.id)}
+                  className="flex min-w-0 flex-1 items-center gap-2 text-left transition hover:opacity-85"
+                >
+                  <span className="w-4 text-xs font-black text-[#E6C79C]">
+                    #{idx + 1}
+                  </span>
+                  <PlayerAvatar
+                    player={p}
+                    sizeClass="h-6 w-6 text-[9px]"
+                    isConnectAccent={p.connectOnly}
+                  />
+                  <span className="truncate text-xs font-bold text-[#F3F4F6] underline decoration-[#6FB3A2]/50 underline-offset-2">
+                    {p.nickname}
+                  </span>
+                </button>
+                {r?.tier && (
+                  <span
+                    className={`rounded border px-2 py-0.5 text-[10px] font-bold ${r.tier.badgeClass}`}
+                  >
+                    {r.tier.symbol} {r.elo}
+                  </span>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        {connectMatches.length > 0 && (
+          <div className="mt-2.5 border-t border-[#22252B] pt-2.5">
+            <div className="mb-1.5 flex items-center justify-between text-[10px] font-bold text-[#8E95A2]">
+              <span>Letzte freie Partie</span>
+              <button
+                type="button"
+                onClick={() => onNavigateTab('matches')}
+                className="text-[#A8D0B1] underline"
+              >
+                Alle Partien ({connectMatches.length})
+              </button>
+            </div>
+            {connectMatches.slice(0, 1).map((m) => {
+              const p1 = playersById[m.player1Id];
+              const p2 = playersById[m.player2Id];
+              const deltas = matchDeltas[m.id] || { delta1: 0, delta2: 0 };
+              if (!p1 || !p2) return null;
+              return (
+                <div
+                  key={m.id}
+                  className="flex items-center justify-between gap-2 rounded-xl bg-[#131417] px-3 py-2 text-xs"
+                >
+                  <div className="truncate font-bold text-[#F3F4F6]">
+                    {p1.nickname}{' '}
+                    <span className="text-[10px] text-[#8E95A2]">
+                      ({deltas.delta1 >= 0 ? `+${deltas.delta1}` : deltas.delta1})
+                    </span>{' '}
+                    vs. {p2.nickname}
+                  </div>
+                  <span className="shrink-0 rounded bg-[#181A1E] px-2 py-0.5 font-black text-[#E6C79C]">
+                    {m.score}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* 4. Neu im Club als striktes 3er-Grid */}
+      {newMembers.length > 0 && (
+        <div
+          id="club-newbies-section"
+          className="rounded-2xl border border-[#24272D] bg-[#181A1E] p-3.5"
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-black uppercase tracking-wide text-[#F3F4F6]">
+              Neu im Club ({newMembers.length})
+            </span>
+            <button
+              type="button"
+              onClick={onOpenEditProfile}
+              className="text-[11px] font-bold text-[#A8D0B1] underline"
+            >
+              Mein Status
+            </button>
+          </div>
+
+          <div className="mt-2.5 grid grid-cols-3 gap-2">
+            {newMembers.map((p) => (
+              <div
+                key={p.id}
+                className="flex flex-col justify-between rounded-xl border border-[#6FB3A2]/25 bg-[#131417] p-2 text-center"
+              >
+                <button
+                  type="button"
+                  onClick={() => onSelectMember?.(p.id)}
+                  className="flex flex-col items-center text-center transition hover:opacity-85"
+                >
+                  <PlayerAvatar
+                    player={p}
+                    sizeClass="h-9 w-9 text-xs"
+                    isConnectAccent
+                  />
+                  <div className="mt-1.5 w-full truncate text-[11px] font-black text-[#F3F4F6]">
+                    {p.nickname}
+                  </div>
+                  <div className="w-full truncate text-[9px] text-[#8E95A2]">
+                    {p.sttClass || 'CLUB'}
+                  </div>
+                </button>
+
+                {p.id !== currentUser.id && (
+                  <div className="mt-2 flex items-center justify-center gap-1">
+                    <WhatsAppActionButton
+                      phone={p.phone}
+                      message={getContextWhatsAppMessage('new_member', currentUser, p)}
+                      label=""
+                      compact
+                    />
+                    <button
+                      type="button"
+                      onClick={() => onOpenLogMatch(p.id)}
+                      title="Partie mit neuem Mitglied eintragen"
+                      className="rounded-lg bg-[#6FB3A2] px-2 py-1 text-[9px] font-black text-[#060708]"
+                    >
+                      + Partie
+                    </button>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ============================================================================
+// RANGLISTE (KOMBINIERBARE FILTER-CHIPS OHNE HORIZONTALES SCROLLEN & TREFFERZÄHLER)
+// ============================================================================
+
+function ClubPlayersTab({
+  players,
+  currentUser,
+  activeSeason,
+  liveCheckins,
+  connectRatings,
+  onOpenAddMember,
+  onOpenRecordConnectMatch,
+  onSelectMember,
+}) {
+  const savedFilters = useMemo(
+    () =>
+      readStorageJson(STORAGE_KEYS.rankingFilters, {
+        search: '',
+        onlyLive: false,
+        onlyLevel: false,
+        playstyle: '',
+        onlyEnglish: false,
+      }),
+    []
+  );
+
+  const [search, setSearch] = useState(savedFilters.search || '');
+  const [onlyLive, setOnlyLive] = useState(Boolean(savedFilters.onlyLive));
+  const [onlyLevel, setOnlyLevel] = useState(Boolean(savedFilters.onlyLevel));
+  const [playstyleFilter, setPlaystyleFilter] = useState(savedFilters.playstyle || '');
+  const [onlyEnglish, setOnlyEnglish] = useState(Boolean(savedFilters.onlyEnglish));
+
+  useEffect(() => {
+    writeStorageJson(STORAGE_KEYS.rankingFilters, {
+      search,
+      onlyLive,
+      onlyLevel,
+      playstyle: playstyleFilter,
+      onlyEnglish,
+    });
+  }, [search, onlyLive, onlyLevel, playstyleFilter, onlyEnglish]);
+
+  const livePlayerIds = useMemo(
+    () => new Set(liveCheckins.map((c) => c.playerId)),
+    [liveCheckins]
+  );
+
+  const sortedAndFilteredPlayers = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return [...players]
+      .filter((p) => {
+        if (onlyLive && !livePlayerIds.has(p.id)) return false;
+        if (
+          onlyLevel &&
+          p.id !== currentUser.id &&
+          !isMatchingLevel(currentUser, p, activeSeason)
+        ) {
+          return false;
+        }
+        if (playstyleFilter && p.playstyle !== playstyleFilter) return false;
+        if (
+          onlyEnglish &&
+          p.language !== 'Englisch' &&
+          p.language !== 'Beides'
+        ) {
+          return false;
+        }
+
+        if (!q) return true;
+        const tierLabel = connectRatings[p.id]?.tier?.label || '';
+        const haystack =
+          `${p.nickname} ${p.firstName} ${p.lastName} ${p.sttClass || ''} ${
+            p.language || ''
+          } ${p.playstyle || ''} ${tierLabel}`.toLowerCase();
+        return haystack.includes(q);
+      })
+      .sort((a, b) => {
+        const eloA = connectRatings[a.id]?.elo || 0;
+        const eloB = connectRatings[b.id]?.elo || 0;
+        if (eloB !== eloA) return eloB - eloA;
+        return a.nickname.localeCompare(b.nickname);
+      });
+  }, [
+    players,
+    search,
+    onlyLive,
+    onlyLevel,
+    playstyleFilter,
+    onlyEnglish,
+    livePlayerIds,
+    currentUser,
+    activeSeason,
+    connectRatings,
+  ]);
+
+  const activeFilterCount =
+    (onlyLive ? 1 : 0) +
+    (onlyLevel ? 1 : 0) +
+    (playstyleFilter ? 1 : 0) +
+    (onlyEnglish ? 1 : 0);
+
+  const resetFilters = () => {
+    setSearch('');
+    setOnlyLive(false);
+    setOnlyLevel(false);
+    setPlaystyleFilter('');
+    setOnlyEnglish(false);
+  };
+
+  return (
+    <div className="space-y-2.5">
+      <div className="flex items-center justify-between gap-2">
+        <div>
+          <h2 className="text-xs font-black tracking-wide text-[#F3F4F6] uppercase">
+            CLUB-Rating ({sortedAndFilteredPlayers.length} Treffer)
+          </h2>
+          <p className="text-[10px] text-[#8E95A2]">
+            Filter kombinierbar · {sortedAndFilteredPlayers.length} von {players.length}{' '}
+            Spielern
+          </p>
+        </div>
+
+        <div className="flex items-center gap-1.5">
+          <button
+            type="button"
+            onClick={() => onOpenRecordConnectMatch('')}
+            className="rounded-lg bg-[#6FB3A2] px-2.5 py-1.5 text-[11px] font-black text-[#060708]"
+          >
+            + Partie eintragen
+          </button>
+          <button
+            type="button"
+            onClick={onOpenAddMember}
+            className="rounded-xl bg-[#22252C] px-3 py-2 text-xs font-bold text-[#E5E7EB]"
+          >
+            + Mitglied
+          </button>
+        </div>
+      </div>
+
+      <input
+        type="text"
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        placeholder="Spieler, Spielstil, Sprache oder Rating suchen..."
+        className="w-full rounded-lg border border-[#2B2F37] bg-[#181A1E] px-2.5 py-1.5 text-xs text-[#F3F4F6]"
+      />
+
+      {/* Kombinierbares Filter-Raster ohne horizontales Scrollen */}
+      <div className="space-y-1.5 rounded-xl border border-[#24272D] bg-[#14161A] p-2">
+        <div className="grid grid-cols-3 gap-1.5">
+          <button
+            type="button"
+            onClick={() => setOnlyLive((v) => !v)}
+            className={`rounded-lg px-2 py-1.5 text-[10px] font-bold transition ${
+              onlyLive
+                ? 'bg-[#6FB3A2] text-[#060708]'
+                : 'bg-[#181A1E] text-[#9CA3AF] ring-1 ring-[#24272D]'
+            }`}
+          >
+            {onlyLive ? '✓ ' : ''}LIVE ({liveCheckins.length})
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setOnlyLevel((v) => !v)}
+            className={`rounded-lg px-2 py-1.5 text-[10px] font-bold transition ${
+              onlyLevel
+                ? 'bg-[#6FB3A2] text-[#060708]'
+                : 'bg-[#181A1E] text-[#9CA3AF] ring-1 ring-[#24272D]'
+            }`}
+          >
+            {onlyLevel ? '✓ ' : ''}Mein Niveau
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setOnlyEnglish((v) => !v)}
+            className={`rounded-lg px-2 py-1.5 text-[10px] font-bold transition ${
+              onlyEnglish
+                ? 'bg-[#6FB3A2] text-[#060708]'
+                : 'bg-[#181A1E] text-[#9CA3AF] ring-1 ring-[#24272D]'
+            }`}
+          >
+            {onlyEnglish ? '✓ ' : ''}EN / Beides
+          </button>
+        </div>
+
+        <div className="grid grid-cols-3 gap-1.5">
+          {PLAYSTYLE_OPTIONS.map((opt) => {
+            const active = playstyleFilter === opt.value;
+            return (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => setPlaystyleFilter(active ? '' : opt.value)}
+                className={`rounded-lg px-2 py-1.5 text-[10px] font-bold transition ${
+                  active
+                    ? 'bg-[#6FB3A2] text-[#060708]'
+                    : 'bg-[#181A1E] text-[#9CA3AF] ring-1 ring-[#24272D]'
+                }`}
+              >
+                {active ? '✓ ' : ''}
+                {opt.label}
+              </button>
+            );
+          })}
+        </div>
+
+        {(activeFilterCount > 0 || search.trim()) && (
+          <div className="flex items-center justify-between border-t border-[#22252B] pt-1.5 text-[10px]">
+            <span className="font-semibold text-[#A8D0B1]">
+              {sortedAndFilteredPlayers.length} Treffer aktiv
+            </span>
+            <button
+              type="button"
+              onClick={resetFilters}
+              className="font-bold text-[#E6C79C] underline"
+            >
+              Filter zurücksetzen
+            </button>
+          </div>
+        )}
+      </div>
+
+      <div className="divide-y divide-[#202329] overflow-hidden rounded-xl border border-[#24272D] bg-[#181A1E]">
+        {sortedAndFilteredPlayers.map((p, index) => {
+          const isLive = livePlayerIds.has(p.id);
+          const isMe = p.id === currentUser.id;
+          const rating = connectRatings[p.id];
+          const tier = rating?.tier;
+
+          return (
+            <div
+              key={p.id}
+              className={`flex items-center justify-between gap-2 px-2.5 py-1.5 text-xs ${
+                isMe ? 'bg-[#152622]/60' : 'hover:bg-[#1D2025]'
+              }`}
+            >
+              <button
+                type="button"
+                onClick={() => onSelectMember?.(p.id)}
+                className="flex min-w-0 flex-1 items-center gap-1.5 text-left transition hover:opacity-85"
+              >
+                <span className="w-4 shrink-0 text-right text-[10px] font-black text-[#6B7280]">
+                  {index + 1}
+                </span>
+
+                <PlayerAvatar
+                  player={p}
+                  sizeClass="h-5 w-5 text-[9px]"
+                  isConnectAccent={p.connectOnly}
+                />
+
+                <span className="truncate font-bold text-[#F3F4F6] underline decoration-[#6FB3A2]/45 underline-offset-2">
+                  {p.nickname}
+                </span>
+
+                {isLive && (
+                  <span
+                    title="Jetzt LIVE in der Halle"
+                    className="h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-400"
+                  />
+                )}
+
+                {p.sttClass && (
+                  <span className="shrink-0 text-[10px] text-[#6B7280]">
+                    {p.sttClass}
+                  </span>
+                )}
+
+                {p.playstyle && (
+                  <span className="hidden shrink-0 rounded bg-[#131417] px-1.5 py-0.5 text-[9px] font-semibold text-[#F4ECC2] sm:inline">
+                    {p.playstyle}
+                  </span>
+                )}
+
+                <span className="shrink-0 rounded bg-[#131417] px-1 py-0.5 text-[9px] font-bold text-[#A8D0B1]">
+                  {getLanguageShortLabel(p.language)}
+                </span>
+              </button>
+
+              <div className="flex shrink-0 items-center gap-1.5">
+                {rating && rating.played > 0 && (
+                  <span className="hidden text-[10px] text-[#6B7280] sm:inline">
+                    {rating.wins}/{rating.losses}
+                  </span>
+                )}
+
+                {tier && (
+                  <span
+                    className={`rounded border px-1.5 py-0.5 text-[10px] font-bold leading-none ${tier.badgeClass}`}
+                    title={`${tier.label} · ${rating.elo} Punkte`}
+                  >
+                    {tier.symbol} {rating.elo}
+                  </span>
+                )}
+
+                {!isMe ? (
+                  <div className="flex items-center gap-1">
+                    <WhatsAppActionButton
+                      phone={p.phone}
+                      message={getContextWhatsAppMessage('rating_directory', currentUser, p)}
+                      label=""
+                      compact
+                      title={`${p.nickname} per WhatsApp anschreiben`}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => onOpenRecordConnectMatch(p.id)}
+                      title={`Spontane Partie mit ${p.nickname} eintragen`}
+                      className="rounded bg-[#6FB3A2] px-2 py-0.5 text-[10px] font-black text-[#060708]"
+                    >
+                      +
+                    </button>
+                  </div>
+                ) : (
+                  <span className="w-6 text-center text-[10px] font-bold text-[#6FB3A2]">
+                    Du
+                  </span>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ============================================================================
+// WEITERE TABS & MODALS (LIGA, HALLENTAGE, PARTIEN, ADMIN)
+// ============================================================================
+
 function LeagueMatchesTab({
   season,
   currentUser,
@@ -4410,154 +5345,154 @@ function LeagueMatchesTab({
   daysRemaining,
   onSelectMatchToRecord,
 }) {
-  const userLeague = season.leagues.find((l) =>
-    l.playerIds.includes(currentUser.id)
-  );
-  const isPaused = season.pausedPlayerIds.includes(currentUser.id);
+  const [showAllLeagues, setShowAllLeagues] = useState(false);
 
-  if (isPaused || !userLeague) {
-    return (
-      <div className="rounded-2xl border border-[#24272D] bg-[#181A1E] p-5 text-center">
-        <div className="text-sm font-bold text-[#F3F4F6]">
-          Du bist im {season.label} in keiner Liga eingeteilt
-        </div>
-        <p className="mt-1 text-xs text-[#9CA3AF]">
-          Nutze den CLUB-Bereich für freie Spiele &amp; Hallen-Check-ins oder melde dich unter «Monats-Status» für die nächste Monatsliga an.
-        </p>
-      </div>
+  const visibleMatches = useMemo(() => {
+    if (showAllLeagues) return season.matches;
+    return season.matches.filter(
+      (m) => m.player1Id === currentUser.id || m.player2Id === currentUser.id
     );
-  }
+  }, [season, currentUser.id, showAllLeagues]);
 
-  const myMatches = season.matches.filter(
-    (m) =>
-      m.leagueId === userLeague.id &&
-      (m.player1Id === currentUser.id || m.player2Id === currentUser.id)
-  );
+  const leaguesById = useMemo(() => {
+    const map = {};
+    season.leagues.forEach((l) => {
+      map[l.id] = l;
+    });
+    return map;
+  }, [season]);
 
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-xs font-black tracking-wide text-[#DE754B] uppercase">
-            {userLeague.name} · {season.label}
-          </h2>
-          <p className="text-[11px] text-[#8E95A2]">
-            {myMatches.filter((m) => m.score1 !== null).length} von{' '}
-            {myMatches.length} Partien gespielt
-          </p>
-        </div>
+        <span className="text-xs font-bold text-[#9CA3AF]">
+          {showAllLeagues ? 'Alle Spiele im Monat' : 'Deine Liga-Spiele'} (
+          {visibleMatches.length})
+        </span>
+        <button
+          type="button"
+          onClick={() => setShowAllLeagues((v) => !v)}
+          className="text-xs font-bold text-[#DE754B] underline"
+        >
+          {showAllLeagues ? 'Nur meine Spiele' : 'Alle Ligen zeigen'}
+        </button>
       </div>
 
-      <div className="space-y-2.5">
-        {myMatches.map((m) => {
-          const isP1 = m.player1Id === currentUser.id;
-          const opponentId = isP1 ? m.player2Id : m.player1Id;
-          const opponent = playersById[opponentId];
-          const isPlayed = m.score1 !== null && m.score2 !== null;
-          const myScore = isP1 ? m.score1 : m.score2;
-          const oppScore = isP1 ? m.score2 : m.score1;
-          const iWon = isPlayed && myScore > oppScore;
+      {visibleMatches.length === 0 ? (
+        <div className="rounded-2xl border border-[#24272D] bg-[#181A1E] p-5 text-center text-xs text-[#9CA3AF]">
+          Keine Liga-Spiele in dieser Ansicht vorhanden.
+        </div>
+      ) : (
+        <div className="space-y-2.5">
+          {visibleMatches.map((m) => {
+            const p1 = playersById[m.player1Id];
+            const p2 = playersById[m.player2Id];
+            const league = leaguesById[m.leagueId];
+            const isPlayed = m.score1 !== null && m.score2 !== null;
+            const opponent = m.player1Id === currentUser.id ? p2 : p1;
+            const waText = opponent
+              ? getContextWhatsAppMessage('league_match', currentUser, opponent, {
+                  leagueName: league?.name,
+                  seasonLabel: season.label,
+                })
+              : '';
+            const waReminderText = opponent
+              ? getContextWhatsAppMessage('league_reminder', currentUser, opponent, {
+                  seasonLabel: season.label,
+                  daysRemaining,
+                })
+              : '';
 
-          return (
-            <div
-              key={m.id}
-              className="rounded-2xl border border-[#24272D] bg-[#181A1E] p-3.5"
-            >
-              <div className="flex items-center justify-between gap-2">
-                <div className="flex min-w-0 items-center gap-2.5">
-                  <PlayerAvatar
-                    player={opponent}
-                    sizeClass="h-9 w-9 text-xs"
-                    isConnectAccent={opponent?.connectOnly}
-                  />
-                  <div className="min-w-0">
-                    <div className="truncate text-xs font-black text-[#F3F4F6]">
-                      vs. {opponent?.nickname}
+            return (
+              <div
+                key={m.id}
+                className="rounded-2xl border border-[#24272D] bg-[#181A1E] p-3.5"
+              >
+                <div className="flex items-center justify-between text-[11px] text-[#8E95A2]">
+                  <span className="font-bold text-[#DE754B]">{league?.name}</span>
+                  <span>{isPlayed ? 'Gespielt' : 'Offen'}</span>
+                </div>
+
+                <div className="mt-2 flex items-center justify-between gap-2">
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate text-sm font-extrabold text-[#F3F4F6]">
+                      {p1?.nickname}
                     </div>
                     <div className="mt-0.5">
                       <PlayerBadge
-                        player={opponent}
+                        player={p1}
                         season={season}
-                        ratingInfo={connectRatings[opponent?.id]}
+                        ratingInfo={connectRatings[p1?.id]}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="shrink-0 rounded-xl bg-[#111215] px-3 py-1.5 text-center ring-1 ring-[#2A2D35]">
+                    {isPlayed ? (
+                      <span className="text-sm font-black tracking-wider text-[#F4ECC2]">
+                        {m.score1} : {m.score2}
+                      </span>
+                    ) : (
+                      <span className="text-xs font-bold text-[#6B7280]">vs</span>
+                    )}
+                  </div>
+
+                  <div className="min-w-0 flex-1 text-right">
+                    <div className="truncate text-sm font-extrabold text-[#F3F4F6]">
+                      {p2?.nickname}
+                    </div>
+                    <div className="mt-0.5 flex justify-end">
+                      <PlayerBadge
+                        player={p2}
+                        season={season}
+                        ratingInfo={connectRatings[p2?.id]}
                       />
                     </div>
                   </div>
                 </div>
 
-                {isPlayed ? (
-                  <div className="flex items-center gap-2">
-                    <span
-                      className={`rounded-lg px-2.5 py-1 text-xs font-black ${
-                        iWon
-                          ? 'bg-emerald-500/20 text-emerald-300'
-                          : 'bg-rose-500/20 text-rose-300'
-                      }`}
-                    >
-                      {myScore}:{oppScore}
-                    </span>
-                    {season.status === 'active' && (
-                      <button
-                        type="button"
-                        onClick={() => onSelectMatchToRecord(m)}
-                        className="rounded-lg bg-[#252830] px-2 py-1 text-[10px] font-bold text-[#9CA3AF]"
-                      >
-                        Ändern
-                      </button>
-                    )}
-                  </div>
-                ) : (
-                  <span className="rounded-full bg-[#2C1912] px-2.5 py-0.5 text-[10px] font-bold text-[#F4ECC2]">
-                    Offen
-                  </span>
-                )}
-              </div>
-
-              {!isPlayed && season.status === 'active' && (
-                <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-[#22252B] pt-2.5">
-                  <WhatsAppActionButton
-                    phone={opponent?.phone}
-                    message={getContextWhatsAppMessage(
-                      isEndOfMonthReminderWindow
-                        ? 'league_reminder'
-                        : 'league_match',
-                      currentUser,
-                      opponent,
-                      {
-                        leagueName: userLeague.name,
-                        seasonLabel: season.label,
-                        daysRemaining,
-                      }
-                    )}
-                    label={
-                      isEndOfMonthReminderWindow
-                        ? 'Erinnerung senden'
-                        : 'Termin per WhatsApp'
-                    }
-                    compact
-                  />
+                <div className="mt-3 flex flex-wrap items-center justify-end gap-2">
+                  {!isPlayed && opponent && opponent.id !== currentUser.id && (
+                    <>
+                      <WhatsAppActionButton
+                        phone={opponent.phone}
+                        message={waText}
+                        label="WhatsApp Termin"
+                      />
+                      {isEndOfMonthReminderWindow && (
+                        <a
+                          href={buildWhatsAppLink(opponent.phone, waReminderText)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="rounded-lg bg-amber-500/20 px-2.5 py-1.5 text-[11px] font-bold text-amber-300 ring-1 ring-amber-500/40"
+                        >
+                          ⏰ Erinnern
+                        </a>
+                      )}
+                    </>
+                  )}
                   <button
                     type="button"
                     onClick={() => onSelectMatchToRecord(m)}
-                    className="rounded-lg bg-[#DE754B] px-3 py-1.5 text-[11px] font-black text-[#060708]"
+                    className={`rounded-lg px-3 py-1.5 text-[11px] font-black transition ${
+                      isPlayed
+                        ? 'bg-[#252830] text-[#D1D5DB] hover:bg-[#30343E]'
+                        : 'bg-[#DE754B] text-[#060708] hover:bg-[#E78760]'
+                    }`}
                   >
-                    Resultat eintragen
+                    {isPlayed ? 'Korrigieren' : 'Resultat eintragen'}
                   </button>
                 </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
 
-function LeagueStandingsTab({
-  season,
-  playersById,
-  currentUser,
-  connectRatings,
-}) {
+function LeagueStandingsTab({ season, playersById, currentUser, connectRatings }) {
   const sortedLeagues = [...season.leagues].sort((a, b) => a.tier - b.tier);
 
   return (
@@ -4572,73 +5507,85 @@ function LeagueStandingsTab({
             key={league.id}
             className="overflow-hidden rounded-2xl border border-[#24272D] bg-[#181A1E]"
           >
-            <div className="flex items-center justify-between border-b border-[#24272D] bg-[#131417] px-3.5 py-2.5">
-              <span className="text-xs font-black text-[#DE754B] uppercase">
+            <div className="flex items-center justify-between border-b border-[#24272D] bg-[#1D2025] px-3.5 py-2.5">
+              <span className="text-xs font-black tracking-wide text-[#DE754B] uppercase">
                 {league.name}
               </span>
-              <span className="text-[10px] text-[#8E95A2]">
-                {hasUpper && '▲ Aufstieg'} {hasUpper && hasLower && '·'}{' '}
-                {hasLower && '▼ Abstieg'}
+              <span className="text-[11px] text-[#8E95A2]">
+                {hasUpper ? '↑ Aufstieg' : ''} {hasUpper && hasLower ? '·' : ''}{' '}
+                {hasLower ? '↓ Abstieg' : ''}
               </span>
             </div>
 
             <div className="divide-y divide-[#22252B]">
-              {rows.map((row, rowIdx) => {
-                const isMe = row.playerId === currentUser.id;
-                const isPromo = hasUpper && rowIdx === 0 && rows.length >= 2;
-                const isReleg =
-                  hasLower && rowIdx === rows.length - 1 && rows.length >= 2;
+              {rows.map((r, pos) => {
+                const isPromotion = hasUpper && pos === 0;
+                const isRelegation = hasLower && pos === rows.length - 1 && rows.length > 1;
+                const isMe = r.playerId === currentUser.id;
 
                 return (
                   <div
-                    key={row.playerId}
-                    className={`flex items-center justify-between gap-2 px-3.5 py-2.5 text-xs ${
-                      isMe ? 'bg-[#291711]/55' : ''
+                    key={r.playerId}
+                    className={`flex items-center justify-between gap-2 px-3.5 py-2.5 ${
+                      isMe ? 'bg-[#291711]' : ''
                     }`}
                   >
                     <div className="flex min-w-0 items-center gap-2.5">
                       <span
-                        className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md text-[10px] font-black ${
-                          isPromo
+                        className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-xs font-black ${
+                          isPromotion
                             ? 'bg-emerald-500/20 text-emerald-300'
-                            : isReleg
+                            : isRelegation
                             ? 'bg-rose-500/20 text-rose-300'
-                            : 'bg-[#131417] text-[#8E95A2]'
+                            : 'bg-[#131417] text-[#9CA3AF]'
                         }`}
                       >
-                        {rowIdx + 1}
+                        {pos + 1}
                       </span>
-                      <PlayerAvatar
-                        player={row.player}
-                        sizeClass="h-7 w-7 text-[10px]"
-                      />
                       <div className="min-w-0">
-                        <div className="truncate font-bold text-[#F3F4F6]">
-                          {row.player?.nickname}
+                        <div className="truncate text-xs font-bold text-[#F3F4F6]">
+                          {r.player?.nickname}{' '}
+                          {isPromotion && (
+                            <span className="text-[10px] text-emerald-400">↑</span>
+                          )}
+                          {isRelegation && (
+                            <span className="text-[10px] text-rose-400">↓</span>
+                          )}
                         </div>
-                        <div className="text-[10px] text-[#8E95A2]">
-                          {row.played} Sp. · Sätze {row.setsWon}:{row.setsLost}
+                        <div className="mt-0.5">
+                          <PlayerBadge
+                            player={r.player}
+                            season={season}
+                            ratingInfo={connectRatings[r.playerId]}
+                          />
                         </div>
                       </div>
                     </div>
 
                     <div className="flex shrink-0 items-center gap-2">
-                      {!isMe && row.player && (
+                      <div className="text-right">
+                        <div className="text-[11px] font-semibold text-[#9CA3AF]">
+                          {r.setsWon}:{r.setsLost}
+                        </div>
+                        <div className="text-[10px] text-[#6B7280]">{r.played} Sp.</div>
+                      </div>
+                      <div className="w-8 rounded-lg bg-[#111215] py-1 text-center text-xs font-black text-[#F4ECC2]">
+                        {r.points}
+                      </div>
+                      {!isMe && r.player && (
                         <WhatsAppActionButton
-                          phone={row.player.phone}
+                          phone={r.player.phone}
                           message={getContextWhatsAppMessage(
                             'league_table',
                             currentUser,
-                            row.player,
+                            r.player,
                             { leagueName: league.name }
                           )}
                           label=""
                           compact
+                          title={`${r.player.nickname} per WhatsApp anschreiben`}
                         />
                       )}
-                      <span className="rounded-lg bg-[#131417] px-2.5 py-1 text-xs font-black text-[#F4ECC2]">
-                        {row.points} Pkt
-                      </span>
                     </div>
                   </div>
                 );
@@ -4655,1162 +5602,92 @@ function LeagueStatusTab({
   season,
   currentUser,
   players,
+  connectRatings,
   isCurrentUserPaused,
   onTogglePause,
   onOpenAddMember,
 }) {
-  const pausedPlayers = season.pausedPlayerIds
-    .map((id) => players.find((p) => p.id === id))
-    .filter(Boolean);
+  const pausedPlayers = players.filter((p) => season.pausedPlayerIds.includes(p.id));
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       <div className="rounded-2xl border border-[#24272D] bg-[#181A1E] p-4">
-        <div className="text-xs font-black text-[#F3F4F6]">
-          Dein Liga-Status ({season.label})
+        <div className="text-xs font-black tracking-wide text-[#DE754B] uppercase">
+          Deine Monats-Teilnahme ({season.label})
         </div>
-        <p className="mt-1 text-xs text-[#9CA3AF]">
+        <p className="mt-1.5 text-xs text-[#D1D5DB]">
           {isCurrentUserPaused
-            ? 'Du pausierst diesen Monat in der Monatsliga. Du kannst jederzeit wieder einsteigen.'
-            : 'Du bist aktuell aktiv in der Monatsliga eingeteilt.'}
+            ? 'Du bist aktuell für diesen Monat pausiert. Du kannst jederzeit für den nächsten Monat wieder einsteigen.'
+            : 'Du spielst diesen Monat aktiv in der Liga mit.'}
         </p>
+
         <button
           type="button"
           onClick={onTogglePause}
-          className={`mt-3 w-full rounded-xl py-2.5 text-xs font-black ${
+          className={`mt-3 w-full rounded-xl py-2.5 text-xs font-black transition ${
             isCurrentUserPaused
               ? 'bg-[#DE754B] text-[#060708]'
-              : 'border border-[#2E323B] bg-[#131417] text-[#F3F4F6]'
+              : 'bg-[#252830] text-[#F3F4F6] hover:bg-[#30343E]'
           }`}
         >
           {isCurrentUserPaused
-            ? 'Wieder für Monatsliga anmelden'
-            : 'Für nächsten Monat pausieren'}
+            ? 'Jetzt wieder aktiv melden'
+            : 'Diesen Monat pausieren (Abmelden)'}
         </button>
       </div>
 
       <div className="rounded-2xl border border-[#24272D] bg-[#181A1E] p-4">
         <div className="flex items-center justify-between">
-          <div className="text-xs font-black text-[#F3F4F6]">
-            Aktuell pausiert / Nur CLUB ({pausedPlayers.length})
-          </div>
+          <span className="text-xs font-bold text-[#9CA3AF]">
+            Pausierte / Nur-CLUB Mitglieder ({pausedPlayers.length})
+          </span>
           <button
             type="button"
             onClick={onOpenAddMember}
-            className="rounded-lg bg-[#252830] px-2.5 py-1 text-[11px] font-bold text-[#A8D0B1]"
+            className="text-xs font-bold text-[#DE754B] underline"
           >
-            + Mitglied
+            + Neues Mitglied
           </button>
         </div>
 
-        <div className="mt-2.5 space-y-2">
-          {pausedPlayers.map((p) => (
-            <div
-              key={p.id}
-              className="flex items-center justify-between rounded-xl bg-[#131417] px-3 py-2 text-xs"
-            >
-              <div className="flex items-center gap-2">
-                <PlayerAvatar
-                  player={p}
-                  sizeClass="h-7 w-7 text-[10px]"
-                  isConnectAccent={p.connectOnly}
-                />
-                <span className="font-bold text-[#F3F4F6]">{p.nickname}</span>
-              </div>
-              {p.id !== currentUser.id && (
-                <WhatsAppActionButton
-                  phone={p.phone}
-                  message={getContextWhatsAppMessage(
-                    'league_paused',
-                    currentUser,
-                    p
-                  )}
-                  label="Match anfragen"
-                  compact
-                />
-              )}
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function ConnectOverviewTab({
-  currentUser,
-  players,
-  playersById,
-  activeSeason,
-  connectRatings,
-  liveCheckins,
-  sessions,
-  challenges,
-  onOneTapCheckIn,
-  onUpdateMyLiveCheckin,
-  onExtendMyLiveCheckin,
-  onToggleComingToo,
-  onCheckOut,
-  onToggleJoinSession,
-  onOpenChallenge,
-  onRespondChallenge,
-  onOpenCreateSession,
-  onSelectMember,
-  onNavigateTab,
-}) {
-  const [onlyMyLevel, setOnlyMyLevel] = useState(false);
-  const [editingMyLive, setEditingMyLive] = useState(false);
-  const [customNoteInput, setCustomNoteInput] = useState('');
-
-  const myLiveEntry = liveCheckins.find((c) => c.playerId === currentUser.id);
-
-  const visibleChallenges = useMemo(() => {
-    return challenges.filter((c) => {
-      const isForMeOrAll =
-        c.targetId === null ||
-        c.targetId === currentUser.id ||
-        c.challengerId === currentUser.id;
-      if (!isForMeOrAll) return false;
-
-      if (
-        onlyMyLevel &&
-        !isMatchingLevel(currentUser, playersById[c.challengerId], activeSeason)
-      ) {
-        return false;
-      }
-
-      return true;
-    });
-  }, [challenges, onlyMyLevel, currentUser, playersById, activeSeason]);
-
-  const visibleSessions = useMemo(() => {
-    if (!onlyMyLevel) return sessions;
-    return sessions.filter((s) =>
-      isMatchingLevel(currentUser, playersById[s.authorId], activeSeason)
-    );
-  }, [sessions, onlyMyLevel, currentUser, playersById, activeSeason]);
-
-  const newMembers = useMemo(
-    () => players.filter((p) => p.isNewMember),
-    [players]
-  );
-
-  return (
-    <div className="space-y-4">
-      <div
-        id="club-live-section"
-        className="rounded-2xl border border-[#24272D] bg-[#14161A] p-3"
-      >
-        <div className="flex items-center justify-between gap-2">
-          <div>
-            <h2 className="text-xs font-black tracking-wide text-[#F3F4F6] uppercase">
-              Gerade LIVE in der Halle ({liveCheckins.length})
-            </h2>
-            <p className="text-[10px] text-[#8E95A2]">
-              Antippen für Player-Card oder direkt dazukommen
-            </p>
-          </div>
-          {!myLiveEntry && (
-            <button
-              type="button"
-              onClick={onOneTapCheckIn}
-              className="rounded-lg bg-[#6FB3A2] px-2.5 py-1.5 text-[11px] font-black text-[#060708]"
-            >
-              + Einchecken
-            </button>
-          )}
-        </div>
-
-        {liveCheckins.length === 0 ? (
-          <div className="mt-2.5 rounded-xl border border-[#22252B] bg-[#0F1114] p-3 text-center text-xs text-[#8E95A2]">
-            Aktuell ist noch niemand eingecheckt. Mach den Anfang!
-          </div>
-        ) : (
-          <div className="mt-2.5 grid grid-cols-2 gap-2">
-            {liveCheckins.map((item) => {
-              const p = playersById[item.playerId];
-              if (!p) return null;
-              const isMe = p.id === currentUser.id;
-              const league = activeSeason.leagues.find((l) =>
-                l.playerIds.includes(p.id)
-              );
-              const rating = connectRatings[p.id];
-              const comingIds = item.comingTooIds || [];
-              const iAmComing = comingIds.includes(currentUser.id);
-              const comingNames = comingIds
-                .map((id) => playersById[id]?.nickname)
-                .filter(Boolean);
-
-              return (
-                <div
-                  key={item.id}
-                  className={`flex flex-col justify-between rounded-xl border p-2.5 ${
-                    isMe && editingMyLive
-                      ? 'col-span-2 border-[#6FB3A2]/50 bg-[#152622]/40'
-                      : isMe
-                      ? 'border-[#6FB3A2]/45 bg-[#152622]/30'
-                      : 'border-[#24272D] bg-[#0F1114]'
-                  }`}
-                >
-                  <div>
-                    <div className="flex items-start justify-between gap-1.5">
-                      <button
-                        type="button"
-                        onClick={() => onSelectMember?.(p.id)}
-                        className="flex min-w-0 items-center gap-2 text-left hover:opacity-85"
-                      >
-                        <PlayerAvatar
-                          player={p}
-                          sizeClass="h-7 w-7 text-[10px]"
-                          isConnectAccent={p.connectOnly}
-                        />
-                        <div className="min-w-0">
-                          <div className="truncate text-xs font-black text-[#F3F4F6]">
-                            {p.nickname}
-                          </div>
-                          <div className="text-[10px] text-[#8E95A2]">
-                            {item.durationLabel}
-                          </div>
-                        </div>
-                      </button>
-
-                      <span className="shrink-0 rounded bg-[#181A1E] px-1.5 py-0.5 text-[9px] font-bold text-[#A8D0B1]">
-                        {league
-                          ? league.name
-                          : `${rating?.tier?.symbol || '○'} ${
-                              rating?.elo || 1200
-                            }`}
-                      </span>
-                    </div>
-
-                    {item.note && (
-                      <div className="mt-1.5 line-clamp-1 text-[10px] text-[#9CA3AF]">
-                        {item.note.replace(/^[^\w\s]+\s*/, '')}
-                      </div>
-                    )}
-
-                    {comingNames.length > 0 && (
-                      <div className="mt-1 truncate text-[10px] font-semibold text-[#A8D0B1]">
-                        Bin dabei: {comingNames.join(', ')}
-                      </div>
-                    )}
-                  </div>
-
-                  {isMe ? (
-                    <div className="mt-2 space-y-2 border-t border-[#22252B] pt-2">
-                      <div className="flex items-center gap-1">
-                        <button
-                          type="button"
-                          onClick={onExtendMyLiveCheckin}
-                          className="flex-1 rounded-lg bg-[#181A1E] py-1 text-[10px] font-bold text-[#A8D0B1] ring-1 ring-[#2B2F37]"
-                        >
-                          +30m
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setCustomNoteInput(item.note || '');
-                            setEditingMyLive((v) => !v);
-                          }}
-                          className="flex-1 rounded-lg bg-[#181A1E] py-1 text-[10px] font-bold text-[#F3F4F6] ring-1 ring-[#2B2F37]"
-                        >
-                          Anpassen
-                        </button>
-                        <button
-                          type="button"
-                          onClick={onCheckOut}
-                          className="rounded-lg bg-[#181A1E] px-2 py-1 text-[10px] font-bold text-rose-300 ring-1 ring-[#2B2F37]"
-                        >
-                          Out
-                        </button>
-                      </div>
-
-                      {editingMyLive && (
-                        <div className="space-y-2 rounded-lg bg-[#0F1114] p-2">
-                          <div className="grid grid-cols-4 gap-1">
-                            {LIVE_DURATION_OPTIONS.map((opt) => (
-                              <button
-                                key={opt.id}
-                                type="button"
-                                onClick={() =>
-                                  onUpdateMyLiveCheckin({
-                                    minutes: opt.minutes,
-                                  })
-                                }
-                                className="rounded bg-[#181A1E] py-1 text-[10px] font-bold text-[#F4ECC2] hover:bg-[#6FB3A2] hover:text-[#060708]"
-                              >
-                                {opt.label}
-                              </button>
-                            ))}
-                          </div>
-                          <div className="flex flex-wrap gap-1">
-                            {LIVE_MOOD_PRESETS.map((preset) => (
-                              <button
-                                key={preset}
-                                type="button"
-                                onClick={() => {
-                                  onUpdateMyLiveCheckin({ note: preset });
-                                  setEditingMyLive(false);
-                                }}
-                                className="rounded bg-[#181A1E] px-2 py-1 text-[10px] text-[#D1D5DB] hover:bg-[#6FB3A2] hover:text-[#060708]"
-                              >
-                                {preset}
-                              </button>
-                            ))}
-                          </div>
-                          <div className="flex gap-1">
-                            <input
-                              type="text"
-                              value={customNoteInput}
-                              onChange={(e) =>
-                                setCustomNoteInput(e.target.value)
-                              }
-                              placeholder="Eigene Notiz..."
-                              className="min-w-0 flex-1 rounded bg-[#181A1E] px-2 py-1 text-[11px] text-[#F3F4F6]"
-                            />
-                            <button
-                              type="button"
-                              onClick={() => {
-                                onUpdateMyLiveCheckin({
-                                  note: customNoteInput.trim(),
-                                });
-                                setEditingMyLive(false);
-                              }}
-                              className="rounded bg-[#6FB3A2] px-2.5 py-1 text-[10px] font-black text-[#060708]"
-                            >
-                              OK
-                            </button>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="mt-2 flex items-center gap-1 border-t border-[#22252B] pt-2">
-                      <button
-                        type="button"
-                        onClick={() => onToggleComingToo(item.id)}
-                        className={`flex-1 rounded-lg py-1 text-[10px] font-bold transition ${
-                          iAmComing
-                            ? 'bg-[#152622] text-[#A8D0B1] ring-1 ring-[#6FB3A2]/50'
-                            : 'bg-[#181A1E] text-[#D1D5DB] ring-1 ring-[#2B2F37]'
-                        }`}
-                      >
-                        {iAmComing ? 'Dabei ✓' : 'Komme auch'}
-                      </button>
-                      <WhatsAppActionButton
-                        phone={p.phone}
-                        message={getContextWhatsAppMessage(
-                          'live_hall',
-                          currentUser,
-                          p,
-                          { durationLabel: item.durationLabel }
-                        )}
-                        label=""
-                        compact
-                      />
-                      <button
-                        type="button"
-                        onClick={() => onOpenChallenge(p.id)}
-                        className="rounded-lg bg-[#181A1E] px-2 py-1 text-[10px] font-bold text-[#F4ECC2] ring-1 ring-[#2B2F37]"
-                      >
-                        Duell
-                      </button>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
-
-      <div className="rounded-2xl border border-[#24272D] bg-[#14161A] p-3">
-        <div className="flex items-center justify-between gap-2">
-          <h2 className="text-xs font-black tracking-wide text-[#F3F4F6] uppercase">
-            Pinnwand ({visibleChallenges.length + visibleSessions.length})
-          </h2>
-
-          <div className="flex items-center gap-1.5">
-            <button
-              type="button"
-              onClick={() => setOnlyMyLevel((v) => !v)}
-              className={`rounded-lg px-2 py-1 text-[10px] font-bold transition ${
-                onlyMyLevel
-                  ? 'bg-[#6FB3A2] text-[#060708]'
-                  : 'bg-[#0F1114] text-[#9CA3AF] ring-1 ring-[#2B2F37]'
-              }`}
-            >
-              Mein Niveau
-            </button>
-            <button
-              type="button"
-              onClick={() => onOpenCreateSession('announcement')}
-              className="rounded-lg bg-[#0F1114] px-2 py-1 text-[10px] font-bold text-[#A8D0B1] ring-1 ring-[#2B2F37]"
-            >
-              + Post
-            </button>
-          </div>
-        </div>
-
-        <div className="mt-2 space-y-1.5">
-          {visibleChallenges.map((ch) => {
-            const challenger = playersById[ch.challengerId];
-            const target = ch.targetId ? playersById[ch.targetId] : null;
-            if (!challenger) return null;
-            const canRespond =
-              ch.status === 'open' &&
-              (ch.targetId === currentUser.id ||
-                (ch.targetId === null && ch.challengerId !== currentUser.id));
-
-            return (
-              <div
-                key={ch.id}
-                className="flex items-center justify-between gap-2 rounded-xl border border-[#DE754B]/30 bg-[#0F1114] px-2.5 py-2"
-              >
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-1.5 text-[11px]">
-                    <span className="font-black text-[#DE754B]">⚡</span>
-                    <button
-                      type="button"
-                      onClick={() => onSelectMember?.(challenger.id)}
-                      className="truncate font-black text-[#F3F4F6] hover:underline"
-                    >
-                      {challenger.nickname}
-                    </button>
-                    <span className="truncate text-[#8E95A2]">
-                      → {target ? target.nickname : 'Alle'} · {ch.format}
-                    </span>
-                  </div>
-                  <div className="mt-0.5 truncate text-[10px] text-[#9CA3AF]">
-                    {ch.whenLabel}
-                    {ch.note ? ` · ${ch.note}` : ''}
-                  </div>
-                </div>
-
-                <div className="flex shrink-0 items-center gap-1">
-                  {canRespond ? (
-                    <>
-                      <button
-                        type="button"
-                        onClick={() => onRespondChallenge(ch.id, 'accepted')}
-                        className="rounded bg-emerald-500/20 px-2 py-1 text-[10px] font-black text-emerald-300"
-                      >
-                        ✓
-                      </button>
-                      {ch.targetId === currentUser.id && (
-                        <button
-                          type="button"
-                          onClick={() => onRespondChallenge(ch.id, 'declined')}
-                          className="rounded bg-rose-500/20 px-2 py-1 text-[10px] font-black text-rose-300"
-                        >
-                          ✕
-                        </button>
-                      )}
-                    </>
-                  ) : (
-                    <span className="rounded bg-[#181A1E] px-1.5 py-0.5 text-[9px] font-bold text-[#F4ECC2]">
-                      {ch.status === 'accepted'
-                        ? 'Angenommen'
-                        : ch.status === 'declined'
-                        ? 'Abgelehnt'
-                        : 'Offen'}
-                    </span>
-                  )}
-
-                  {challenger.id !== currentUser.id && (
-                    <WhatsAppActionButton
-                      phone={challenger.phone}
-                      message={getContextWhatsAppMessage(
-                        'challenge_reply',
-                        currentUser,
-                        challenger,
-                        { format: ch.format, whenLabel: ch.whenLabel }
-                      )}
-                      label=""
-                      compact
-                    />
-                  )}
-                </div>
-              </div>
-            );
-          })}
-
-          {visibleSessions.map((s) => {
-            const author = playersById[s.authorId];
-            if (!author) return null;
-            const joined = s.joinedIds.includes(currentUser.id);
-
-            return (
-              <div
-                key={s.id}
-                className="flex items-center justify-between gap-2 rounded-xl border border-[#24272D] bg-[#0F1114] px-2.5 py-2"
-              >
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-1.5 text-[11px]">
-                    <button
-                      type="button"
-                      onClick={() => onSelectMember?.(author.id)}
-                      className="truncate font-black text-[#F3F4F6] hover:underline"
-                    >
-                      {author.nickname}
-                    </button>
-                    <span className="truncate font-semibold text-[#6FB3A2]">
-                      · {s.dateLabel}
-                    </span>
-                    <span className="shrink-0 text-[10px] text-[#8E95A2]">
-                      ({s.joinedIds.length})
-                    </span>
-                  </div>
-                  <div className="mt-0.5 truncate text-[10px] text-[#9CA3AF]">
-                    {s.note}
-                  </div>
-                </div>
-
-                <div className="flex shrink-0 items-center gap-1">
-                  <button
-                    type="button"
-                    onClick={() => onToggleJoinSession(s.id)}
-                    className={`rounded px-2 py-1 text-[10px] font-black ${
-                      joined
-                        ? 'bg-[#6FB3A2] text-[#060708]'
-                        : 'bg-[#181A1E] text-[#D1D5DB] ring-1 ring-[#2B2F37]'
-                    }`}
-                  >
-                    {joined ? 'Dabei ✓' : '+ Dabei'}
-                  </button>
-                  {author.id !== currentUser.id && (
-                    <WhatsAppActionButton
-                      phone={author.phone}
-                      message={getContextWhatsAppMessage(
-                        'session_join',
-                        currentUser,
-                        author,
-                        { dateLabel: s.dateLabel }
-                      )}
-                      label=""
-                      compact
-                    />
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {newMembers.length > 0 && (
-        <div className="rounded-2xl border border-[#24272D] bg-[#14161A] p-3">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xs font-black tracking-wide text-[#F3F4F6] uppercase">
-              Neu im Club ({newMembers.length})
-            </h2>
-            <button
-              type="button"
-              onClick={() => onNavigateTab('players')}
-              className="text-[11px] font-bold text-[#6FB3A2]"
-            >
-              Alle Spieler →
-            </button>
-          </div>
-
-          <div className="mt-2 grid grid-cols-3 gap-2">
-            {newMembers.map((m) => (
-              <div
-                key={m.id}
-                className="flex flex-col justify-between rounded-xl border border-[#24272D] bg-[#0F1114] p-2"
-              >
-                <button
-                  type="button"
-                  onClick={() => onSelectMember?.(m.id)}
-                  className="flex w-full flex-col items-center gap-1 text-center"
-                >
-                  <PlayerAvatar
-                    player={m}
-                    sizeClass="h-9 w-9 text-[10px]"
-                    isConnectAccent
-                  />
-                  <div className="w-full min-w-0">
-                    <div className="truncate text-[11px] font-black text-[#F3F4F6]">
-                      {m.nickname}
-                    </div>
-                    <div className="truncate text-[9px] text-[#8E95A2]">
-                      {m.sttClass}
-                    </div>
-                  </div>
-                </button>
-                {m.id !== currentUser.id && (
-                  <div className="mt-2 flex items-center justify-center">
-                    <WhatsAppActionButton
-                      phone={m.phone}
-                      message={getContextWhatsAppMessage(
-                        'new_member',
-                        currentUser,
-                        m
-                      )}
-                      label="Hi"
-                      compact
-                    />
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function ClubPlayersTab({
-  players,
-  currentUser,
-  activeSeason,
-  connectRatings,
-  connectMatches = [],
-  liveCheckins,
-  onOpenChallenge,
-  onSelectMember,
-}) {
-  const [search, setSearch] = useState('');
-  const [quickFilter, setQuickFilter] = useState('all');
-  const [styleTab, setStyleTab] = useState('ALL');
-  const [modeTab, setModeTab] = useState('ALL');
-  const [langTab, setLangTab] = useState('ALL');
-
-  const livePlayerIds = useMemo(
-    () => new Set(liveCheckins.map((c) => c.playerId)),
-    [liveCheckins]
-  );
-
-  const leaguePlayerIds = useMemo(() => {
-    const ids = new Set();
-    (activeSeason?.leagues || []).forEach((l) =>
-      l.playerIds.forEach((id) => ids.add(id))
-    );
-    return ids;
-  }, [activeSeason]);
-
-  const todayDayCode = useMemo(() => {
-    const jsDay = new Date().getDay();
-    return DAYS_OF_WEEK[(jsDay + 6) % 7] || 'Mi';
-  }, []);
-
-  const myScheduleDays = useMemo(() => {
-    const sched = getNormalizedHallSchedule(currentUser);
-    return new Set(
-      DAYS_OF_WEEK.filter((d) => Array.isArray(sched[d]) && sched[d].length > 0)
-    );
-  }, [currentUser]);
-
-  const { playedAgainstIds, lostLastAgainstIds } = useMemo(() => {
-    const played = new Set();
-    const lastOutcomeByOpp = {};
-    const chronological = [...(connectMatches || [])].reverse();
-
-    chronological.forEach((m) => {
-      if (m.player1Id === currentUser.id) {
-        played.add(m.player2Id);
-        lastOutcomeByOpp[m.player2Id] = m.winnerId === currentUser.id ? 'W' : 'L';
-      } else if (m.player2Id === currentUser.id) {
-        played.add(m.player1Id);
-        lastOutcomeByOpp[m.player1Id] = m.winnerId === currentUser.id ? 'W' : 'L';
-      }
-    });
-
-    const lostLast = new Set(
-      Object.entries(lastOutcomeByOpp)
-        .filter(([, outcome]) => outcome === 'L')
-        .map(([oppId]) => oppId)
-    );
-
-    return { playedAgainstIds: played, lostLastAgainstIds: lostLast };
-  }, [connectMatches, currentUser.id]);
-
-  const myElo = connectRatings[currentUser.id]?.elo || 1200;
-
-  const rankedPlayers = useMemo(() => {
-    return [...players].sort(
-      (a, b) =>
-        (connectRatings[b.id]?.elo || 1200) - (connectRatings[a.id]?.elo || 1200)
-    );
-  }, [players, connectRatings]);
-
-  const top5Ids = useMemo(
-    () => new Set(rankedPlayers.slice(0, 5).map((p) => p.id)),
-    [rankedPlayers]
-  );
-
-  const activeFilterCount =
-    (quickFilter !== 'all' ? 1 : 0) +
-    (styleTab !== 'ALL' ? 1 : 0) +
-    (modeTab !== 'ALL' ? 1 : 0) +
-    (langTab !== 'ALL' ? 1 : 0) +
-    (search.trim() ? 1 : 0);
-
-  const resetAllFilters = () => {
-    setSearch('');
-    setQuickFilter('all');
-    setStyleTab('ALL');
-    setModeTab('ALL');
-    setLangTab('ALL');
-  };
-
-  const sortedAndFilteredPlayers = useMemo(() => {
-    const q = search.trim().toLowerCase();
-
-    return rankedPlayers.filter((p) => {
-      const pDays = new Set(
-        DAYS_OF_WEEK.filter((d) => {
-          const sched = getNormalizedHallSchedule(p);
-          return Array.isArray(sched[d]) && sched[d].length > 0;
-        })
-      );
-      const pElo = connectRatings[p.id]?.elo || 1200;
-
-      if (quickFilter === 'live' && !livePlayerIds.has(p.id)) return false;
-      if (quickFilter === 'today' && !pDays.has(todayDayCode)) return false;
-      if (
-        quickFilter === 'samedays' &&
-        (p.id === currentUser.id ||
-          ![...pDays].some((d) => myScheduleDays.has(d)))
-      ) {
-        return false;
-      }
-      if (
-        quickFilter === 'mylevel' &&
-        !isMatchingLevel(currentUser, p, activeSeason)
-      ) {
-        return false;
-      }
-      if (
-        quickFilter === 'reachable' &&
-        (p.id === currentUser.id || pElo <= myElo || pElo > myElo + 65)
-      ) {
-        return false;
-      }
-      if (
-        quickFilter === 'unplayed' &&
-        (p.id === currentUser.id || playedAgainstIds.has(p.id))
-      ) {
-        return false;
-      }
-      if (quickFilter === 'rematch' && !lostLastAgainstIds.has(p.id)) {
-        return false;
-      }
-      if (quickFilter === 'top5' && !top5Ids.has(p.id)) return false;
-      if (quickFilter === 'new' && !p.isNewMember) return false;
-
-      if (styleTab !== 'ALL' && p.playstyle !== styleTab) return false;
-
-      if (modeTab === 'LEAGUE' && !leaguePlayerIds.has(p.id)) return false;
-      if (modeTab === 'CLUB_ONLY' && leaguePlayerIds.has(p.id)) return false;
-
-      if (langTab === 'DE' && p.language === 'Englisch') return false;
-      if (langTab === 'EN' && p.language === 'Deutsch') return false;
-
-      if (!q) return true;
-      return `${p.nickname} ${p.firstName} ${p.lastName} ${p.sttClass || ''} ${
-        p.playstyle || ''
-      } ${connectRatings[p.id]?.tier?.label || ''}`
-        .toLowerCase()
-        .includes(q);
-    });
-  }, [
-    rankedPlayers,
-    connectRatings,
-    search,
-    quickFilter,
-    styleTab,
-    modeTab,
-    langTab,
-    livePlayerIds,
-    todayDayCode,
-    myScheduleDays,
-    myElo,
-    playedAgainstIds,
-    lostLastAgainstIds,
-    top5Ids,
-    leaguePlayerIds,
-    currentUser,
-    activeSeason,
-  ]);
-
-  const primaryTabs = [
-    { id: 'all', label: 'Alle' },
-    { id: 'live', label: `⚡ LIVE (${livePlayerIds.size})` },
-    { id: 'today', label: `📅 Heute (${todayDayCode})` },
-    { id: 'samedays', label: '🤝 Gleiche Tage' },
-    { id: 'mylevel', label: '🎯 Mein Niveau' },
-    { id: 'reachable', label: '⛰️ +50 Elo' },
-    { id: 'unplayed', label: '🆕 Unbespielt' },
-    { id: 'rematch', label: '🔥 Revanche' },
-    { id: 'top5', label: '👑 Top 5' },
-    { id: 'new', label: '👋 Neu' },
-  ];
-
-  const secondaryTabs = [
-    {
-      group: 'style',
-      id: 'Abwehr / Noppen',
-      label: '🛡️ Noppen/Abwehr',
-      active: styleTab === 'Abwehr / Noppen',
-      onClick: () =>
-        setStyleTab((prev) =>
-          prev === 'Abwehr / Noppen' ? 'ALL' : 'Abwehr / Noppen'
-        ),
-    },
-    {
-      group: 'style',
-      id: 'Offensiv',
-      label: '🚀 Offensiv',
-      active: styleTab === 'Offensiv',
-      onClick: () =>
-        setStyleTab((prev) => (prev === 'Offensiv' ? 'ALL' : 'Offensiv')),
-    },
-    {
-      group: 'style',
-      id: 'Allround',
-      label: '⚖️ Allround',
-      active: styleTab === 'Allround',
-      onClick: () =>
-        setStyleTab((prev) => (prev === 'Allround' ? 'ALL' : 'Allround')),
-    },
-    {
-      group: 'mode',
-      id: 'LEAGUE',
-      label: '🏆 Liga',
-      active: modeTab === 'LEAGUE',
-      onClick: () =>
-        setModeTab((prev) => (prev === 'LEAGUE' ? 'ALL' : 'LEAGUE')),
-    },
-    {
-      group: 'mode',
-      id: 'CLUB_ONLY',
-      label: '🏓 Nur CLUB',
-      active: modeTab === 'CLUB_ONLY',
-      onClick: () =>
-        setModeTab((prev) => (prev === 'CLUB_ONLY' ? 'ALL' : 'CLUB_ONLY')),
-    },
-    {
-      group: 'lang',
-      id: 'EN',
-      label: '🇬🇧 English',
-      active: langTab === 'EN',
-      onClick: () => setLangTab((prev) => (prev === 'EN' ? 'ALL' : 'EN')),
-    },
-    {
-      group: 'lang',
-      id: 'DE',
-      label: '🇨🇭 Deutsch',
-      active: langTab === 'DE',
-      onClick: () => setLangTab((prev) => (prev === 'DE' ? 'ALL' : 'DE')),
-    },
-  ];
-
-  const resultCount = sortedAndFilteredPlayers.length;
-
-  return (
-    <div className="space-y-3">
-      <div className="space-y-2.5 rounded-2xl border border-[#24272D] bg-[#14161A] p-3">
-        <div className="flex items-center gap-2">
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Spieler suchen (Name, Klassierung, Stufe, Stil)..."
-            className="min-w-0 flex-1 rounded-xl border border-[#2B2F37] bg-[#0F1114] px-3 py-2 text-xs text-[#F3F4F6]"
-          />
-          {activeFilterCount > 0 && (
-            <button
-              type="button"
-              onClick={resetAllFilters}
-              className="shrink-0 rounded-xl border border-[#DE754B]/40 bg-[#23140F] px-2.5 py-2 text-[11px] font-bold text-[#F4ECC2]"
-            >
-              Reset ({activeFilterCount})
-            </button>
-          )}
-        </div>
-
-        <div className="flex items-center justify-between gap-2 rounded-xl border border-[#22252B] bg-[#0F1114] px-2.5 py-1.5">
-          <span className="text-[11px] font-bold text-[#F4ECC2]">
-            {resultCount} {resultCount === 1 ? 'Resultat' : 'Resultate'}
-            <span className="ml-1 font-normal text-[#8E95A2]">
-              von {players.length} Spielern
-            </span>
-          </span>
-          {activeFilterCount > 0 && (
-            <span className="rounded bg-[#152622] px-1.5 py-0.5 text-[10px] font-bold text-[#A8D0B1]">
-              Kombiniert aktiv
-            </span>
-          )}
-        </div>
-
-        <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-5">
-          {primaryTabs.map((f) => (
-            <button
-              key={f.id}
-              type="button"
-              onClick={() => setQuickFilter(f.id)}
-              className={`truncate rounded-lg px-2 py-1.5 text-center text-[11px] font-bold transition ${
-                quickFilter === f.id
-                  ? 'bg-[#6FB3A2] text-[#060708]'
-                  : 'bg-[#0F1114] text-[#9CA3AF] ring-1 ring-[#2B2F37] hover:text-[#F4ECC2]'
-              }`}
-            >
-              {f.label}
-            </button>
-          ))}
-        </div>
-
-        <div className="grid grid-cols-2 gap-1.5 border-t border-[#22252B] pt-2 sm:grid-cols-4">
-          {secondaryTabs.map((tab) => (
-            <button
-              key={`${tab.group}-${tab.id}`}
-              type="button"
-              onClick={tab.onClick}
-              className={`truncate rounded-lg px-2 py-1 text-center text-[10px] font-bold transition ${
-                tab.active
-                  ? 'bg-[#F4ECC2] text-[#060708]'
-                  : 'bg-[#0F1114] text-[#8E95A2] ring-1 ring-[#262A31] hover:text-[#F3F4F6]'
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {sortedAndFilteredPlayers.length === 0 ? (
-        <div className="rounded-2xl border border-[#24272D] bg-[#181A1E] p-5 text-center text-xs text-[#9CA3AF]">
-          Keine Spieler mit diesen Filterkriterien gefunden.{' '}
-          <button
-            type="button"
-            onClick={resetAllFilters}
-            className="font-bold text-[#6FB3A2] underline"
-          >
-            Filter zurücksetzen
-          </button>
-        </div>
-      ) : (
-        <div className="grid grid-cols-2 gap-2">
-          {sortedAndFilteredPlayers.map((p, index) => {
-            const isLive = livePlayerIds.has(p.id);
-            const isMe = p.id === currentUser.id;
-            const rating = connectRatings[p.id];
-            const tier = rating?.tier;
-            const rank = index + 1;
-
+        <div className="mt-3 space-y-2">
+          {pausedPlayers.map((p) => {
+            const scheduleSummary = formatHallScheduleSummary(p);
             return (
               <div
                 key={p.id}
-                className={`flex flex-col justify-between rounded-2xl border p-2.5 transition ${
-                  isMe
-                    ? 'border-[#6FB3A2]/50 bg-[#152622]/55'
-                    : 'border-[#24272D] bg-[#181A1E] hover:border-[#6FB3A2]/40'
-                }`}
+                className="flex items-center justify-between gap-2 rounded-xl bg-[#131417] px-3 py-2"
               >
-                <div>
-                  <div className="flex items-center justify-between gap-1">
-                    <span
-                      className={`rounded-md px-1.5 py-0.5 text-[10px] font-black ${
-                        rank === 1
-                          ? 'bg-[#F4ECC2] text-[#060708]'
-                          : rank === 2
-                          ? 'bg-[#D1D5DB] text-[#060708]'
-                          : rank === 3
-                          ? 'bg-[#DE754B] text-[#060708]'
-                          : 'bg-[#131417] text-[#8E95A2]'
-                      }`}
-                    >
-                      #{rank}
-                    </span>
-
-                    {tier && (
-                      <span
-                        className={`rounded border px-1.5 py-0.5 text-[9px] font-bold leading-none ${tier.badgeClass}`}
-                        title={`${tier.label} · ${rating.elo} Punkte`}
-                      >
-                        {tier.symbol} {rating.elo}
-                      </span>
-                    )}
+                <div className="min-w-0">
+                  <div className="truncate text-xs font-bold text-[#F3F4F6]">
+                    {p.nickname} ({p.firstName})
                   </div>
-
-                  <button
-                    type="button"
-                    onClick={() => onSelectMember?.(p.id)}
-                    className="mt-2 flex w-full items-center gap-2 text-left transition hover:opacity-85"
-                  >
-                    <PlayerAvatar
-                      player={p}
-                      sizeClass="h-8 w-8 text-[10px]"
-                      isConnectAccent={p.connectOnly}
-                    />
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-1">
-                        <span className="truncate text-xs font-black text-[#F3F4F6] underline decoration-[#6FB3A2]/45 underline-offset-2">
-                          {p.nickname}
-                        </span>
-                        {isLive && (
-                          <span
-                            title="Jetzt LIVE in der Halle"
-                            className="h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-400"
-                          />
-                        )}
-                      </div>
-                      <div className="truncate text-[10px] text-[#8E95A2]">
-                        {p.firstName} {p.lastName}
-                      </div>
+                  {scheduleSummary && (
+                    <div className="truncate text-[10px] text-[#8E95A2]">
+                      Halle: {scheduleSummary}
                     </div>
-                  </button>
-
-                  <div className="mt-2 flex flex-wrap items-center gap-1">
-                    {p.sttClass && (
-                      <span className="rounded bg-[#131417] px-1.5 py-0.5 text-[9px] font-semibold text-[#9CA3AF]">
-                        {p.sttClass}
-                      </span>
-                    )}
-                    {p.playstyle && (
-                      <span className="rounded bg-[#131417] px-1.5 py-0.5 text-[9px] font-semibold text-[#F4ECC2]">
-                        {p.playstyle}
-                      </span>
-                    )}
-                    <span className="rounded bg-[#131417] px-1 py-0.5 text-[9px] font-bold text-[#A8D0B1]">
-                      {getLanguageShortLabel(p.language)}
-                    </span>
-                  </div>
+                  )}
                 </div>
-
-                <div className="mt-2.5 flex items-center justify-between gap-1 border-t border-[#22252B] pt-2">
-                  <span className="text-[10px] text-[#8E95A2]">
-                    {rating && rating.played > 0
-                      ? `${rating.wins}S / ${rating.losses}N`
-                      : 'Neu'}
-                  </span>
-
-                  {!isMe ? (
-                    <div className="flex items-center gap-1">
-                      <WhatsAppActionButton
-                        phone={p.phone}
-                        message={getContextWhatsAppMessage(
-                          'rating_directory',
-                          currentUser,
-                          p
-                        )}
-                        label=""
-                        compact
-                        title={`${p.nickname} per WhatsApp anschreiben`}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => onOpenChallenge(p.id)}
-                        title={`${p.nickname} herausfordern`}
-                        className="rounded-lg bg-[#6FB3A2] px-2 py-1 text-[10px] font-black text-[#060708]"
-                      >
-                        ⚡ Duell
-                      </button>
-                    </div>
-                  ) : (
-                    <span className="rounded bg-[#1F2927] px-1.5 py-0.5 text-[9px] font-bold text-[#A8D0B1]">
-                      Du
-                    </span>
+                <div className="flex shrink-0 items-center gap-1.5">
+                  <PlayerBadge
+                    player={p}
+                    season={season}
+                    ratingInfo={connectRatings[p.id]}
+                  />
+                  {p.id !== currentUser.id && (
+                    <WhatsAppActionButton
+                      phone={p.phone}
+                      message={getContextWhatsAppMessage('league_paused', currentUser, p)}
+                      label=""
+                      compact
+                    />
                   )}
                 </div>
               </div>
             );
           })}
         </div>
-      )}
-    </div>
-  );
-}
-
-function ConnectMatchesTab({
-  connectMatches = [],
-  matchDeltas = {},
-  playersById,
-  currentUser,
-  onOpenRecordConnectMatch,
-}) {
-  return (
-    <div className="space-y-3">
-      <div className="flex items-center justify-between gap-2 rounded-2xl border border-[#24272D] bg-[#14161A] p-3">
-        <div>
-          <h2 className="text-xs font-black tracking-wide text-[#F3F4F6] uppercase">
-            Freie CLUB-Partien ({connectMatches.length})
-          </h2>
-          <p className="text-[10px] text-[#8E95A2]">
-            Dynamisches Elo-Rating · Revanche direkt per WhatsApp
-          </p>
-        </div>
-        <button
-          type="button"
-          onClick={onOpenRecordConnectMatch}
-          className="rounded-xl bg-[#6FB3A2] px-3 py-2 text-xs font-black text-[#060708]"
-        >
-          + Partie
-        </button>
       </div>
-
-      {connectMatches.length === 0 ? (
-        <div className="rounded-2xl border border-[#24272D] bg-[#181A1E] p-5 text-center text-xs text-[#9CA3AF]">
-          Noch keine freien CLUB-Partien erfasst.
-        </div>
-      ) : (
-        <div className="space-y-2">
-          {connectMatches.map((m) => {
-            const p1 = playersById[m.player1Id];
-            const p2 = playersById[m.player2Id];
-            if (!p1 || !p2) return null;
-            const delta = matchDeltas[m.id];
-            const involvesMe =
-              m.player1Id === currentUser.id || m.player2Id === currentUser.id;
-            const opp = m.player1Id === currentUser.id ? p2 : p1;
-
-            return (
-              <div
-                key={m.id}
-                className="flex items-center justify-between gap-2 rounded-2xl border border-[#24272D] bg-[#181A1E] p-3 text-xs"
-              >
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-1.5 font-black text-[#F3F4F6]">
-                    <span className="truncate">{p1.nickname}</span>
-                    <span className="rounded bg-[#131417] px-2 py-0.5 text-[#F4ECC2]">
-                      {m.score}
-                    </span>
-                    <span className="truncate">{p2.nickname}</span>
-                  </div>
-                  <div className="mt-1 flex flex-wrap items-center gap-2 text-[10px] text-[#8E95A2]">
-                    <span>Sieger: {playersById[m.winnerId]?.nickname}</span>
-                    <span>· {m.dateLabel}</span>
-                    {delta && (
-                      <span className="font-bold text-[#A8D0B1]">
-                        ({p1.nickname}{' '}
-                        {delta.delta1 >= 0 ? `+${delta.delta1}` : delta.delta1}{' '}
-                        / {p2.nickname}{' '}
-                        {delta.delta2 >= 0 ? `+${delta.delta2}` : delta.delta2})
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                {involvesMe && opp && (
-                  <WhatsAppActionButton
-                    phone={opp.phone}
-                    message={getContextWhatsAppMessage(
-                      'rematch',
-                      currentUser,
-                      opp,
-                      { score: m.score }
-                    )}
-                    label="Revanche"
-                    compact
-                  />
-                )}
-              </div>
-            );
-          })}
-        </div>
-      )}
     </div>
   );
 }
@@ -5820,133 +5697,295 @@ function HallDaysTab({
   currentUser,
   activeSeason,
   connectRatings,
-  onOpenChallenge,
+  onOpenEditProfile,
+  onOpenRecordConnectMatch,
   onSelectMember,
 }) {
-  const [selectedDay, setSelectedDay] = useState(() => {
-    const jsDay = new Date().getDay();
-    return DAYS_OF_WEEK[(jsDay + 6) % 7] || 'Mi';
-  });
-  const [selectedSlot, setSelectedSlot] = useState('ALL');
+  const [selectedDay, setSelectedDay] = useState('Do');
+  const [selectedTimeSlot, setSelectedTimeSlot] = useState('Alle');
 
   const matchingPlayers = useMemo(() => {
     return players.filter((p) => {
-      const sched = getNormalizedHallSchedule(p);
-      const slots = sched[selectedDay] || [];
+      const schedule = getNormalizedHallSchedule(p);
+      const slots = schedule[selectedDay] || [];
       if (slots.length === 0) return false;
-      if (selectedSlot === 'ALL') return true;
-      return slots.includes(selectedSlot);
+      if (selectedTimeSlot === 'Alle') return true;
+      return slots.includes(selectedTimeSlot);
     });
-  }, [players, selectedDay, selectedSlot]);
+  }, [players, selectedDay, selectedTimeSlot]);
 
   return (
     <div className="space-y-3">
-      <div className="space-y-2.5 rounded-2xl border border-[#24272D] bg-[#14161A] p-3">
-        <div className="grid grid-cols-7 gap-1">
-          {DAYS_OF_WEEK.map((d) => (
-            <button
-              key={d}
-              type="button"
-              onClick={() => setSelectedDay(d)}
-              className={`rounded-lg py-2 text-xs font-black transition ${
-                selectedDay === d
-                  ? 'bg-[#6FB3A2] text-[#060708]'
-                  : 'bg-[#0F1114] text-[#8E95A2] ring-1 ring-[#262A31] hover:text-[#F4ECC2]'
-              }`}
-            >
-              {d}
-            </button>
-          ))}
-        </div>
-
-        <div className="grid grid-cols-4 gap-1.5">
-          {[
-            { id: 'ALL', label: 'Alle Zeiten' },
-            ...HALL_TIME_SLOTS.map((s) => ({ id: s.id, label: s.label })),
-          ].map((slot) => (
-            <button
-              key={slot.id}
-              type="button"
-              onClick={() => setSelectedSlot(slot.id)}
-              className={`rounded-lg py-1.5 text-[11px] font-bold transition ${
-                selectedSlot === slot.id
-                  ? 'bg-[#F4ECC2] text-[#060708]'
-                  : 'bg-[#0F1114] text-[#8E95A2] ring-1 ring-[#262A31] hover:text-[#F3F4F6]'
-              }`}
-            >
-              {slot.label}
-            </button>
-          ))}
-        </div>
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-bold text-[#9CA3AF]">
+          Wer ist wann in der Halle?
+        </span>
+        <button
+          type="button"
+          onClick={onOpenEditProfile}
+          className="text-[11px] font-bold text-[#A8D0B1] underline"
+        >
+          Meine Zeiten bearbeiten
+        </button>
       </div>
 
-      {matchingPlayers.length === 0 ? (
-        <div className="rounded-2xl border border-[#24272D] bg-[#181A1E] p-5 text-center text-xs text-[#9CA3AF]">
-          Am {selectedDay} sind für diese Tageszeit noch keine Spieler eingetragen.
-        </div>
-      ) : (
-        <div className="grid grid-cols-2 gap-2">
-          {matchingPlayers.map((p) => {
-            const sched = getNormalizedHallSchedule(p);
-            const daySlots = sched[selectedDay] || [];
-            const isMe = p.id === currentUser.id;
-            const rating = connectRatings[p.id];
+      <div className="grid grid-cols-7 gap-1">
+        {DAYS_OF_WEEK.map((d) => (
+          <button
+            key={d}
+            type="button"
+            onClick={() => setSelectedDay(d)}
+            className={`rounded-lg py-2 text-xs font-black ${
+              selectedDay === d
+                ? 'bg-[#6FB3A2] text-[#060708]'
+                : 'bg-[#181A1E] text-[#9CA3AF] ring-1 ring-[#24272D]'
+            }`}
+          >
+            {d}
+          </button>
+        ))}
+      </div>
 
+      <div className="grid grid-cols-4 gap-1.5">
+        {['Alle', ...HALL_TIME_SLOTS.map((s) => s.id)].map((slot) => (
+          <button
+            key={slot}
+            type="button"
+            onClick={() => setSelectedTimeSlot(slot)}
+            className={`rounded-lg py-1.5 text-[11px] font-bold transition ${
+              selectedTimeSlot === slot
+                ? 'bg-[#6FB3A2] text-[#060708]'
+                : 'bg-[#181A1E] text-[#9CA3AF] ring-1 ring-[#24272D] hover:text-[#F3F4F6]'
+            }`}
+          >
+            {slot === 'Alle' ? 'Alle Zeiten' : slot}
+          </button>
+        ))}
+      </div>
+
+      <div className="space-y-2">
+        <div className="text-xs font-bold text-[#9CA3AF]">
+          Oft am {selectedDay}
+          {selectedTimeSlot !== 'Alle' ? ` (${selectedTimeSlot})` : ''} in der
+          Halle ({matchingPlayers.length})
+        </div>
+
+        {matchingPlayers.length === 0 ? (
+          <div className="rounded-2xl border border-[#24272D] bg-[#181A1E] p-4 text-center text-xs text-[#8E95A2]">
+            Für {selectedDay}
+            {selectedTimeSlot !== 'Alle' ? ` · ${selectedTimeSlot}` : ''} ist
+            noch niemand eingetragen.
+          </div>
+        ) : (
+          matchingPlayers.map((p) => {
+            const schedule = getNormalizedHallSchedule(p);
+            const daySlots = schedule[selectedDay] || [];
+            const waMsg = getContextWhatsAppMessage('hall_day', currentUser, p, {
+              day: selectedDay,
+              timeSlot:
+                selectedTimeSlot !== 'Alle' ? selectedTimeSlot : daySlots.join(' / '),
+            });
             return (
               <div
                 key={p.id}
-                className="flex flex-col justify-between rounded-2xl border border-[#24272D] bg-[#181A1E] p-2.5"
+                className="flex items-center justify-between gap-2 rounded-2xl border border-[#24272D] bg-[#181A1E] p-3"
               >
-                <div>
-                  <button
-                    type="button"
-                    onClick={() => onSelectMember?.(p.id)}
-                    className="flex w-full items-center gap-2 text-left"
-                  >
-                    <PlayerAvatar
-                      player={p}
-                      sizeClass="h-8 w-8 text-[10px]"
-                      isConnectAccent={p.connectOnly}
-                    />
-                    <div className="min-w-0 flex-1">
-                      <div className="truncate text-xs font-black text-[#F3F4F6]">
-                        {p.nickname}
-                      </div>
-                      <div className="truncate text-[10px] text-[#6FB3A2]">
-                        {daySlots.join(', ')}
-                      </div>
+                <button
+                  type="button"
+                  onClick={() => onSelectMember?.(p.id)}
+                  className="flex min-w-0 flex-1 items-center gap-2.5 text-left transition hover:opacity-85"
+                >
+                  <PlayerAvatar
+                    player={p}
+                    sizeClass="h-8 w-8 text-[10px]"
+                    isConnectAccent={p.connectOnly}
+                  />
+                  <div className="min-w-0">
+                    <div className="truncate text-xs font-black text-[#F3F4F6] underline decoration-[#6FB3A2]/50 underline-offset-2">
+                      {p.nickname} ({p.firstName})
                     </div>
-                  </button>
+                    <div className="mt-1 flex flex-wrap items-center gap-1">
+                      {daySlots.map((slot) => (
+                        <span
+                          key={slot}
+                          className="rounded bg-[#152622] px-1.5 py-0.5 text-[10px] font-bold text-[#A8D0B1] ring-1 ring-[#6FB3A2]/35"
+                        >
+                          {selectedDay} · {slot}
+                        </span>
+                      ))}
+                      <PlayerBadge
+                        player={p}
+                        season={activeSeason}
+                        ratingInfo={connectRatings[p.id]}
+                      />
+                    </div>
+                  </div>
+                </button>
 
-                  <div className="mt-2">
-                    <PlayerBadge
-                      player={p}
-                      season={activeSeason}
-                      ratingInfo={rating}
+                {p.id !== currentUser.id && (
+                  <div className="flex shrink-0 items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => onOpenRecordConnectMatch(p.id)}
+                      className="rounded-lg bg-[#6FB3A2] px-2.5 py-1.5 text-[11px] font-black text-[#060708]"
+                    >
+                      + Partie
+                    </button>
+                    <WhatsAppActionButton
+                      phone={p.phone}
+                      message={waMsg}
+                      label="WhatsApp"
                     />
+                  </div>
+                )}
+              </div>
+            );
+          })
+        )}
+      </div>
+    </div>
+  );
+}
+
+function ConnectMatchesTab({
+  connectMatches,
+  matchDeltas,
+  playersById,
+  currentUser,
+  connectRatings,
+  onOpenRecordConnectMatch,
+}) {
+  const [onlyMine, setOnlyMine] = useState(false);
+
+  const visibleMatches = useMemo(() => {
+    if (!onlyMine) return connectMatches;
+    return connectMatches.filter(
+      (m) => m.player1Id === currentUser.id || m.player2Id === currentUser.id
+    );
+  }, [connectMatches, onlyMine, currentUser.id]);
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between gap-2">
+        <div>
+          <h2 className="text-xs font-black tracking-wide text-[#F3F4F6] uppercase">
+            CLUB-Partien ({visibleMatches.length})
+          </h2>
+          <p className="text-[11px] text-[#8E95A2]">
+            Freie Spiele fliessen direkt in das CLUB-Rating ein
+          </p>
+        </div>
+
+        <div className="flex items-center gap-1.5">
+          {onOpenRecordConnectMatch && (
+            <button
+              type="button"
+              onClick={onOpenRecordConnectMatch}
+              className="rounded-lg bg-[#6FB3A2] px-2.5 py-1.5 text-[11px] font-black text-[#060708]"
+            >
+              + Partie
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => setOnlyMine((v) => !v)}
+            className="rounded-lg bg-[#181A1E] px-2.5 py-1.5 text-[11px] font-bold text-[#A8D0B1] ring-1 ring-[#2B2F37]"
+          >
+            {onlyMine ? 'Alle' : 'Nur meine'}
+          </button>
+        </div>
+      </div>
+
+      {visibleMatches.length === 0 ? (
+        <div className="rounded-2xl border border-[#24272D] bg-[#181A1E] p-5 text-center text-xs text-[#9CA3AF]">
+          Noch keine CLUB-Partien in dieser Ansicht eingetragen.
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {visibleMatches.map((m) => {
+            const p1 = playersById[m.player1Id];
+            const p2 = playersById[m.player2Id];
+            if (!p1 || !p2) return null;
+
+            const p1Won = m.winnerId === p1.id;
+            const deltas = matchDeltas[m.id] || { delta1: 0, delta2: 0 };
+
+            return (
+              <div
+                key={m.id}
+                className="rounded-2xl border border-[#24272D] bg-[#181A1E] p-3"
+              >
+                <div className="flex items-center justify-between text-[10px] text-[#8E95A2]">
+                  <span className="font-bold text-[#6FB3A2]">CLUB-Partie</span>
+                  <span>{m.dateLabel}</span>
+                </div>
+
+                <div className="mt-2 flex items-center justify-between gap-2">
+                  <div className="min-w-0 flex-1">
+                    <div
+                      className={`truncate text-xs font-black ${
+                        p1Won ? 'text-emerald-300' : 'text-[#F3F4F6]'
+                      }`}
+                    >
+                      {p1.nickname} {p1Won ? '🏆' : ''}
+                    </div>
+                    <div className="mt-0.5 flex items-center gap-1 text-[10px]">
+                      <span className="text-[#8E95A2]">
+                        {connectRatings[p1.id]?.tier?.symbol} {connectRatings[p1.id]?.elo}
+                      </span>
+                      <span
+                        className={`font-bold ${
+                          deltas.delta1 >= 0 ? 'text-emerald-400' : 'text-rose-400'
+                        }`}
+                      >
+                        ({deltas.delta1 >= 0 ? `+${deltas.delta1}` : deltas.delta1})
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="shrink-0 rounded-xl bg-[#111215] px-3 py-1 text-center ring-1 ring-[#2B2F37]">
+                    <span className="text-xs font-black tracking-wider text-[#E6C79C]">
+                      {m.score}
+                    </span>
+                  </div>
+
+                  <div className="min-w-0 flex-1 text-right">
+                    <div
+                      className={`truncate text-xs font-black ${
+                        !p1Won ? 'text-emerald-300' : 'text-[#F3F4F6]'
+                      }`}
+                    >
+                      {!p1Won ? '🏆 ' : ''}
+                      {p2.nickname}
+                    </div>
+                    <div className="mt-0.5 flex items-center justify-end gap-1 text-[10px]">
+                      <span
+                        className={`font-bold ${
+                          deltas.delta2 >= 0 ? 'text-emerald-400' : 'text-rose-400'
+                        }`}
+                      >
+                        ({deltas.delta2 >= 0 ? `+${deltas.delta2}` : deltas.delta2})
+                      </span>
+                      <span className="text-[#8E95A2]">
+                        {connectRatings[p2.id]?.tier?.symbol} {connectRatings[p2.id]?.elo}
+                      </span>
+                    </div>
                   </div>
                 </div>
 
-                {!isMe && (
-                  <div className="mt-2.5 flex items-center justify-end gap-1 border-t border-[#22252B] pt-2">
+                {(p1.id === currentUser.id || p2.id === currentUser.id) && (
+                  <div className="mt-2.5 flex justify-end border-t border-[#22252B] pt-2">
                     <WhatsAppActionButton
-                      phone={p.phone}
+                      phone={(p1.id === currentUser.id ? p2 : p1).phone}
                       message={getContextWhatsAppMessage(
-                        'hall_day',
+                        'rematch',
                         currentUser,
-                        p,
-                        { day: selectedDay, timeSlot: daySlots.join(', ') }
+                        p1.id === currentUser.id ? p2 : p1,
+                        { score: m.score }
                       )}
-                      label=""
+                      label="Revanche per WhatsApp"
                       compact
                     />
-                    <button
-                      type="button"
-                      onClick={() => onOpenChallenge(p.id)}
-                      className="rounded-lg bg-[#6FB3A2] px-2 py-1 text-[10px] font-black text-[#060708]"
-                    >
-                      ⚡ Duell
-                    </button>
                   </div>
                 )}
               </div>
@@ -5958,460 +5997,7 @@ function HallDaysTab({
   );
 }
 
-function RecordConnectMatchModal({
-  players,
-  currentUser,
-  connectRatings,
-  defaultOpponentId = '',
-  onSave,
-  onClose,
-}) {
-  const opponents = useMemo(
-    () => players.filter((p) => p.id !== currentUser.id),
-    [players, currentUser.id]
-  );
-
-  const [opponentSearch, setOpponentSearch] = useState('');
-  const [opponentId, setOpponentId] = useState(
-    defaultOpponentId || opponents[0]?.id || ''
-  );
-  const [winnerSide, setWinnerSide] = useState('me');
-  const [score, setScore] = useState('3:1');
-
-  const filteredOpponents = useMemo(() => {
-    const q = opponentSearch.trim().toLowerCase();
-    if (!q) return opponents;
-    return opponents.filter((p) =>
-      `${p.nickname} ${p.firstName} ${p.lastName} ${p.sttClass || ''}`
-        .toLowerCase()
-        .includes(q)
-    );
-  }, [opponents, opponentSearch]);
-
-  const effectiveOpponentId = useMemo(() => {
-    if (filteredOpponents.some((p) => p.id === opponentId)) return opponentId;
-    return filteredOpponents[0]?.id || '';
-  }, [filteredOpponents, opponentId]);
-
-  const opponent = players.find((p) => p.id === effectiveOpponentId);
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (!effectiveOpponentId) return;
-    const winnerId = winnerSide === 'me' ? currentUser.id : effectiveOpponentId;
-    onSave(effectiveOpponentId, winnerId, score);
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/75 p-3 sm:items-center">
-      <form
-        onSubmit={handleSubmit}
-        className="w-full max-w-md space-y-3 rounded-2xl border border-[#2E323B] bg-[#181A1E] p-4 shadow-2xl"
-      >
-        <div className="flex items-center justify-between">
-          <h3 className="text-sm font-black text-[#F3F4F6]">
-            CLUB-Partie erfassen
-          </h3>
-          <button
-            type="button"
-            onClick={onClose}
-            className="text-xs font-bold text-[#8E95A2]"
-          >
-            ✕
-          </button>
-        </div>
-
-        <div className="space-y-1.5">
-          <label className="block text-[11px] font-semibold text-[#8E95A2]">
-            1. Gegner suchen &amp; auswählen
-          </label>
-          <input
-            type="text"
-            value={opponentSearch}
-            onChange={(e) => setOpponentSearch(e.target.value)}
-            placeholder="Name oder Nickname suchen..."
-            className="w-full rounded-xl border border-[#2E323B] bg-[#131417] px-3 py-2 text-base sm:text-xs text-[#F3F4F6] placeholder:text-[#6B7280] focus:border-[#6FB3A2] focus:outline-none"
-          />
-          {filteredOpponents.length === 0 ? (
-            <div className="rounded-xl border border-[#2E323B] bg-[#131417] px-3 py-2 text-xs text-[#8E95A2]">
-              Kein Spieler gefunden.
-            </div>
-          ) : (
-            <select
-              value={effectiveOpponentId}
-              onChange={(e) => setOpponentId(e.target.value)}
-              className="w-full rounded-xl border border-[#2E323B] bg-[#131417] px-3 py-2 text-base sm:text-xs font-bold text-[#F3F4F6]"
-            >
-              {filteredOpponents.map((p) => {
-                const r = connectRatings[p.id];
-                return (
-                  <option key={p.id} value={p.id}>
-                    {p.nickname} ({p.firstName} {p.lastName}) · {r?.tier?.symbol}{' '}
-                    {r?.elo}
-                  </option>
-                );
-              })}
-            </select>
-          )}
-        </div>
-
-        <div>
-          <label className="mb-1 block text-[11px] font-semibold text-[#8E95A2]">
-            2. Gewinner definieren
-          </label>
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              type="button"
-              onClick={() => setWinnerSide('me')}
-              className={`rounded-xl py-2.5 text-xs font-black ${
-                winnerSide === 'me'
-                  ? 'bg-emerald-500 text-[#0F1012]'
-                  : 'border border-[#2E323B] bg-[#131417] text-[#9CA3AF]'
-              }`}
-            >
-              {currentUser.nickname}
-            </button>
-            <button
-              type="button"
-              disabled={!opponent}
-              onClick={() => setWinnerSide('opponent')}
-              className={`rounded-xl py-2.5 text-xs font-black disabled:opacity-40 ${
-                winnerSide === 'opponent'
-                  ? 'bg-emerald-500 text-[#0F1012]'
-                  : 'border border-[#2E323B] bg-[#131417] text-[#9CA3AF]'
-              }`}
-            >
-              {opponent?.nickname || 'Gegner'}
-            </button>
-          </div>
-        </div>
-
-        <div>
-          <label className="mb-1 block text-[11px] font-semibold text-[#8E95A2]">
-            3. Satzergebnis antippen
-          </label>
-          <div className="grid grid-cols-5 gap-1.5">
-            {['3:0', '3:1', '3:2', '2:0', '2:1'].map((preset) => (
-              <button
-                key={preset}
-                type="button"
-                onClick={() => setScore(preset)}
-                className={`rounded-xl py-2 text-xs font-black ${
-                  score === preset
-                    ? 'bg-[#6FB3A2] text-[#060708]'
-                    : 'border border-[#2E323B] bg-[#131417] text-[#9CA3AF]'
-                }`}
-              >
-                {preset}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <button
-          type="submit"
-          disabled={!effectiveOpponentId}
-          className="w-full rounded-xl bg-[#6FB3A2] py-2.5 text-xs font-black text-[#060708] disabled:opacity-40"
-        >
-          Partie speichern &amp; Rating aktualisieren
-        </button>
-      </form>
-    </div>
-  );
-}
-
-function ChallengeModal({
-  players,
-  currentUser,
-  activeSeason,
-  connectRatings,
-  defaultTargetId = null,
-  onSend,
-  onClose,
-}) {
-  const [targetId, setTargetId] = useState(defaultTargetId || '');
-  const [playerSearch, setPlayerSearch] = useState('');
-  const [onlyMyLevel, setOnlyMyLevel] = useState(false);
-  const [format, setFormat] = useState('Best of 5');
-  const [whenLabel, setWhenLabel] = useState('Jetzt');
-  const [note, setNote] = useState('');
-  const [sendWhatsApp, setSendWhatsApp] = useState(true);
-
-  const otherPlayers = useMemo(() => {
-    const q = playerSearch.trim().toLowerCase();
-    return players
-      .filter((p) => p.id !== currentUser.id)
-      .filter((p) => {
-        if (onlyMyLevel && !isMatchingLevel(currentUser, p, activeSeason)) {
-          return false;
-        }
-        if (!q) return true;
-        return `${p.nickname} ${p.firstName} ${p.lastName} ${p.sttClass || ''} ${
-          p.playstyle || ''
-        }`
-          .toLowerCase()
-          .includes(q);
-      });
-  }, [players, currentUser, activeSeason, playerSearch, onlyMyLevel]);
-
-  const selectedTarget = useMemo(
-    () => (targetId ? players.find((p) => p.id === targetId) || null : null),
-    [players, targetId]
-  );
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    onSend({
-      targetId: targetId || null,
-      format,
-      whenLabel,
-      note: note.trim(),
-      sendWhatsApp: Boolean(targetId) && sendWhatsApp,
-    });
-  };
-
-  return (
-    <div
-      onClick={onClose}
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/75 p-3 sm:items-center"
-    >
-      <form
-        onClick={(e) => e.stopPropagation()}
-        onSubmit={handleSubmit}
-        className="flex max-h-[88dvh] w-full max-w-md flex-col overflow-hidden rounded-2xl border border-[#6FB3A2]/40 bg-[#181A1E] shadow-2xl"
-      >
-        <div className="flex shrink-0 items-center justify-between border-b border-[#24272D] px-4 py-3">
-          <div>
-            <h3 className="text-sm font-black text-[#F4ECC2]">
-              ⚡ Schnell herausfordern
-            </h3>
-            <p className="text-[10px] text-[#8E95A2]">
-              {selectedTarget
-                ? `Direktes Duell an ${selectedTarget.nickname}`
-                : 'Offen an den Club oder gezielt per 1-Tap wählen'}
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-lg bg-[#24272D] px-2.5 py-1 text-xs font-bold text-[#9CA3AF] hover:text-[#F3F4F6]"
-          >
-            ✕
-          </button>
-        </div>
-
-        <div className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain p-4">
-          <div className="space-y-2">
-            <div className="flex items-center justify-between gap-2">
-              <div className="flex items-center gap-1.5">
-                <label className="text-[11px] font-semibold text-[#8E95A2]">
-                  Gegner
-                </label>
-                <span className="rounded bg-[#131417] px-1.5 py-0.5 text-[10px] font-bold text-[#9CA3AF]">
-                  {otherPlayers.length}
-                </span>
-              </div>
-
-              <div className="flex items-center gap-1.5">
-                <button
-                  type="button"
-                  onClick={() => setOnlyMyLevel((prev) => !prev)}
-                  className={`rounded-lg px-2.5 py-1 text-[10px] font-black transition ${
-                    onlyMyLevel
-                      ? 'bg-[#F4ECC2] text-[#060708]'
-                      : 'bg-[#131417] text-[#F4ECC2] ring-1 ring-[#2E323B] hover:border-[#6FB3A2]/50'
-                  }`}
-                >
-                  {onlyMyLevel ? '🎯 Mein Niveau ✓' : '🎯 Mein Niveau'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setTargetId('')}
-                  className={`rounded-lg px-2.5 py-1 text-[10px] font-black transition ${
-                    !targetId
-                      ? 'bg-[#6FB3A2] text-[#060708]'
-                      : 'bg-[#131417] text-[#A8D0B1] ring-1 ring-[#2E323B]'
-                  }`}
-                >
-                  {!targetId ? '✓ An alle im Club' : 'Offen an alle'}
-                </button>
-              </div>
-            </div>
-
-            <input
-              type="text"
-              value={playerSearch}
-              onChange={(e) => setPlayerSearch(e.target.value)}
-              placeholder="Spieler suchen (Name, Nickname, Stil)..."
-              className="w-full rounded-xl border border-[#2E323B] bg-[#131417] px-3 py-2 text-base sm:text-xs text-[#F3F4F6] placeholder:text-[#6B7280] focus:border-[#6FB3A2] focus:outline-none"
-            />
-
-            <div className="max-h-36 space-y-1 overflow-y-auto rounded-xl border border-[#24272D] bg-[#131417] p-1.5">
-              {otherPlayers.length === 0 ? (
-                <div className="space-y-1.5 py-3 text-center text-[11px] text-[#8E95A2]">
-                  <div>Kein passender Spieler gefunden.</div>
-                  {(onlyMyLevel || playerSearch.trim()) && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setOnlyMyLevel(false);
-                        setPlayerSearch('');
-                      }}
-                      className="rounded-md bg-[#181A1E] px-2 py-1 text-[10px] font-bold text-[#6FB3A2] ring-1 ring-[#2E323B]"
-                    >
-                      Filter zurücksetzen
-                    </button>
-                  )}
-                </div>
-              ) : (
-                otherPlayers.map((p) => {
-                  const isSelected = targetId === p.id;
-                  const league = activeSeason.leagues.find((l) =>
-                    l.playerIds.includes(p.id)
-                  );
-                  const r = connectRatings[p.id];
-                  return (
-                    <button
-                      key={p.id}
-                      type="button"
-                      onClick={() =>
-                        setTargetId((prev) => (prev === p.id ? '' : p.id))
-                      }
-                      className={`flex w-full items-center justify-between gap-2 rounded-lg px-2.5 py-1.5 text-left transition ${
-                        isSelected
-                          ? 'bg-[#6FB3A2] text-[#060708]'
-                          : 'text-[#F3F4F6] hover:bg-[#1C1F26]'
-                      }`}
-                    >
-                      <div className="flex min-w-0 items-center gap-2">
-                        <PlayerAvatar
-                          player={p}
-                          sizeClass="h-6 w-6 text-[9px]"
-                          isConnectAccent={p.connectOnly}
-                        />
-                        <div className="min-w-0">
-                          <div className="truncate text-xs font-black">
-                            {p.nickname}
-                          </div>
-                          <div
-                            className={`truncate text-[10px] ${
-                              isSelected ? 'text-[#060708]/80' : 'text-[#8E95A2]'
-                            }`}
-                          >
-                            {p.firstName} {p.lastName} ·{' '}
-                            {league ? league.name : p.sttClass || 'CLUB'}
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="flex shrink-0 items-center gap-1.5">
-                        <span
-                          className={`rounded px-1.5 py-0.5 text-[10px] font-bold ${
-                            isSelected
-                              ? 'bg-[#060708]/15 text-[#060708]'
-                              : 'bg-[#181A1E] text-[#A8D0B1]'
-                          }`}
-                        >
-                          {r?.tier?.symbol} {r?.elo || 1200}
-                        </span>
-                        <span className="text-xs font-black">
-                          {isSelected ? '✓' : '+'}
-                        </span>
-                      </div>
-                    </button>
-                  );
-                })
-              )}
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-2">
-            <div>
-              <label className="mb-1 block text-[11px] font-semibold text-[#8E95A2]">
-                Modus
-              </label>
-              <div className="grid grid-cols-3 gap-1">
-                {['Best of 5', '3 Sätze', 'Locker'].map((opt) => (
-                  <button
-                    key={opt}
-                    type="button"
-                    onClick={() => setFormat(opt)}
-                    className={`truncate rounded-lg px-1.5 py-1.5 text-[10px] font-bold transition ${
-                      format === opt
-                        ? 'bg-[#6FB3A2] text-[#060708]'
-                        : 'border border-[#2E323B] bg-[#131417] text-[#9CA3AF]'
-                    }`}
-                  >
-                    {opt}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div>
-              <label className="mb-1 block text-[11px] font-semibold text-[#8E95A2]">
-                Wann
-              </label>
-              <div className="grid grid-cols-3 gap-1">
-                {['Jetzt', 'Heute', 'Diese Wo.'].map((w) => (
-                  <button
-                    key={w}
-                    type="button"
-                    onClick={() => setWhenLabel(w)}
-                    className={`truncate rounded-lg px-1.5 py-1.5 text-[10px] font-bold transition ${
-                      whenLabel === w
-                        ? 'bg-[#6FB3A2] text-[#060708]'
-                        : 'border border-[#2E323B] bg-[#131417] text-[#9CA3AF]'
-                    }`}
-                  >
-                    {w}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          <input
-            type="text"
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
-            placeholder="Kurze Notiz (optional)..."
-            className="w-full rounded-xl border border-[#2E323B] bg-[#131417] px-3 py-2 text-base sm:text-xs text-[#F3F4F6] placeholder:text-[#6B7280] focus:border-[#6FB3A2] focus:outline-none"
-          />
-
-          {targetId && (
-            <label className="flex items-center gap-2 rounded-xl bg-[#131417] px-3 py-2 text-xs text-[#D1D5DB]">
-              <input
-                type="checkbox"
-                checked={sendWhatsApp}
-                onChange={(e) => setSendWhatsApp(e.target.checked)}
-              />
-              <span>Auch per WhatsApp an {selectedTarget?.nickname} senden</span>
-            </label>
-          )}
-        </div>
-
-        <div className="shrink-0 border-t border-[#24272D] p-3">
-          <button
-            type="submit"
-            className="w-full rounded-xl bg-[#6FB3A2] py-2.5 text-xs font-black text-[#060708] transition hover:bg-[#82C1B1]"
-          >
-            {selectedTarget
-              ? `⚡ ${selectedTarget.nickname} herausfordern`
-              : '⚡ Offene Challenge senden'}
-          </button>
-        </div>
-      </form>
-    </div>
-  );
-}
-
-function PlayerProfileModal({
-  currentUser,
-  onLogout,
-  onSave,
-  onClose,
-}) {
+function PlayerProfileModal({ currentUser, onLogout, onSave, onClose }) {
   const [isEditing, setIsEditing] = useState(false);
   const [form, setForm] = useState({
     ...currentUser,
@@ -6445,8 +6031,7 @@ function PlayerProfileModal({
       }
     }
     const activeDays = DAYS_OF_WEEK.filter(
-      (d) =>
-        Array.isArray(form.hallSchedule?.[d]) && form.hallSchedule[d].length > 0
+      (d) => Array.isArray(form.hallSchedule?.[d]) && form.hallSchedule[d].length > 0
     );
     onSave({
       ...form,
@@ -6622,10 +6207,7 @@ function PlayerProfileModal({
                   onClick={() =>
                     setForm((prev) => ({
                       ...prev,
-                      nickname: generateFunnyNickname(
-                        prev.firstName,
-                        prev.nickname
-                      ),
+                      nickname: generateFunnyNickname(prev.firstName, prev.nickname),
                     }))
                   }
                   className="inline-flex shrink-0 items-center justify-center gap-1 rounded-xl border border-[#C8A26E]/35 bg-[#1B1813] px-2.5 py-2 text-[11px] font-bold text-[#E6C79C] transition hover:border-[#C8A26E] hover:bg-[#252018]"
@@ -6709,10 +6291,7 @@ function PlayerProfileModal({
                 <HallSchedulePicker
                   schedule={form.hallSchedule || {}}
                   onChange={(nextSchedule) =>
-                    setForm((prev) => ({
-                      ...prev,
-                      hallSchedule: nextSchedule,
-                    }))
+                    setForm((prev) => ({ ...prev, hallSchedule: nextSchedule }))
                   }
                 />
               </div>
@@ -6722,34 +6301,28 @@ function PlayerProfileModal({
                   4-stelligen Profil-PIN anpassen (optional)
                 </label>
                 <div className="grid grid-cols-2 gap-2">
-                  <div className="pk-mobile-nozoom-wrap w-full overflow-hidden rounded-xl border border-[#2E323B] bg-[#181A1E]">
-                    <input
-                      type="password"
-                      inputMode="numeric"
-                      maxLength={4}
-                      value={newPin}
-                      onChange={(e) =>
-                        setNewPin(e.target.value.replace(/\D/g, '').slice(0, 4))
-                      }
-                      placeholder="Neuer PIN"
-                      className="pk-mobile-pin-input w-full bg-transparent px-2.5 py-2 text-center text-xs font-black tracking-[0.2em] placeholder:font-semibold placeholder:tracking-normal text-[#F4ECC2] focus:outline-none"
-                    />
-                  </div>
-                  <div className="pk-mobile-nozoom-wrap w-full overflow-hidden rounded-xl border border-[#2E323B] bg-[#181A1E]">
-                    <input
-                      type="password"
-                      inputMode="numeric"
-                      maxLength={4}
-                      value={newPinConfirm}
-                      onChange={(e) =>
-                        setNewPinConfirm(
-                          e.target.value.replace(/\D/g, '').slice(0, 4)
-                        )
-                      }
-                      placeholder="PIN bestätigen"
-                      className="pk-mobile-pin-input w-full bg-transparent px-2.5 py-2 text-center text-xs font-black tracking-[0.2em] placeholder:font-semibold placeholder:tracking-normal text-[#F4ECC2] focus:outline-none"
-                    />
-                  </div>
+                  <input
+                    type="password"
+                    inputMode="numeric"
+                    maxLength={4}
+                    value={newPin}
+                    onChange={(e) =>
+                      setNewPin(e.target.value.replace(/\D/g, '').slice(0, 4))
+                    }
+                    placeholder="Neuer PIN"
+                    className="w-full rounded-xl border border-[#2E323B] bg-[#181A1E] px-2.5 py-2 text-center text-xs font-black tracking-[0.2em] text-[#F4ECC2]"
+                  />
+                  <input
+                    type="password"
+                    inputMode="numeric"
+                    maxLength={4}
+                    value={newPinConfirm}
+                    onChange={(e) =>
+                      setNewPinConfirm(e.target.value.replace(/\D/g, '').slice(0, 4))
+                    }
+                    placeholder="PIN bestätigen"
+                    className="w-full rounded-xl border border-[#2E323B] bg-[#181A1E] px-2.5 py-2 text-center text-xs font-black tracking-[0.2em] text-[#F4ECC2]"
+                  />
                 </div>
               </div>
 
@@ -6782,19 +6355,6 @@ function PlayerProfileModal({
             onClick={onLogout}
             className="flex w-full items-center justify-center gap-2 rounded-xl border border-rose-500/30 bg-rose-950/20 py-2.5 text-xs font-bold text-rose-300 transition hover:bg-rose-950/35"
           >
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="h-4 w-4"
-            >
-              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-              <polyline points="16 17 21 12 16 7" />
-              <line x1="21" y1="12" x2="9" y2="12" />
-            </svg>
             <span>Abmelden &amp; zur Startseite zurück</span>
           </button>
         </div>
@@ -7027,93 +6587,6 @@ function AddMemberModal({ activeSeason, onAdd, onClose }) {
   );
 }
 
-function CreateSessionModal({ defaultType, onSubmit, onClose }) {
-  const [type, setType] = useState(defaultType);
-  const [dateLabel, setDateLabel] = useState(
-    defaultType === 'announcement' ? 'Donnerstag · 19:30 Uhr' : 'Heute · 19:00 Uhr'
-  );
-  const [note, setNote] = useState('');
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    onSubmit({
-      type,
-      dateLabel,
-      note: note.trim() || 'Wer hat Lust auf ein paar Sätze?',
-    });
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/75 p-3 sm:items-center">
-      <form
-        onSubmit={handleSubmit}
-        className="w-full max-w-md space-y-3 rounded-2xl border border-[#2E323B] bg-[#181A1E] p-4 shadow-2xl"
-      >
-        <div className="flex items-center justify-between">
-          <h3 className="text-sm font-black text-[#F3F4F6]">
-            {type === 'announcement' ? 'Vorankündigung erstellen' : 'Spontan-Session posten'}
-          </h3>
-          <button
-            type="button"
-            onClick={onClose}
-            className="text-xs font-bold text-[#8E95A2]"
-          >
-            ✕
-          </button>
-        </div>
-
-        <div className="grid grid-cols-2 gap-1.5">
-          <button
-            type="button"
-            onClick={() => setType('announcement')}
-            className={`rounded-lg py-1.5 text-xs font-bold ${
-              type === 'announcement'
-                ? 'bg-[#6FB3A2] text-[#060708]'
-                : 'bg-[#131417] text-[#9CA3AF]'
-            }`}
-          >
-            Vorankündigung
-          </button>
-          <button
-            type="button"
-            onClick={() => setType('spontaneous')}
-            className={`rounded-lg py-1.5 text-xs font-bold ${
-              type === 'spontaneous'
-                ? 'bg-[#6FB3A2] text-[#060708]'
-                : 'bg-[#131417] text-[#9CA3AF]'
-            }`}
-          >
-            Spontan heute
-          </button>
-        </div>
-
-        <input
-          type="text"
-          value={dateLabel}
-          onChange={(e) => setDateLabel(e.target.value)}
-          placeholder="Tag & Uhrzeit"
-          className="w-full rounded-xl border border-[#2E323B] bg-[#131417] px-3 py-2 text-xs text-[#F3F4F6]"
-        />
-
-        <textarea
-          rows={3}
-          value={note}
-          onChange={(e) => setNote(e.target.value)}
-          placeholder="Was möchtest du spielen? (z. B. lockeres Einspielen, Best of 5...)"
-          className="w-full rounded-xl border border-[#2E323B] bg-[#131417] px-3 py-2 text-xs text-[#F3F4F6]"
-        />
-
-        <button
-          type="submit"
-          className="w-full rounded-xl bg-[#6FB3A2] py-2.5 text-xs font-black text-[#060708]"
-        >
-          Veröffentlichen
-        </button>
-      </form>
-    </div>
-  );
-}
-
 function RecordLeagueMatchModal({ match, player1, player2, onSave, onClose }) {
   const initialWinner =
     match.score1 !== null && match.score2 !== null && match.score2 > match.score1
@@ -7215,14 +6688,6 @@ function RecordLeagueMatchModal({ match, player1, player2, onSave, onClose }) {
           </div>
         </div>
 
-        <div className="rounded-xl border border-[#24272D] bg-[#131417] px-3 py-2 text-center text-xs text-[#9CA3AF]">
-          Ergebnis:{' '}
-          <span className="font-black text-[#F3F4F6]">
-            {winnerSide === 'p1' ? player1?.nickname : player2?.nickname}
-          </span>{' '}
-          gewinnt <span className="font-black text-[#DE754B]">{scorePreset}</span>
-        </div>
-
         <button
           type="submit"
           className="w-full rounded-xl bg-[#DE754B] py-2.5 text-xs font-black text-[#060708]"
@@ -7248,7 +6713,6 @@ function AdminPanelTab({
   connectMatches,
   liveCheckins,
   sessions,
-  challenges,
   adminPinCode,
   onChangeAdminPin,
   onLockAdmin,
@@ -7264,7 +6728,6 @@ function AdminPanelTab({
   onDeleteConnectMatch,
   onRemoveLiveCheckin,
   onDeleteSession,
-  onDeleteChallenge,
 }) {
   const [memberSearch, setMemberSearch] = useState('');
   const [editingPlayerId, setEditingPlayerId] = useState(null);
@@ -7288,10 +6751,7 @@ function AdminPanelTab({
       const sep = line.includes(';') ? ';' : line.includes('\t') ? '\t' : ',';
       const cols = line.split(sep).map((c) => c.trim().replace(/^"|"$/g, ''));
       if (cols.length === 0 || !cols[0]) return;
-
-      if (idx === 0 && /^(vorname|first|name|nachname)/i.test(cols[0])) {
-        return;
-      }
+      if (idx === 0 && /^(vorname|first|name|nachname)/i.test(cols[0])) return;
 
       const firstName = cols[0] || '';
       const lastName = cols[1] || '';
@@ -7442,14 +6902,6 @@ function AdminPanelTab({
                 </button>
               </div>
 
-              <p className="text-[11px] leading-relaxed text-[#9CA3AF]">
-                Spaltenformat (mit <code className="text-[#E6C79C]">;</code> oder{' '}
-                <code className="text-[#E6C79C]">,</code> getrennt):{' '}
-                <strong className="text-[#F3F4F6]">
-                  Vorname; Nachname; Nickname; Telefon (+41/+49...); Klassierung; PIN
-                </strong>
-              </p>
-
               <div className="flex flex-wrap items-center gap-2">
                 <label className="cursor-pointer rounded-lg bg-[#252830] px-3 py-1.5 text-[11px] font-bold text-[#E6C79C]">
                   CSV-Datei wählen
@@ -7468,9 +6920,7 @@ function AdminPanelTab({
                     maxLength={4}
                     value={bulkDefaultPin}
                     onChange={(e) =>
-                      setBulkDefaultPin(
-                        e.target.value.replace(/\D/g, '').slice(0, 4)
-                      )
+                      setBulkDefaultPin(e.target.value.replace(/\D/g, '').slice(0, 4))
                     }
                     className="w-14 rounded-lg border border-[#2E323B] bg-[#131417] px-2 py-1 text-center font-black text-[#F3F4F6]"
                   />
@@ -7490,7 +6940,7 @@ function AdminPanelTab({
                 rows={4}
                 value={bulkText}
                 onChange={(e) => setBulkText(e.target.value)}
-                placeholder={`Beispiel:\nMax; Muster; MaxPower; +41 79 123 45 67; C8; 1234\nAnna; Keller; AnnaK; +49 170 987 65 43; D4; 1234`}
+                placeholder={`Beispiel:\nMax; Muster; MaxPower; +41 79 123 45 67; C8; 1234`}
                 className="w-full rounded-xl border border-[#2E323B] bg-[#131417] px-3 py-2 font-mono text-[11px] text-[#F3F4F6]"
               />
 
@@ -7551,23 +7001,21 @@ function AdminPanelTab({
                       </div>
                     </div>
 
-                    <div className="flex shrink-0 items-center gap-1.5">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (isEditing) {
-                            setEditingPlayerId(null);
-                          } else {
-                            setEditingPlayerId(p.id);
-                            setEditPinValue(p.pin || '1234');
-                            setEditSttValue(p.sttClass || 'Hobby');
-                          }
-                        }}
-                        className="rounded-lg bg-[#252830] px-2.5 py-1.5 text-[11px] font-bold text-[#F3F4F6]"
-                      >
-                        {isEditing ? 'Schliessen' : 'Bearbeiten'}
-                      </button>
-                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (isEditing) {
+                          setEditingPlayerId(null);
+                        } else {
+                          setEditingPlayerId(p.id);
+                          setEditPinValue(p.pin || '1234');
+                          setEditSttValue(p.sttClass || 'Hobby');
+                        }
+                      }}
+                      className="shrink-0 rounded-lg bg-[#252830] px-2.5 py-1.5 text-[11px] font-bold text-[#F3F4F6]"
+                    >
+                      {isEditing ? 'Schliessen' : 'Bearbeiten'}
+                    </button>
                   </div>
 
                   {isEditing && (
@@ -7726,9 +7174,7 @@ function AdminPanelTab({
 
                     <select
                       value={currentLeague ? currentLeague.id : 'paused'}
-                      onChange={(e) =>
-                        onAssignPlayerLeague(p.id, e.target.value)
-                      }
+                      onChange={(e) => onAssignPlayerLeague(p.id, e.target.value)}
                       className="rounded-lg border border-[#2E323B] bg-[#181A1E] px-2.5 py-1.5 text-xs font-bold text-[#F3F4F6]"
                     >
                       {sortedLeagues.map((l) => (
@@ -7827,9 +7273,7 @@ function AdminPanelTab({
                       {playersById[cm.player1Id]?.nickname} vs.{' '}
                       {playersById[cm.player2Id]?.nickname}
                     </span>
-                    <span className="ml-2 font-black text-[#E6C79C]">
-                      {cm.score}
-                    </span>
+                    <span className="ml-2 font-black text-[#E6C79C]">{cm.score}</span>
                   </div>
                   <button
                     type="button"
@@ -7909,44 +7353,31 @@ function AdminPanelTab({
 
           <div className="rounded-2xl border border-[#24272D] bg-[#181A1E] p-3.5">
             <div className="mb-2 text-xs font-black text-[#F3F4F6]">
-              Pinnwand &amp; Challenges ({sessions.length + challenges.length})
+              Spontan-Sessions ({sessions.length})
             </div>
-            <div className="space-y-1.5">
-              {challenges.map((ch) => (
-                <div
-                  key={ch.id}
-                  className="flex items-center justify-between rounded-xl bg-[#131417] px-3 py-2 text-xs"
-                >
-                  <span className="truncate pr-2">
-                    ⚡ {playersById[ch.challengerId]?.nickname}: {ch.format}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => onDeleteChallenge(ch.id)}
-                    className="shrink-0 rounded-lg bg-rose-950/50 px-2.5 py-1 text-[11px] font-bold text-rose-300"
+            {sessions.length === 0 ? (
+              <div className="text-xs text-[#8E95A2]">Keine aktiven Sessions.</div>
+            ) : (
+              <div className="space-y-1.5">
+                {sessions.map((s) => (
+                  <div
+                    key={s.id}
+                    className="flex items-center justify-between rounded-xl bg-[#131417] px-3 py-2 text-xs"
                   >
-                    Löschen
-                  </button>
-                </div>
-              ))}
-              {sessions.map((s) => (
-                <div
-                  key={s.id}
-                  className="flex items-center justify-between rounded-xl bg-[#131417] px-3 py-2 text-xs"
-                >
-                  <span className="truncate pr-2">
-                    📌 {playersById[s.authorId]?.nickname}: {s.dateLabel}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => onDeleteSession(s.id)}
-                    className="shrink-0 rounded-lg bg-rose-950/50 px-2.5 py-1 text-[11px] font-bold text-rose-300"
-                  >
-                    Löschen
-                  </button>
-                </div>
-              ))}
-            </div>
+                    <span className="truncate pr-2">
+                      {playersById[s.authorId]?.nickname}: {s.dateLabel}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => onDeleteSession(s.id)}
+                      className="shrink-0 rounded-lg bg-rose-950/50 px-2.5 py-1 text-[11px] font-bold text-rose-300"
+                    >
+                      Löschen
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}
