@@ -23,6 +23,134 @@ const STT_LEVEL_OPTIONS = [
   { value: 'A16+', label: 'A16+', rank: 65 },
 ];
 
+const LANGUAGE_OPTIONS = [
+  { value: 'Deutsch', label: 'Deutsch', shortLabel: 'DE' },
+  { value: 'Englisch', label: 'Englisch', shortLabel: 'EN' },
+  { value: 'Beides', label: 'Beides (DE & EN)', shortLabel: 'DE/EN' },
+];
+
+const PLAYSTYLE_OPTIONS = [
+  { value: 'Offensiv', label: 'Offensiv' },
+  { value: 'Allround', label: 'Allround' },
+  { value: 'Abwehr / Noppen', label: 'Abwehr / Noppen' },
+];
+
+function normalizeWhatsAppPhone(rawPhone = '') {
+  const trimmed = String(rawPhone || '').trim();
+  if (!trimmed) return '';
+  if (trimmed.startsWith('00')) {
+    return '+' + trimmed.slice(2).replace(/[^\d\s]/g, '');
+  }
+  return trimmed;
+}
+
+function validateWhatsAppPhone(rawPhone = '') {
+  const normalized = normalizeWhatsAppPhone(rawPhone);
+  if (!normalized) {
+    return { valid: false, error: 'Bitte WhatsApp-Telefonnummer mit Ländervorwahl eingeben (z. B. +41 79 123 45 67).' };
+  }
+  if (normalized.startsWith('0') && !normalized.startsWith('00')) {
+    return {
+      valid: false,
+      error: 'Bitte statt der führenden «0» die Ländervorwahl eingeben (z. B. +41 79... oder +49 170...).',
+    };
+  }
+  if (!normalized.startsWith('+')) {
+    return {
+      valid: false,
+      error: 'Bitte die Nummer mit «+» und Ländervorwahl beginnen (z. B. +41..., +49..., +33...).',
+    };
+  }
+  if (/^\+\d{1,3}\s*0/.test(normalized)) {
+    return {
+      valid: false,
+      error: 'Bitte die erste «0» nach der Ländervorwahl weglassen (z. B. +41 79... statt +41 079...).',
+    };
+  }
+  const digitsOnly = normalized.replace(/\D/g, '');
+  if (digitsOnly.length < 8 || digitsOnly.length > 15) {
+    return {
+      valid: false,
+      error: 'Die Telefonnummer scheint unvollständig oder zu lang zu sein (8–15 Ziffern inkl. Ländervorwahl).',
+    };
+  }
+  return { valid: true, normalized, digitsOnly };
+}
+
+function getWhatsAppPhoneHint(rawPhone = '') {
+  const trimmed = String(rawPhone || '').trim();
+  if (!trimmed) {
+    return {
+      status: 'neutral',
+      text: 'Mit Ländervorwahl eingeben, z. B. +41 79 123 45 67 oder +49 170 1234567',
+    };
+  }
+  if (trimmed.startsWith('00')) {
+    return {
+      status: 'info',
+      text: '«00...» wird automatisch in «+...» umgewandelt (ohne erste Null der Ortsvorwahl).',
+    };
+  }
+  const check = validateWhatsAppPhone(trimmed);
+  if (!check.valid) {
+    return {
+      status: 'warning',
+      text: check.error,
+    };
+  }
+  return {
+    status: 'valid',
+    text: `Gültige internationale Nummer (wa.me/${check.digitsOnly}) ✓`,
+  };
+}
+
+function WhatsAppPhoneField({ value, onChange, required = false, placeholder = '+41 79 123 45 67' }) {
+  const hint = getWhatsAppPhoneHint(value);
+
+  return (
+    <div className="space-y-1.5">
+      <label className="block text-[11px] font-semibold text-[#8E95A2]">
+        WhatsApp-Nummer (mit Ländervorwahl){required ? ' *' : ''}
+      </label>
+
+      <input
+        type="tel"
+        required={required}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        className={`w-full min-w-0 rounded-xl border bg-[#0F1114] px-3 py-2 text-base sm:text-xs text-[#F3F4F6] focus:outline-none ${
+          hint.status === 'warning'
+            ? 'border-amber-500/60'
+            : hint.status === 'valid'
+            ? 'border-[#6FB3A2]/60'
+            : 'border-[#2B2F37]'
+        }`}
+      />
+
+      <div
+        className={`flex items-start gap-1.5 rounded-lg px-2.5 py-1.5 text-[10px] leading-snug ${
+          hint.status === 'warning'
+            ? 'border border-amber-500/35 bg-amber-950/25 text-amber-200'
+            : hint.status === 'valid'
+            ? 'border border-[#6FB3A2]/35 bg-[#152622]/60 text-[#A8D0B1]'
+            : 'bg-[#0F1114]/80 text-[#8E95A2]'
+        }`}
+      >
+        <span className="shrink-0">
+          {hint.status === 'warning' ? '⚠️' : hint.status === 'valid' ? '✓' : '🌍'}
+        </span>
+        <span>{hint.text}</span>
+      </div>
+    </div>
+  );
+}
+
+const getLanguageShortLabel = (lang) => {
+  const found = LANGUAGE_OPTIONS.find((opt) => opt.value === lang);
+  return found ? found.shortLabel : 'DE';
+};
+
 const getSttRankValue = (sttClass) => {
   const found = STT_LEVEL_OPTIONS.find((opt) => opt.value === sttClass);
   return found ? found.rank : 15;
@@ -134,6 +262,8 @@ const INITIAL_PLAYERS = [
       'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=160&q=80',
     phone: '+41 79 111 22 33',
     sttClass: 'B11',
+    language: 'Beides',
+    playstyle: 'Offensiv',
     connectOnly: false,
     isNewMember: false,
     joinedLabel: '2022',
@@ -150,6 +280,8 @@ const INITIAL_PLAYERS = [
       'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=160&q=80',
     phone: '+41 79 222 33 44',
     sttClass: 'C9',
+    language: 'Deutsch',
+    playstyle: 'Offensiv',
     connectOnly: false,
     isNewMember: false,
     joinedLabel: '2023',
@@ -166,6 +298,8 @@ const INITIAL_PLAYERS = [
       'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=160&q=80',
     phone: '+41 79 333 44 55',
     sttClass: 'C8',
+    language: 'Deutsch',
+    playstyle: 'Allround',
     connectOnly: false,
     isNewMember: false,
     joinedLabel: '2021',
@@ -182,6 +316,8 @@ const INITIAL_PLAYERS = [
       'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=160&q=80',
     phone: '+41 79 444 55 66',
     sttClass: 'C7',
+    language: 'Beides',
+    playstyle: 'Allround',
     connectOnly: false,
     isNewMember: false,
     joinedLabel: '2024',
@@ -198,6 +334,8 @@ const INITIAL_PLAYERS = [
       'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=160&q=80',
     phone: '+41 79 555 66 77',
     sttClass: 'D4',
+    language: 'Deutsch',
+    playstyle: 'Offensiv',
     connectOnly: false,
     isNewMember: false,
     joinedLabel: '2024',
@@ -214,6 +352,8 @@ const INITIAL_PLAYERS = [
       'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=160&q=80',
     phone: '+41 79 666 77 88',
     sttClass: 'D3',
+    language: 'Deutsch',
+    playstyle: 'Abwehr / Noppen',
     connectOnly: false,
     isNewMember: true,
     joinedLabel: 'Nov 2026',
@@ -230,6 +370,8 @@ const INITIAL_PLAYERS = [
       'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&w=160&q=80',
     phone: '+41 79 777 88 99',
     sttClass: '≈ C-Niveau',
+    language: 'Englisch',
+    playstyle: 'Allround',
     connectOnly: true,
     isNewMember: true,
     joinedLabel: 'Okt 2026',
@@ -246,6 +388,8 @@ const INITIAL_PLAYERS = [
       'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=160&q=80',
     phone: '+41 79 888 99 00',
     sttClass: 'Hobby',
+    language: 'Beides',
+    playstyle: 'Allround',
     connectOnly: true,
     isNewMember: true,
     joinedLabel: 'Nov 2026',
@@ -656,6 +800,49 @@ function PlayerAvatar({ player, sizeClass = 'h-8 w-8 text-xs', isConnectAccent =
   );
 }
 
+function PlayerBadge({ player, season, ratingInfo }) {
+  if (!player) return null;
+  const league = season?.leagues?.find((l) => l.playerIds.includes(player.id));
+
+  return (
+    <div className="flex flex-wrap items-center gap-1">
+      {league ? (
+        <span className="rounded bg-[#2C1912] px-1.5 py-0.5 text-[9px] font-bold text-[#F4ECC2] ring-1 ring-[#DE754B]/40">
+          {league.name}
+        </span>
+      ) : (
+        <span className="rounded bg-[#152622] px-1.5 py-0.5 text-[9px] font-bold text-[#A8D0B1]">
+          CLUB
+        </span>
+      )}
+
+      {player.sttClass && (
+        <span className="rounded bg-[#131417] px-1.5 py-0.5 text-[9px] font-semibold text-[#9CA3AF]">
+          {player.sttClass}
+        </span>
+      )}
+
+      {player.playstyle && (
+        <span className="rounded bg-[#131417] px-1.5 py-0.5 text-[9px] font-semibold text-[#F4ECC2]">
+          {player.playstyle}
+        </span>
+      )}
+
+      <span className="rounded bg-[#131417] px-1 py-0.5 text-[9px] font-bold text-[#A8D0B1]">
+        {getLanguageShortLabel(player.language)}
+      </span>
+
+      {ratingInfo?.tier && (
+        <span
+          className={`rounded border px-1 py-0.5 text-[9px] font-bold leading-none ${ratingInfo.tier.badgeClass}`}
+        >
+          {ratingInfo.tier.symbol} {ratingInfo.elo}
+        </span>
+      )}
+    </div>
+  );
+}
+
 function isMatchingLevel(userA, userB, season) {
   if (!userA || !userB) return true;
   const leagueA = season?.leagues.find((l) => l.playerIds.includes(userA.id));
@@ -868,33 +1055,27 @@ function PingkongLogo({ className = 'h-12 w-12', accentHead = false, animated = 
           className={`${className} ${animated ? 'pk-logo-stance' : ''}`}
           aria-label="PINGKONG Logo"
         >
-          {/* Kopf / Stirn */}
           <polygon
             className={animated ? 'pk-logo-head' : ''}
             points="24.2,3.4 39.8,14.8 24.4,44.0 14.8,37.2 17.6,23.6 14.6,20.0"
             fill={accentHead ? '#DE754B' : 'currentColor'}
           />
-          {/* Vorderbein & Schulter */}
           <polygon
             points="42.4,15.6 56.0,21.0 32.8,96.6 4.0,96.6"
             fill="currentColor"
           />
-          {/* Zweites Vorderbein */}
           <polygon
             points="40.6,72.4 49.4,74.8 47.0,96.6 35.6,96.6"
             fill="currentColor"
           />
-          {/* Rücken & Oberkörper */}
           <polygon
             points="56.6,31.2 66.8,54.6 78.6,56.6 64.0,74.8 42.0,69.6"
             fill="currentColor"
           />
-          {/* Hinterbein vorne */}
           <polygon
             points="80.8,58.8 92.6,68.2 78.4,84.4 81.4,96.6 71.8,96.6 66.2,78.0"
             fill="currentColor"
           />
-          {/* Hinterbein hinten */}
           <polygon
             points="93.2,71.4 96.4,96.6 88.2,96.6 81.6,84.6"
             fill="currentColor"
@@ -923,10 +1104,73 @@ function PingkongFullLogo({ className = 'w-56', customSrc = '' }) {
   );
 }
 
+function PlatformInfoModal({ onClose }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/80 p-3 sm:items-center">
+      <div className="max-h-[88vh] w-full max-w-md space-y-3.5 overflow-y-auto rounded-2xl border border-[#DE754B]/45 bg-[#14161A] p-4 shadow-2xl">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[#DE754B] text-xs font-black text-[#060708]">
+              i
+            </span>
+            <h3 className="text-sm font-black text-[#F4ECC2]">Was ist CONNECT?</h3>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-lg bg-[#202329] px-2.5 py-1 text-xs font-bold text-[#9CA3AF] hover:text-[#F4ECC2]"
+          >
+            ✕
+          </button>
+        </div>
+
+        <p className="text-xs leading-relaxed text-[#D1D5DB]">
+          <strong className="text-[#F4ECC2]">CONNECT</strong> verbindet unseren
+          ganzen Tischtennis-Club in einer einzigen App – egal ob du einfach
+          spontan Bälle schlagen willst oder zusätzlich in der monatlichen
+          Club-Liga mitspielst.
+        </p>
+
+        <div className="space-y-2.5">
+          <div className="rounded-xl border border-[#6FB3A2]/40 bg-[#152622]/55 p-3">
+            <div className="text-xs font-black uppercase tracking-wider text-[#6FB3A2]">
+              1. CLUB · Halle &amp; Community
+            </div>
+            <ul className="mt-1.5 space-y-1 text-[11px] text-[#E5E7EB]">
+              <li>• Sieh live, wer gerade in der Halle an welchem Tisch steht</li>
+              <li>• Plane Club-Abende, Trainings &amp; spontane Herausforderungen</li>
+              <li>• Finde Trainingspartner nach Spielstärke, Spielstil, Sprache &amp; Hallentagen</li>
+              <li>• Sammle Punkte im freien CONNECT-Rating – ganz ohne Ligapflicht</li>
+            </ul>
+          </div>
+
+          <div className="rounded-xl border border-[#DE754B]/40 bg-[#291711]/55 p-3">
+            <div className="text-xs font-black uppercase tracking-wider text-[#DE754B]">
+              2. LEAGUE · Freiwillige Monatsliga
+            </div>
+            <ul className="mt-1.5 space-y-1 text-[11px] text-[#E5E7EB]">
+              <li>• Kleine, ausgeglichene 3er-/4er-Ligen pro Kalendermonat</li>
+              <li>• Flexible Terminabsprache direkt per 1-Klick-WhatsApp</li>
+              <li>• Auf- &amp; Abstieg am Monatsende – und jederzeit pausierbar</li>
+            </ul>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={onClose}
+          className="w-full rounded-xl bg-[#6FB3A2] py-2.5 text-xs font-black text-[#060708]"
+        >
+          Verstanden ✓
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function AuthGateScreen({
   players,
   activeSeason,
-  connectRatings,
   onSelectProfile,
   onRegisterProfile,
   onOpenPlatformInfo,
@@ -939,6 +1183,8 @@ function AuthGateScreen({
   const [nickname, setNickname] = useState('');
   const [phone, setPhone] = useState('');
   const [sttClass, setSttClass] = useState('Hobby');
+  const [playstyle, setPlaystyle] = useState('Allround');
+  const [language, setLanguage] = useState('Deutsch');
   const [pin, setPin] = useState('');
   const [pinConfirm, setPinConfirm] = useState('');
   const [formError, setFormError] = useState('');
@@ -994,8 +1240,9 @@ function AuthGateScreen({
       setFormError('Bitte Nickname eingeben.');
       return;
     }
-    if (!phone.trim()) {
-      setFormError('Bitte WhatsApp-Telefonnummer eingeben.');
+    const phoneCheck = validateWhatsAppPhone(phone);
+    if (!phoneCheck.valid) {
+      setFormError(phoneCheck.error);
       return;
     }
     const activeDays = DAYS_OF_WEEK.filter(
@@ -1025,8 +1272,10 @@ function AuthGateScreen({
       nickname: nickname.trim(),
       pin,
       avatarUrl,
-      phone: phone.trim(),
+      phone: phoneCheck.normalized,
       sttClass,
+      playstyle,
+      language,
       connectOnly,
       leagueStartNextMonth: !connectOnly && leagueJoinTiming === 'next',
       isNewMember: true,
@@ -1077,12 +1326,44 @@ function AuthGateScreen({
   };
 
   return (
-    <div className="min-h-screen overflow-x-hidden bg-[#060708] px-4 py-6 text-[#F3F4F6]">
-      <div className="mx-auto w-full max-w-md space-y-4">
-        <div className="rounded-3xl border border-[#22252B] bg-[#121417] px-6 py-7 text-center">
+    <div
+      className={`overflow-x-hidden bg-[#060708] px-3.5 text-[#F3F4F6] sm:px-4 ${
+        mode === 'select'
+          ? 'flex h-[100dvh] flex-col overflow-hidden py-3 sm:min-h-screen sm:h-auto sm:overflow-visible sm:py-6'
+          : 'min-h-screen py-4 sm:py-6'
+      }`}
+    >
+      <style>{`
+        @media (max-width: 639px) {
+          .pk-mobile-nozoom-wrap {
+            height: 34px;
+            overflow: hidden;
+          }
+          .pk-mobile-nozoom-input {
+            font-size: 16px !important;
+            line-height: 20px !important;
+            width: 123.08% !important;
+            transform: scale(0.8125);
+            transform-origin: left top;
+            padding-top: 10px !important;
+            padding-bottom: 10px !important;
+          }
+          .pk-mobile-nozoom-input::placeholder {
+            font-size: 15px !important;
+          }
+        }
+      `}</style>
+      <div
+        className={`mx-auto flex w-full max-w-md flex-col overflow-x-hidden ${
+          mode === 'select'
+            ? 'min-h-0 flex-1 space-y-2.5 sm:flex-initial sm:space-y-4'
+            : 'space-y-3 sm:space-y-4'
+        }`}
+      >
+        <div className="shrink-0 rounded-2xl border border-[#22252B] bg-[#121417] px-4 py-3.5 text-center sm:rounded-3xl sm:px-6 sm:py-6">
           <div className="flex flex-col items-center">
             <PingkongFullLogo
-              className="w-28 max-w-full sm:w-32"
+              className="w-16 max-w-full sm:w-28"
               customSrc={customLogoUrl}
             />
 
@@ -1090,21 +1371,21 @@ function AuthGateScreen({
               style={{
                 fontFamily: "'Avenir Next', 'Montserrat', 'Trebuchet MS', 'Segoe UI', sans-serif",
               }}
-              className="mt-3 text-center text-3xl font-black tracking-[0.22em] text-[#F4ECC2] uppercase sm:text-4xl"
+              className="mt-1.5 text-center text-2xl font-black tracking-[0.22em] text-[#F4ECC2] uppercase sm:mt-3 sm:text-4xl"
             >
               CONNECT
             </h1>
 
-            <p className="mt-2.5 max-w-[260px] text-xs leading-relaxed text-[#9CA3AF]">
+            <p className="mt-1 max-w-[270px] text-[11px] leading-snug text-[#9CA3AF] sm:mt-2 sm:text-xs sm:leading-relaxed">
               Wähle dein PINGKONG Club Profil aus oder registriere dich neu.
             </p>
 
             <button
               type="button"
               onClick={onOpenPlatformInfo}
-              className="mt-4 inline-flex items-center gap-1.5 rounded-full border border-[#2B2F37] bg-[#15171B] px-3.5 py-1.5 text-[11px] font-bold text-[#F4ECC2] transition hover:border-[#DE754B] hover:text-[#DE754B]"
+              className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-[#2B2F37] bg-[#15171B] px-3 py-1 text-[10px] font-bold text-[#F4ECC2] transition hover:border-[#DE754B] hover:text-[#DE754B] sm:mt-3.5 sm:px-3.5 sm:py-1.5 sm:text-[11px]"
             >
-              <span className="flex h-4 w-4 items-center justify-center rounded-full bg-[#DE754B] text-[10px] font-black text-[#060708]">
+              <span className="flex h-3.5 w-3.5 items-center justify-center rounded-full bg-[#DE754B] text-[9px] font-black text-[#060708] sm:h-4 sm:w-4 sm:text-[10px]">
                 i
               </span>
               <span>Was ist CONNECT?</span>
@@ -1112,14 +1393,14 @@ function AuthGateScreen({
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-1.5 rounded-2xl border border-[#24272E] bg-[#14161A] p-1.5">
+        <div className="grid shrink-0 grid-cols-2 gap-1.5 rounded-2xl border border-[#24272E] bg-[#14161A] p-1 sm:p-1.5">
           <button
             type="button"
             onClick={() => {
               setMode('select');
               setPendingProfile(null);
             }}
-            className={`rounded-xl py-2.5 text-xs font-black transition ${
+            className={`rounded-xl py-2 text-xs font-black transition sm:py-2.5 ${
               mode === 'select'
                 ? 'bg-[#6FB3A2] text-[#060708]'
                 : 'text-[#9CA3AF] hover:text-[#F4ECC2]'
@@ -1133,7 +1414,7 @@ function AuthGateScreen({
               setMode('register');
               setPendingProfile(null);
             }}
-            className={`rounded-xl py-2.5 text-xs font-black transition ${
+            className={`rounded-xl py-2 text-xs font-black transition sm:py-2.5 ${
               mode === 'register'
                 ? 'bg-[#6FB3A2] text-[#060708]'
                 : 'text-[#9CA3AF] hover:text-[#F4ECC2]'
@@ -1144,7 +1425,7 @@ function AuthGateScreen({
         </div>
 
         {mode === 'select' && (
-          <div className="space-y-3 rounded-2xl border border-[#24272E] bg-[#14161A] p-4">
+          <div className="flex min-h-0 flex-1 flex-col gap-2.5 rounded-2xl border border-[#24272E] bg-[#14161A] p-3 sm:flex-initial sm:gap-3 sm:p-4">
             {pendingProfile ? (
               <form onSubmit={handleVerifyProfilePin} className="space-y-3">
                 <div className="flex items-center justify-between">
@@ -1201,26 +1482,17 @@ function AuthGateScreen({
               </form>
             ) : (
               <>
-                <style>{`
-                  @media (max-width: 639px) {
-                    .pk-mobile-search-input {
-                      width: 123.08% !important;
-                      transform: scale(0.8125);
-                      transform-origin: left center;
-                    }
-                  }
-                `}</style>
-                <div className="overflow-hidden">
+                <div className="pk-mobile-nozoom-wrap w-full shrink-0 overflow-hidden">
                   <input
                     type="text"
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                     placeholder="Profil suchen nach Name oder Spielername..."
-                    className="pk-mobile-search-input w-full rounded-xl border border-[#2B2F37] bg-[#0F1114] px-3.5 py-3 text-[16px] text-[#F3F4F6] placeholder:text-[#6B7280] focus:border-[#6FB3A2] focus:outline-none sm:px-3 sm:py-2.5 sm:text-xs"
+                    className="pk-mobile-nozoom-input w-full rounded-xl border border-[#2B2F37] bg-[#0F1114] px-3 py-2 text-xs text-[#F3F4F6] placeholder:text-[#6B7280] focus:border-[#6FB3A2] focus:outline-none"
                   />
                 </div>
 
-                <div>
+                <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pr-0.5 sm:max-h-[420px] sm:flex-initial">
                   {filteredPlayers.length === 0 ? (
                     <div className="rounded-xl border border-[#22252B] bg-[#0F1114] p-3 text-center text-xs text-[#8E95A2]">
                       Kein Profil gefunden.{' '}
@@ -1233,7 +1505,7 @@ function AuthGateScreen({
                       </button>
                     </div>
                   ) : (
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid grid-cols-2 gap-1.5 sm:gap-2">
                       {filteredPlayers.map((p) => (
                         <button
                           key={p.id}
@@ -1243,7 +1515,7 @@ function AuthGateScreen({
                             setLoginPin('');
                             setLoginPinError('');
                           }}
-                          className="flex flex-col justify-between rounded-xl border border-[#24272E] bg-[#0F1114] p-2.5 text-left transition hover:border-[#DE754B] hover:bg-[#1E1410]"
+                          className="flex flex-col justify-between rounded-xl border border-[#24272E] bg-[#0F1114] p-2 text-left transition hover:border-[#DE754B] hover:bg-[#1E1410] sm:p-2.5"
                         >
                           <div className="flex items-center gap-2">
                             <PlayerAvatar
@@ -1288,7 +1560,7 @@ function AuthGateScreen({
         {mode === 'register' && (
           <form
             onSubmit={handleRegisterSubmit}
-            className="space-y-3 rounded-2xl border border-[#24272E] bg-[#14161A] p-4"
+            className="w-full max-w-full space-y-3 overflow-x-hidden rounded-2xl border border-[#24272E] bg-[#14161A] p-4"
           >
             <div className="flex items-start gap-2.5 rounded-2xl border border-[#6FB3A2]/40 bg-[#152622]/70 px-3.5 py-2.5 text-left">
               <span className="mt-0.5 text-sm">⚡</span>
@@ -1443,7 +1715,7 @@ function AuthGateScreen({
                 value={firstName}
                 onChange={(e) => setFirstName(e.target.value)}
                 placeholder="Vorname *"
-                className="rounded-xl border border-[#2E323B] bg-[#131417] px-3 py-2 text-xs text-[#F3F4F6]"
+                className="w-full min-w-0 rounded-xl border border-[#2E323B] bg-[#131417] px-3 py-2 text-base sm:text-xs text-[#F3F4F6]"
               />
               <input
                 type="text"
@@ -1451,40 +1723,39 @@ function AuthGateScreen({
                 value={lastName}
                 onChange={(e) => setLastName(e.target.value)}
                 placeholder="Nachname *"
-                className="rounded-xl border border-[#2E323B] bg-[#131417] px-3 py-2 text-xs text-[#F3F4F6]"
+                className="w-full min-w-0 rounded-xl border border-[#2E323B] bg-[#131417] px-3 py-2 text-base sm:text-xs text-[#F3F4F6]"
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-2">
-              <div className="space-y-1">
+            <div className="space-y-1">
+              <div className="flex gap-2">
                 <input
                   type="text"
                   required
                   value={nickname}
                   onChange={(e) => setNickname(e.target.value)}
                   placeholder="Nickname *"
-                  className="w-full rounded-xl border border-[#2B2F37] bg-[#0F1114] px-3 py-2 text-xs font-bold text-[#F3F4F6]"
+                  className="min-w-0 flex-1 rounded-xl border border-[#2B2F37] bg-[#0F1114] px-3 py-2 text-base sm:text-xs font-bold text-[#F3F4F6]"
                 />
                 <button
                   type="button"
                   onClick={() =>
                     setNickname(generateFunnyNickname(firstName, nickname))
                   }
-                  className="inline-flex w-full items-center justify-center gap-1 rounded-lg border border-[#DE754B]/40 bg-[#23140F] px-2 py-1 text-[10px] font-bold text-[#F4ECC2] transition hover:border-[#DE754B] hover:bg-[#2F1B14]"
+                  className="inline-flex shrink-0 items-center justify-center gap-1 rounded-xl border border-[#DE754B]/40 bg-[#23140F] px-3 py-2 text-[11px] font-bold text-[#F4ECC2] transition hover:border-[#DE754B] hover:bg-[#2F1B14]"
                 >
                   <span>🎲</span>
                   <span>Lustiger Vorschlag</span>
                 </button>
               </div>
-              <input
-                type="tel"
-                required
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                placeholder="WhatsApp (+41...) *"
-                className="self-start rounded-xl border border-[#2B2F37] bg-[#0F1114] px-3 py-2 text-xs text-[#F3F4F6]"
-              />
             </div>
+
+            <WhatsAppPhoneField
+              value={phone}
+              onChange={setPhone}
+              required
+              placeholder="+41 79 123 45 67 / +49 170 1234567"
+            />
 
             <div>
               <label className="mb-1 block text-[11px] font-semibold text-[#8E95A2]">
@@ -1494,7 +1765,7 @@ function AuthGateScreen({
                 required
                 value={sttClass}
                 onChange={(e) => setSttClass(e.target.value)}
-                className="w-full rounded-xl border border-[#2B2F37] bg-[#0F1114] px-2.5 py-2 text-xs font-bold text-[#F3F4F6]"
+                className="w-full min-w-0 rounded-xl border border-[#2B2F37] bg-[#0F1114] px-2.5 py-2 text-base sm:text-xs font-bold text-[#F3F4F6]"
               >
                 {STT_LEVEL_OPTIONS.map((opt) => (
                   <option key={opt.value} value={opt.value}>
@@ -1502,6 +1773,60 @@ function AuthGateScreen({
                   </option>
                 ))}
               </select>
+            </div>
+
+            <div>
+              <label className="mb-1 block text-[11px] font-semibold text-[#8E95A2]">
+                Spielstil *
+              </label>
+              <div className="grid grid-cols-3 gap-1.5">
+                {PLAYSTYLE_OPTIONS.map((opt) => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => setPlaystyle(opt.value)}
+                    className={`rounded-xl py-2 text-[11px] font-black transition ${
+                      playstyle === opt.value
+                        ? 'bg-[#6FB3A2] text-[#060708]'
+                        : 'border border-[#2B2F37] bg-[#0F1114] text-[#9CA3AF] hover:text-[#F4ECC2]'
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <label className="mb-1 block text-[11px] font-semibold text-[#8E95A2]">
+                Sprache *
+              </label>
+              <div className="grid grid-cols-3 gap-1.5">
+                {LANGUAGE_OPTIONS.map((opt) => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => setLanguage(opt.value)}
+                    className={`rounded-xl py-2 text-[11px] font-black transition ${
+                      language === opt.value
+                        ? 'bg-[#6FB3A2] text-[#060708]'
+                        : 'border border-[#2B2F37] bg-[#0F1114] text-[#9CA3AF] hover:text-[#F4ECC2]'
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <label className="mb-1 block text-[11px] font-semibold text-[#8E95A2]">
+                Typische Hallentage &amp; Tageszeit (min. 1 Tag) *
+              </label>
+              <HallSchedulePicker
+                schedule={hallSchedule}
+                onChange={setHallSchedule}
+              />
             </div>
 
             <div className="rounded-xl border border-[#DE754B]/40 bg-[#0F1114] p-2.5">
@@ -1519,7 +1844,7 @@ function AuthGateScreen({
                     setPin(e.target.value.replace(/\D/g, '').slice(0, 4))
                   }
                   placeholder="PIN (4 Ziffern) *"
-                  className="rounded-xl border border-[#2B2F37] bg-[#14161A] px-3 py-2 text-center text-xs font-black tracking-[0.25em] text-[#F4ECC2]"
+                  className="w-full min-w-0 rounded-xl border border-[#2B2F37] bg-[#14161A] px-3 py-2 text-center text-base sm:text-xs font-black tracking-[0.25em] text-[#F4ECC2]"
                 />
                 <input
                   type="password"
@@ -1531,19 +1856,9 @@ function AuthGateScreen({
                     setPinConfirm(e.target.value.replace(/\D/g, '').slice(0, 4))
                   }
                   placeholder="PIN bestätigen *"
-                  className="rounded-xl border border-[#2B2F37] bg-[#14161A] px-3 py-2 text-center text-xs font-black tracking-[0.25em] text-[#F4ECC2]"
+                  className="w-full min-w-0 rounded-xl border border-[#2B2F37] bg-[#14161A] px-3 py-2 text-center text-base sm:text-xs font-black tracking-[0.25em] text-[#F4ECC2]"
                 />
               </div>
-            </div>
-
-            <div>
-              <label className="mb-1 block text-[11px] font-semibold text-[#8E95A2]">
-                Typische Hallentage &amp; Tageszeit (min. 1 Tag) *
-              </label>
-              <HallSchedulePicker
-                schedule={hallSchedule}
-                onChange={setHallSchedule}
-              />
             </div>
 
             {formError && (
@@ -1557,7 +1872,7 @@ function AuthGateScreen({
               className="w-full rounded-xl bg-[#6FB3A2] py-3 text-xs font-black text-[#060708] transition hover:bg-[#82C1B1]"
             >
               {connectOnly
-                ? 'Als CLUB-Mitglied registrieren →'
+                ? 'Für CLUB registrieren →'
                 : 'Für CLUB & LEAGUE registrieren →'}
             </button>
           </form>
@@ -1571,7 +1886,7 @@ export default function App() {
   const [players, setPlayers] = useState(INITIAL_PLAYERS);
   const [seasons, setSeasons] = useState(INITIAL_SEASONS);
   const [currentUserId, setCurrentUserId] = useState(null);
-  const [world, setWorld] = useState('start');
+  const [world, setWorld] = useState('connect');
   const [leagueTab, setLeagueTab] = useState('matches');
   const [connectTab, setConnectTab] = useState('overview');
   const [selectedSeasonId, setSelectedSeasonId] = useState('2026-11');
@@ -1593,7 +1908,6 @@ export default function App() {
   const [toastMessage, setToastMessage] = useState('');
   const customLogoUrl = '';
 
-  // Admin-Zustand (Admin-PIN geschützt)
   const [adminPinCode, setAdminPinCode] = useState('9999');
   const [isAdminUnlocked, setIsAdminUnlocked] = useState(false);
   const [showAdminPinPrompt, setShowAdminPinPrompt] = useState(false);
@@ -1659,10 +1973,10 @@ export default function App() {
         <AuthGateScreen
           players={players}
           activeSeason={activeSeason}
-          connectRatings={ratingsByPlayer}
           onSelectProfile={(id) => {
             setCurrentUserId(id);
-            setWorld('start');
+            setWorld('connect');
+            setConnectTab('overview');
             showToast(`Willkommen zurück, ${playersById[id]?.nickname || ''}!`);
           }}
           onRegisterProfile={(newPlayer, leagueId) => {
@@ -1699,7 +2013,8 @@ export default function App() {
               })
             );
             setCurrentUserId(newPlayer.id);
-            setWorld('start');
+            setWorld('connect');
+            setConnectTab('overview');
             showToast(
               newPlayer.leagueStartNextMonth
                 ? `Profil ${newPlayer.nickname} erstellt – Liga-Start auf nächsten Monat vorgemerkt!`
@@ -1723,12 +2038,20 @@ export default function App() {
   const isCurrentUserPaused = activeSeason.pausedPlayerIds.includes(currentUser.id);
 
   const handleUpdatePlayer = (updated) => {
-    setPlayers((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
+    const cleaned = {
+      ...updated,
+      phone: normalizeWhatsAppPhone(updated.phone),
+    };
+    setPlayers((prev) => prev.map((p) => (p.id === cleaned.id ? cleaned : p)));
     showToast('Stammdaten gespeichert');
   };
 
   const handleAddMember = (newPlayer, leagueId) => {
-    setPlayers((prev) => [...prev, newPlayer]);
+    const cleanedPlayer = {
+      ...newPlayer,
+      phone: normalizeWhatsAppPhone(newPlayer.phone),
+    };
+    setPlayers((prev) => [...prev, cleanedPlayer]);
     if (leagueId) {
       setSeasons((prev) =>
         prev.map((s) =>
@@ -1738,7 +2061,7 @@ export default function App() {
                 ...s,
                 leagues: s.leagues.map((l) =>
                   l.id === leagueId
-                    ? { ...l, playerIds: [...l.playerIds, newPlayer.id] }
+                    ? { ...l, playerIds: [...l.playerIds, cleanedPlayer.id] }
                     : l
                 ),
               }
@@ -1746,7 +2069,7 @@ export default function App() {
       );
     }
     setShowAddMemberModal(false);
-    showToast(`${newPlayer.nickname} wurde hinzugefügt`);
+    showToast(`${cleanedPlayer.nickname} wurde hinzugefügt`);
   };
 
   const handleTogglePauseCurrentUser = () => {
@@ -1782,7 +2105,6 @@ export default function App() {
     showToast(isCurrentUserPaused ? 'Wieder aktiv gemeldet' : 'Für diesen Monat pausiert');
   };
 
-  // --- ADMIN AKTIONEN ---
   const handleOpenAdmin = () => {
     if (isAdminUnlocked) {
       setWorld('admin');
@@ -2222,7 +2544,10 @@ export default function App() {
           <div className="flex items-center justify-between gap-2">
             <button
               type="button"
-              onClick={() => setWorld('start')}
+              onClick={() => {
+                setWorld('connect');
+                setConnectTab('overview');
+              }}
               className="flex items-center gap-2.5 text-left"
             >
               <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-xl border border-[#2B2F37] bg-[#0C0D10] p-1 text-[#DE754B]">
@@ -2240,13 +2565,24 @@ export default function App() {
                 <div className="text-sm font-black tracking-[0.14em] text-[#F4ECC2] uppercase">
                   CONNECT
                 </div>
-                <div className="text-[10px] font-bold tracking-[0.16em] text-[#A8D0B1] uppercase">
-                  CLUB <span className="text-[#DE754B]">/</span> LEAGUE
+                <div className="text-[10px] font-bold tracking-[0.16em] text-[#6FB3A2] uppercase">
+                  CLUB <span className="text-[#6B7280]">/</span>{' '}
+                  <span className="text-[#DE754B]">LEAGUE</span>
                 </div>
               </div>
             </button>
 
             <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => setShowPlatformInfo(true)}
+                title="Was ist CONNECT?"
+                aria-label="Was ist CONNECT?"
+                className="flex h-8 w-8 items-center justify-center rounded-full bg-[#15171B] text-xs font-black text-[#F4ECC2] ring-1 ring-[#2B2F37] transition hover:border-[#DE754B] hover:text-[#DE754B]"
+              >
+                i
+              </button>
+
               <button
                 type="button"
                 onClick={handleOpenAdmin}
@@ -2323,8 +2659,8 @@ export default function App() {
               onClick={() => setWorld('connect')}
               className={`relative flex items-center justify-between rounded-xl px-3.5 py-2 text-left transition ${
                 world === 'connect'
-                  ? 'bg-[#6FB3A2] text-[#060708] shadow-lg shadow-[#6FB3A2]/20'
-                  : 'bg-[#14161A] text-[#D1D5DB] ring-1 ring-[#24272E] hover:bg-[#1A1D22]'
+                  ? 'bg-[#6FB3A2] text-[#060708] shadow-lg shadow-[#6FB3A2]/25'
+                  : 'bg-[#14161A] text-[#D1D5DB] ring-1 ring-[#6FB3A2]/35 hover:bg-[#16221F]'
               }`}
             >
               <div>
@@ -2353,8 +2689,8 @@ export default function App() {
               onClick={() => setWorld('league')}
               className={`relative flex items-center justify-between rounded-xl px-3.5 py-2 text-left transition ${
                 world === 'league'
-                  ? 'bg-[#6FB3A2] text-[#060708] shadow-lg shadow-[#6FB3A2]/20'
-                  : 'bg-[#14161A] text-[#D1D5DB] ring-1 ring-[#24272E] hover:bg-[#1A1D22]'
+                  ? 'bg-[#DE754B] text-[#060708] shadow-lg shadow-[#DE754B]/25'
+                  : 'bg-[#14161A] text-[#D1D5DB] ring-1 ring-[#DE754B]/35 hover:bg-[#231611]'
               }`}
             >
               <div>
@@ -2372,15 +2708,25 @@ export default function App() {
                     : 'Info'}
                 </div>
               </div>
-              {openLeagueMatchesCount > 0 && (
+              {openLeagueMatchesCount > 0 ? (
                 <span
                   className={`rounded-full px-2 py-0.5 text-[10px] font-black ${
                     world === 'league'
-                      ? 'bg-[#060708] text-[#A8D0B1]'
-                      : 'bg-[#152622] text-[#A8D0B1]'
+                      ? 'bg-[#060708] text-[#F4ECC2]'
+                      : 'bg-[#2C1912] text-[#F4ECC2] ring-1 ring-[#DE754B]/45'
                   }`}
                 >
                   {openLeagueMatchesCount} offen
+                </span>
+              ) : (
+                <span
+                  className={`rounded-full px-2 py-0.5 text-[10px] font-black ${
+                    world === 'league'
+                      ? 'bg-[#060708] text-[#F4ECC2]'
+                      : 'bg-[#2C1912] text-[#DE754B]'
+                  }`}
+                >
+                  Liga
                 </span>
               )}
             </button>
@@ -2395,37 +2741,6 @@ export default function App() {
       )}
 
       <main className="mx-auto max-w-2xl px-4 pt-4">
-        {world === 'start' && (
-          <StartOverviewTab
-            currentUser={currentUser}
-            currentUserLeague={currentUserLeague}
-            isCurrentUserPaused={isCurrentUserPaused}
-            activeSeason={activeSeason}
-            openLeagueMatchesCount={openLeagueMatchesCount}
-            liveCheckins={liveCheckins}
-            sessions={sessions}
-            challenges={challenges}
-            clubEvenings={clubEvenings}
-            playersById={playersById}
-            connectRatings={ratingsByPlayer}
-            daysRemaining={daysRemaining}
-            isEndOfMonthReminderWindow={isEndOfMonthReminderWindow}
-            onGoLeague={(tab = 'matches') => {
-              setWorld('league');
-              setLeagueTab(tab);
-            }}
-            onGoConnect={(tab = 'overview') => {
-              setWorld('connect');
-              setConnectTab(tab);
-            }}
-            onOpenCheckIn={() => setShowCheckInModal(true)}
-            onOpenAddMember={() => setShowAddMemberModal(true)}
-            onOpenChallenge={(targetId = null) => setChallengeTargetId(targetId)}
-            onOpenPlatformInfo={() => setShowPlatformInfo(true)}
-            onOpenAdmin={handleOpenAdmin}
-          />
-        )}
-
         {world === 'admin' && (
           <AdminPanelTab
             adminTab={adminTab}
@@ -2450,7 +2765,7 @@ export default function App() {
             }}
             onLockAdmin={() => {
               setIsAdminUnlocked(false);
-              setWorld('start');
+              setWorld('connect');
               showToast('Admin-Bereich gesperrt');
             }}
             onOpenAddMember={() => setShowAddMemberModal(true)}
@@ -2502,7 +2817,7 @@ export default function App() {
 
         {world === 'league' && (
           <div className="space-y-4">
-            <div className="flex items-center justify-between gap-2 rounded-2xl border border-[#22252B] bg-[#14161A] p-2.5">
+            <div className="flex items-center justify-between gap-2 rounded-2xl border border-[#DE754B]/30 bg-[#14161A] p-2.5">
               <div className="flex items-center gap-1.5 overflow-x-auto">
                 {seasons.map((s) => (
                   <button
@@ -2511,7 +2826,7 @@ export default function App() {
                     onClick={() => setSelectedSeasonId(s.id)}
                     className={`whitespace-nowrap rounded-lg px-2.5 py-1.5 text-xs font-bold transition ${
                       s.id === viewedSeason.id
-                        ? 'bg-[#6FB3A2] text-[#060708]'
+                        ? 'bg-[#DE754B] text-[#060708]'
                         : 'bg-[#0F1114] text-[#9CA3AF] hover:text-[#F4ECC2]'
                     }`}
                   >
@@ -2524,7 +2839,7 @@ export default function App() {
                 <button
                   type="button"
                   onClick={handleAdvanceMonth}
-                  className="shrink-0 rounded-lg border border-[#6FB3A2]/45 bg-[#152622] px-2.5 py-1.5 text-[11px] font-bold text-[#A8D0B1] hover:bg-[#1C332D]"
+                  className="shrink-0 rounded-lg border border-[#DE754B]/45 bg-[#291711] px-2.5 py-1.5 text-[11px] font-bold text-[#F4ECC2] hover:bg-[#361E16]"
                 >
                   Monat abschliessen →
                 </button>
@@ -2557,7 +2872,7 @@ export default function App() {
               </div>
             )}
 
-            <div className="grid grid-cols-3 gap-1.5 rounded-xl bg-[#14161A] p-1 ring-1 ring-[#22252B]">
+            <div className="grid grid-cols-3 gap-1.5 rounded-xl bg-[#14161A] p-1 ring-1 ring-[#DE754B]/25">
               {[
                 { id: 'matches', label: 'Meine Spiele' },
                 { id: 'standings', label: 'Tabelle & Aufstieg' },
@@ -2569,7 +2884,7 @@ export default function App() {
                   onClick={() => setLeagueTab(t.id)}
                   className={`rounded-lg py-2 text-xs font-bold transition ${
                     leagueTab === t.id
-                      ? 'bg-[#6FB3A2] text-[#060708]'
+                      ? 'bg-[#DE754B] text-[#060708]'
                       : 'text-[#8E95A2] hover:text-[#F4ECC2]'
                   }`}
                 >
@@ -2691,7 +3006,6 @@ export default function App() {
                 clubEvenings={clubEvenings}
                 currentUser={currentUser}
                 playersById={playersById}
-                connectRatings={ratingsByPlayer}
                 onCreateEvening={handleCreateClubEvening}
                 onToggleJoinEvening={handleToggleClubEveningJoin}
               />
@@ -2740,7 +3054,6 @@ export default function App() {
               <ClubPlayersTab
                 players={players}
                 currentUser={currentUser}
-                activeSeason={activeSeason}
                 liveCheckins={liveCheckins}
                 connectRatings={ratingsByPlayer}
                 onOpenAddMember={() => setShowAddMemberModal(true)}
@@ -2894,234 +3207,6 @@ export default function App() {
   );
 }
 
-function StartOverviewTab({
-  currentUser,
-  currentUserLeague,
-  isCurrentUserPaused,
-  activeSeason,
-  openLeagueMatchesCount,
-  liveCheckins,
-  challenges,
-  clubEvenings,
-  playersById,
-  daysRemaining,
-  isEndOfMonthReminderWindow,
-  onGoLeague,
-  onGoConnect,
-  onOpenCheckIn,
-  onOpenAddMember,
-  onOpenChallenge,
-  onOpenPlatformInfo,
-  onOpenAdmin,
-}) {
-  const incomingChallenges = challenges.filter(
-    (c) =>
-      c.status === 'open' &&
-      (c.targetId === currentUser.id ||
-        (c.targetId === null && c.challengerId !== currentUser.id))
-  );
-
-  const nextEvening = clubEvenings[0];
-
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between gap-2 rounded-2xl border border-[#22252B] bg-[#14161A] px-3.5 py-2.5">
-        <div className="text-xs font-bold text-[#D1D5DB]">
-          Willkommen, <span className="text-[#F4ECC2]">{currentUser.nickname}</span>
-        </div>
-        <button
-          type="button"
-          onClick={onOpenPlatformInfo}
-          className="inline-flex items-center gap-1.5 rounded-full border border-[#DE754B]/45 bg-[#0F1114] px-3 py-1 text-[11px] font-bold text-[#F4ECC2] hover:border-[#DE754B]"
-        >
-          <span className="flex h-3.5 w-3.5 items-center justify-center rounded-full bg-[#DE754B] text-[9px] font-black text-[#060708]">
-            i
-          </span>
-          <span>Was ist CONNECT?</span>
-        </button>
-      </div>
-
-      {isEndOfMonthReminderWindow && openLeagueMatchesCount > 0 && (
-        <div className="rounded-2xl border border-amber-500/40 bg-amber-950/25 p-3.5">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <div className="text-[11px] font-black uppercase tracking-wider text-amber-300">
-                ⏰ Monatsende in {daysRemaining}{' '}
-                {daysRemaining === 1 ? 'Tag' : 'Tagen'}
-              </div>
-              <p className="mt-0.5 text-xs text-[#E5E7EB]">
-                Du hast noch{' '}
-                <strong className="text-white">{openLeagueMatchesCount}</strong>{' '}
-                offene Liga-Partie(n) im {activeSeason.label}.
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={() => onGoLeague('matches')}
-              className="shrink-0 rounded-xl bg-amber-400 px-3 py-2 text-xs font-black text-[#0F1012]"
-            >
-              Jetzt eintragen
-            </button>
-          </div>
-        </div>
-      )}
-
-      {incomingChallenges.length > 0 && (
-        <div className="rounded-2xl border border-[#DE754B]/45 bg-[#23140F] p-3.5">
-          <div className="flex items-center justify-between gap-2">
-            <div>
-              <div className="text-[11px] font-black uppercase tracking-wider text-[#F4ECC2]">
-                ⚡ {incomingChallenges.length} offene Herausforderung
-                {incomingChallenges.length > 1 ? 'en' : ''}
-              </div>
-              <div className="mt-0.5 text-xs text-[#E5E7EB]">
-                {playersById[incomingChallenges[0].challengerId]?.nickname}:{' '}
-                {incomingChallenges[0].format} ·{' '}
-                {incomingChallenges[0].whenLabel}
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={() => onGoConnect('board')}
-              className="shrink-0 rounded-xl bg-[#6FB3A2] px-3 py-1.5 text-xs font-black text-[#060708] transition hover:bg-[#82C1B1]"
-            >
-              Ansehen
-            </button>
-          </div>
-        </div>
-      )}
-
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <div className="rounded-2xl border border-[#6FB3A2]/35 bg-[#14161A] p-4">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-black tracking-widest text-[#6FB3A2] uppercase">
-              CLUB · HALLE
-            </span>
-            <span className="flex items-center gap-1.5 rounded-full bg-[#6FB3A2]/15 px-2.5 py-0.5 text-[11px] font-bold text-[#A8D0B1]">
-              <span className="h-1.5 w-1.5 rounded-full bg-[#6FB3A2]" />
-              {liveCheckins.length} LIVE
-            </span>
-          </div>
-
-          <h2 className="mt-2 text-base font-extrabold text-[#F3F4F6]">
-            {nextEvening ? nextEvening.title : 'Spontan spielen & herausfordern'}
-          </h2>
-          <p className="mt-1 text-xs text-[#9CA3AF]">
-            {nextEvening
-              ? `${nextEvening.dateLabel} · ${nextEvening.attendeeIds.length} Anmeldungen`
-              : 'Sieh wer gerade in der Halle ist oder fordere jemanden heraus.'}
-          </p>
-
-          <div className="mt-3.5 flex gap-2">
-            <button
-              type="button"
-              onClick={() => onGoConnect('overview')}
-              className="flex-1 rounded-xl bg-[#6FB3A2] py-2 text-xs font-black text-[#060708] transition hover:bg-[#82C1B1]"
-            >
-              CLUB öffnen
-            </button>
-            <button
-              type="button"
-              onClick={onOpenCheckIn}
-              className="rounded-xl bg-[#1C2127] px-3 py-2 text-xs font-bold text-[#A8D0B1] hover:bg-[#242B33]"
-            >
-              Check-in
-            </button>
-          </div>
-        </div>
-
-        <div className="rounded-2xl border border-[#DE754B]/35 bg-[#14161A] p-4">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-black tracking-widest text-[#DE754B] uppercase">
-              LEAGUE · {activeSeason.shortLabel}
-            </span>
-            <span className="rounded-full bg-[#2C1912] px-2.5 py-0.5 text-[11px] font-bold text-[#F4ECC2]">
-              {currentUserLeague
-                ? currentUserLeague.name
-                : isCurrentUserPaused
-                ? 'Pausiert'
-                : 'Nur CLUB'}
-            </span>
-          </div>
-
-          <h2 className="mt-2 text-base font-extrabold text-[#F3F4F6]">
-            {currentUserLeague
-              ? openLeagueMatchesCount > 0
-                ? `${openLeagueMatchesCount} offene Liga-Spiele`
-                : 'Alle Liga-Spiele erledigt'
-              : 'Monatsliga pausiert'}
-          </h2>
-          <p className="mt-1 text-xs text-[#9CA3AF]">
-            {currentUserLeague
-              ? 'Resultate eintragen, Tabelle prüfen & Auf-/Abstieg verfolgen.'
-              : 'Du kannst dich jederzeit für den nächsten Monat wieder anmelden.'}
-          </p>
-
-          <div className="mt-3.5 flex gap-2">
-            <button
-              type="button"
-              onClick={() => onGoLeague('matches')}
-              className="flex-1 rounded-xl bg-[#6FB3A2] py-2 text-xs font-black text-[#060708] transition hover:bg-[#82C1B1]"
-            >
-              Zur Liga
-            </button>
-            <button
-              type="button"
-              onClick={() => onGoLeague('standings')}
-              className="rounded-xl bg-[#1C2127] px-3 py-2 text-xs font-bold text-[#F4ECC2] hover:bg-[#242B33]"
-            >
-              Tabelle
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <div className="rounded-2xl border border-[#22252B] bg-[#14161A] p-3.5">
-        <div className="text-[11px] font-bold tracking-wider text-[#8E95A2] uppercase">
-          Schnellaktionen
-        </div>
-        <div className="mt-2.5 grid grid-cols-4 gap-2">
-          <button
-            type="button"
-            onClick={() => onOpenChallenge(null)}
-            className="rounded-xl bg-[#0F1114] p-2.5 text-center ring-1 ring-[#24272E] hover:border-[#DE754B]"
-          >
-            <div className="text-sm font-black text-[#DE754B]">⚡</div>
-            <div className="mt-0.5 text-[10px] font-bold text-[#F4ECC2]">Duell</div>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => onGoConnect('evenings')}
-            className="rounded-xl bg-[#0F1114] p-2.5 text-center ring-1 ring-[#24272E] hover:border-[#6FB3A2]"
-          >
-            <div className="text-sm font-black text-[#6FB3A2]">🎉</div>
-            <div className="mt-0.5 text-[10px] font-bold text-[#F4ECC2]">Abende</div>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => onGoConnect('players')}
-            className="rounded-xl bg-[#0F1114] p-2.5 text-center ring-1 ring-[#24272E] hover:border-[#A8D0B1]"
-          >
-            <div className="text-sm font-black text-[#A8D0B1]">★</div>
-            <div className="mt-0.5 text-[10px] font-bold text-[#F4ECC2]">Rating</div>
-          </button>
-
-          <button
-            type="button"
-            onClick={onOpenAdmin}
-            className="rounded-xl bg-[#0F1114] p-2.5 text-center ring-1 ring-[#24272E] hover:border-[#DE754B]"
-          >
-            <div className="text-sm font-black text-[#DE754B]">🛡️</div>
-            <div className="mt-0.5 text-[10px] font-bold text-[#F4ECC2]">Admin</div>
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 function LeagueMatchesTab({
   season,
   currentUser,
@@ -3158,7 +3243,7 @@ function LeagueMatchesTab({
         <button
           type="button"
           onClick={() => setShowAllLeagues((v) => !v)}
-          className="text-xs font-bold text-[#E6C79C] underline"
+          className="text-xs font-bold text-[#DE754B] underline"
         >
           {showAllLeagues ? 'Nur meine Spiele' : 'Alle Ligen zeigen'}
         </button>
@@ -3195,7 +3280,7 @@ function LeagueMatchesTab({
                 className="rounded-2xl border border-[#24272D] bg-[#181A1E] p-3.5"
               >
                 <div className="flex items-center justify-between text-[11px] text-[#8E95A2]">
-                  <span className="font-bold text-[#C8A26E]">{league?.name}</span>
+                  <span className="font-bold text-[#DE754B]">{league?.name}</span>
                   <span>{isPlayed ? 'Gespielt' : 'Offen'}</span>
                 </div>
 
@@ -3215,7 +3300,7 @@ function LeagueMatchesTab({
 
                   <div className="shrink-0 rounded-xl bg-[#111215] px-3 py-1.5 text-center ring-1 ring-[#2A2D35]">
                     {isPlayed ? (
-                      <span className="text-sm font-black tracking-wider text-[#E6C79C]">
+                      <span className="text-sm font-black tracking-wider text-[#F4ECC2]">
                         {m.score1} : {m.score2}
                       </span>
                     ) : (
@@ -3263,7 +3348,7 @@ function LeagueMatchesTab({
                     className={`rounded-lg px-3 py-1.5 text-[11px] font-black transition ${
                       isPlayed
                         ? 'bg-[#252830] text-[#D1D5DB] hover:bg-[#30343E]'
-                        : 'bg-[#6FB3A2] text-[#060708] hover:bg-[#82C1B1]'
+                        : 'bg-[#DE754B] text-[#060708] hover:bg-[#E78760]'
                     }`}
                   >
                     {isPlayed ? 'Korrigieren' : 'Resultat eintragen'}
@@ -3335,9 +3420,9 @@ function ConnectOverviewTab({
         <button
           type="button"
           onClick={() => onNavigateTab('evenings')}
-          className="rounded-xl border border-[#7A93AC]/30 bg-[#181A1E] p-2.5 text-center"
+          className="rounded-xl border border-[#6FB3A2]/30 bg-[#181A1E] p-2.5 text-center"
         >
-          <div className="text-sm font-black text-[#9EB2C6]">
+          <div className="text-sm font-black text-[#A8D0B1]">
             {clubEvenings.length}
           </div>
           <div className="mt-0.5 text-[10px] font-bold text-[#9CA3AF]">
@@ -3451,15 +3536,15 @@ function ConnectOverviewTab({
         )}
       </div>
 
-      <div className="rounded-2xl border border-[#7A93AC]/35 bg-[#181A1E] p-3.5">
+      <div className="rounded-2xl border border-[#6FB3A2]/35 bg-[#181A1E] p-3.5">
         <div className="flex items-center justify-between">
-          <span className="text-xs font-black uppercase tracking-wide text-[#9EB2C6]">
+          <span className="text-xs font-black uppercase tracking-wide text-[#A8D0B1]">
             🎉 Nächster Club-Abend
           </span>
           <button
             type="button"
             onClick={() => onNavigateTab('evenings')}
-            className="text-[11px] font-bold text-[#9EB2C6] underline"
+            className="text-[11px] font-bold text-[#A8D0B1] underline"
           >
             Alle Abende ({clubEvenings.length})
           </button>
@@ -3472,11 +3557,11 @@ function ConnectOverviewTab({
                 <div className="text-xs font-black text-[#F3F4F6]">
                   {clubEvenings[0].title}
                 </div>
-                <div className="mt-0.5 text-[11px] font-semibold text-[#9EB2C6]">
+                <div className="mt-0.5 text-[11px] font-semibold text-[#A8D0B1]">
                   {clubEvenings[0].dateLabel} · {clubEvenings[0].tables}
                 </div>
               </div>
-              <span className="shrink-0 rounded-full bg-[#1B232C] px-2 py-0.5 text-[10px] font-bold text-[#9EB2C6]">
+              <span className="shrink-0 rounded-full bg-[#152622] px-2 py-0.5 text-[10px] font-bold text-[#A8D0B1]">
                 {clubEvenings[0].attendeeIds.length}/
                 {clubEvenings[0].maxParticipants}
               </span>
@@ -3611,7 +3696,7 @@ function ConnectOverviewTab({
             <button
               type="button"
               onClick={() => onNavigateTab('matches')}
-              className="text-[11px] font-bold text-[#9EB2C6] underline"
+              className="text-[11px] font-bold text-[#A8D0B1] underline"
             >
               Alle ({connectMatches.length})
             </button>
@@ -3706,7 +3791,7 @@ function ConnectOverviewTab({
         <button
           type="button"
           onClick={() => onOpenCreateSession('announcement')}
-          className="flex-1 rounded-xl border border-[#2B2F37] bg-[#181A1E] py-2.5 text-xs font-bold text-[#9EB2C6]"
+          className="flex-1 rounded-xl border border-[#2B2F37] bg-[#181A1E] py-2.5 text-xs font-bold text-[#A8D0B1]"
         >
           + Training ankündigen
         </button>
@@ -3777,7 +3862,7 @@ function ClubEveningsTab({
       {showForm && (
         <form
           onSubmit={handleSubmit}
-          className="space-y-2.5 rounded-2xl border border-[#7A93AC]/40 bg-[#181A1E] p-3.5"
+          className="space-y-2.5 rounded-2xl border border-[#6FB3A2]/40 bg-[#181A1E] p-3.5"
         >
           <input
             type="text"
@@ -3849,7 +3934,7 @@ function ClubEveningsTab({
                   <h3 className="text-sm font-black text-[#F3F4F6]">
                     {ev.title}
                   </h3>
-                  <div className="mt-0.5 text-xs font-bold text-[#9EB2C6]">
+                  <div className="mt-0.5 text-xs font-bold text-[#A8D0B1]">
                     {ev.dateLabel} · {ev.tables}
                   </div>
                 </div>
@@ -3997,7 +4082,6 @@ function LeagueStandingsTab({ season, playersById, currentUser, connectRatings }
 
     const cards = [];
 
-    // 1. Ungeschlagen
     const undefeated = activeStats
       .filter((s) => s.won > 0 && s.lost === 0)
       .sort((a, b) => b.won - a.won || b.setsWon - a.setsWon);
@@ -4016,7 +4100,6 @@ function LeagueStandingsTab({ season, playersById, currentUser, connectRatings }
       });
     }
 
-    // 2. Bestes Satzverhältnis
     const bestDiff = [...activeStats].sort((a, b) => {
       const diffA = a.setsWon - a.setsLost;
       const diffB = b.setsWon - b.setsLost;
@@ -4036,7 +4119,6 @@ function LeagueStandingsTab({ season, playersById, currentUser, connectRatings }
       });
     }
 
-    // 3. Nervenstark (5-Satz-Krimi)
     const clutch = [...activeStats]
       .filter((s) => s.fiveSetWins > 0)
       .sort((a, b) => b.fiveSetWins - a.fiveSetWins)[0];
@@ -4050,7 +4132,6 @@ function LeagueStandingsTab({ season, playersById, currentUser, connectRatings }
       });
     }
 
-    // 4. Zu-Null-Abräumer
     const sweeper = [...activeStats]
       .filter((s) => s.cleanSweeps > 0)
       .sort((a, b) => b.cleanSweeps - a.cleanSweeps)[0];
@@ -4064,7 +4145,6 @@ function LeagueStandingsTab({ season, playersById, currentUser, connectRatings }
       });
     }
 
-    // 5. Fleissbiene (meiste gespielte Partien)
     const busiest = [...activeStats].sort((a, b) => b.played - a.played)[0];
     if (busiest) {
       cards.push({
@@ -4082,9 +4162,9 @@ function LeagueStandingsTab({ season, playersById, currentUser, connectRatings }
   return (
     <div className="space-y-4">
       {funStats.length > 0 && (
-        <div className="rounded-2xl border border-[#C8A26E]/35 bg-gradient-to-br from-[#1C1A16] to-[#16181C] p-3.5">
+        <div className="rounded-2xl border border-[#DE754B]/35 bg-gradient-to-br from-[#231611] to-[#16181C] p-3.5">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-black uppercase tracking-wider text-[#E6C79C]">
+            <span className="text-[11px] font-black uppercase tracking-wider text-[#F4ECC2]">
               ✨ Monats-Highlights · {season.label}
             </span>
             <span className="text-[10px] text-[#8E95A2]">Live-Auswertung</span>
@@ -4105,7 +4185,7 @@ function LeagueStandingsTab({ season, playersById, currentUser, connectRatings }
                 <div className="mt-1 truncate text-xs font-black text-[#F3F4F6]">
                   {item.highlight}
                 </div>
-                <div className="mt-0.5 text-[10px] leading-snug text-[#C8A26E]">
+                <div className="mt-0.5 text-[10px] leading-snug text-[#DE754B]">
                   {item.detail}
                 </div>
               </div>
@@ -4125,7 +4205,7 @@ function LeagueStandingsTab({ season, playersById, currentUser, connectRatings }
             className="overflow-hidden rounded-2xl border border-[#24272D] bg-[#181A1E]"
           >
             <div className="flex items-center justify-between border-b border-[#24272D] bg-[#1D2025] px-3.5 py-2.5">
-              <span className="text-xs font-black tracking-wide text-[#E6C79C] uppercase">
+              <span className="text-xs font-black tracking-wide text-[#DE754B] uppercase">
                 {league.name}
               </span>
               <span className="text-[11px] text-[#8E95A2]">
@@ -4144,7 +4224,7 @@ function LeagueStandingsTab({ season, playersById, currentUser, connectRatings }
                   <div
                     key={r.playerId}
                     className={`flex items-center justify-between gap-2 px-3.5 py-2.5 ${
-                      isMe ? 'bg-[#262119]' : ''
+                      isMe ? 'bg-[#291711]' : ''
                     }`}
                   >
                     <div className="flex min-w-0 items-center gap-2.5">
@@ -4186,7 +4266,7 @@ function LeagueStandingsTab({ season, playersById, currentUser, connectRatings }
                         </div>
                         <div className="text-[10px] text-[#6B7280]">{r.played} Sp.</div>
                       </div>
-                      <div className="w-8 rounded-lg bg-[#111215] py-1 text-center text-xs font-black text-[#E6C79C]">
+                      <div className="w-8 rounded-lg bg-[#111215] py-1 text-center text-xs font-black text-[#F4ECC2]">
                         {r.points}
                       </div>
                       {!isMe && r.player && (
@@ -4229,7 +4309,7 @@ function LeagueStatusTab({
   return (
     <div className="space-y-4">
       <div className="rounded-2xl border border-[#24272D] bg-[#181A1E] p-4">
-        <div className="text-xs font-black tracking-wide text-[#E6C79C] uppercase">
+        <div className="text-xs font-black tracking-wide text-[#DE754B] uppercase">
           Deine Monats-Teilnahme ({season.label})
         </div>
         <p className="mt-1.5 text-xs text-[#D1D5DB]">
@@ -4243,7 +4323,7 @@ function LeagueStatusTab({
           onClick={onTogglePause}
           className={`mt-3 w-full rounded-xl py-2.5 text-xs font-black transition ${
             isCurrentUserPaused
-              ? 'bg-[#6FB3A2] text-[#060708]'
+              ? 'bg-[#DE754B] text-[#060708]'
               : 'bg-[#252830] text-[#F3F4F6] hover:bg-[#30343E]'
           }`}
         >
@@ -4261,7 +4341,7 @@ function LeagueStatusTab({
           <button
             type="button"
             onClick={onOpenAddMember}
-            className="text-xs font-bold text-[#E6C79C] underline"
+            className="text-xs font-bold text-[#DE754B] underline"
           >
             + Neues Mitglied
           </button>
@@ -4632,7 +4712,7 @@ function BoardTab({
                     <span
                       className={`rounded px-1.5 py-0.5 text-[10px] font-bold ${
                         s.type === 'announcement'
-                          ? 'bg-[#1B232C] text-[#9EB2C6]'
+                          ? 'bg-[#152622] text-[#A8D0B1]'
                           : 'bg-[#2C2418] text-[#E6C79C]'
                       }`}
                     >
@@ -4736,7 +4816,7 @@ function HallDaysTab({
         <button
           type="button"
           onClick={onOpenEditProfile}
-          className="text-[11px] font-bold text-[#9EB2C6] underline"
+          className="text-[11px] font-bold text-[#A8D0B1] underline"
         >
           Meine Zeiten bearbeiten
         </button>
@@ -4819,7 +4899,7 @@ function HallDaysTab({
                       {daySlots.map((slot) => (
                         <span
                           key={slot}
-                          className="rounded bg-[#1B232C] px-1.5 py-0.5 text-[10px] font-bold text-[#9EB2C6] ring-1 ring-[#7A93AC]/35"
+                          className="rounded bg-[#152622] px-1.5 py-0.5 text-[10px] font-bold text-[#A8D0B1] ring-1 ring-[#6FB3A2]/35"
                         >
                           {selectedDay} · {slot}
                         </span>
@@ -4864,7 +4944,6 @@ function HallDaysTab({
 function ClubPlayersTab({
   players,
   currentUser,
-  activeSeason,
   liveCheckins,
   connectRatings,
   onOpenAddMember,
@@ -4885,7 +4964,7 @@ function ClubPlayersTab({
         if (!q) return true;
         const tierLabel = connectRatings[p.id]?.tier?.label || '';
         const haystack =
-          `${p.nickname} ${p.firstName} ${p.lastName} ${p.sttClass || ''} ${tierLabel}`.toLowerCase();
+          `${p.nickname} ${p.firstName} ${p.lastName} ${p.sttClass || ''} ${p.language || ''} ${p.playstyle || ''} ${tierLabel}`.toLowerCase();
         return haystack.includes(q);
       })
       .sort((a, b) => {
@@ -4930,7 +5009,7 @@ function ClubPlayersTab({
         type="text"
         value={search}
         onChange={(e) => setSearch(e.target.value)}
-        placeholder="Spieler oder Rating-Stufe suchen..."
+        placeholder="Spieler, Spielstil, Sprache oder Rating suchen..."
         className="w-full rounded-lg border border-[#2B2F37] bg-[#181A1E] px-2.5 py-1.5 text-xs text-[#F3F4F6]"
       />
 
@@ -4945,7 +5024,7 @@ function ClubPlayersTab({
             <div
               key={p.id}
               className={`flex items-center justify-between gap-2 px-2.5 py-1.5 text-xs ${
-                isMe ? 'bg-[#231F18]' : 'hover:bg-[#1D2025]'
+                isMe ? 'bg-[#152622]/60' : 'hover:bg-[#1D2025]'
               }`}
             >
               <div className="flex min-w-0 items-center gap-1.5">
@@ -4973,6 +5052,16 @@ function ClubPlayersTab({
                     {p.sttClass}
                   </span>
                 )}
+
+                {p.playstyle && (
+                  <span className="hidden shrink-0 rounded bg-[#131417] px-1.5 py-0.5 text-[9px] font-semibold text-[#F4ECC2] sm:inline">
+                    {p.playstyle}
+                  </span>
+                )}
+
+                <span className="shrink-0 rounded bg-[#131417] px-1 py-0.5 text-[9px] font-bold text-[#A8D0B1]">
+                  {getLanguageShortLabel(p.language)}
+                </span>
               </div>
 
               <div className="flex shrink-0 items-center gap-1.5">
@@ -5014,7 +5103,7 @@ function ClubPlayersTab({
                     </button>
                   </div>
                 ) : (
-                  <span className="w-6 text-center text-[10px] font-bold text-[#C8A26E]">
+                  <span className="w-6 text-center text-[10px] font-bold text-[#6FB3A2]">
                     Du
                   </span>
                 )}
@@ -5058,7 +5147,7 @@ function ConnectMatchesTab({
         <button
           type="button"
           onClick={() => setOnlyMine((v) => !v)}
-          className="rounded-lg bg-[#181A1E] px-2.5 py-1.5 text-[11px] font-bold text-[#9EB2C6] ring-1 ring-[#2B2F37]"
+          className="rounded-lg bg-[#181A1E] px-2.5 py-1.5 text-[11px] font-bold text-[#A8D0B1] ring-1 ring-[#2B2F37]"
         >
           {onlyMine ? 'Alle zeigen' : 'Nur meine'}
         </button>
@@ -5084,7 +5173,7 @@ function ConnectMatchesTab({
                 className="rounded-2xl border border-[#24272D] bg-[#181A1E] p-3"
               >
                 <div className="flex items-center justify-between text-[10px] text-[#8E95A2]">
-                  <span className="font-bold text-[#9EB2C6]">CONNECT-Partie</span>
+                  <span className="font-bold text-[#6FB3A2]">CONNECT-Partie</span>
                   <span>{m.dateLabel}</span>
                 </div>
 
@@ -5193,7 +5282,7 @@ function NewMembersTab({
         <button
           type="button"
           onClick={onOpenEditProfile}
-          className="rounded-lg bg-[#181A1E] px-2.5 py-1.5 text-[11px] font-bold text-[#9EB2C6] ring-1 ring-[#2B2F37]"
+          className="rounded-lg bg-[#181A1E] px-2.5 py-1.5 text-[11px] font-bold text-[#A8D0B1] ring-1 ring-[#2B2F37]"
         >
           Mein Status
         </button>
@@ -5212,7 +5301,7 @@ function NewMembersTab({
             return (
               <div
                 key={p.id}
-                className="rounded-2xl border border-[#7A93AC]/35 bg-[#181A1E] p-3.5"
+                className="rounded-2xl border border-[#6FB3A2]/35 bg-[#181A1E] p-3.5"
               >
                 <div className="flex items-start gap-3">
                   <PlayerAvatar
@@ -5486,7 +5575,7 @@ function ChallengeModal({
               return (
                 <option key={p.id} value={p.id}>
                   {p.nickname} ({p.firstName}) ·{' '}
-                  {league ? league.name : p.sttClass || 'CONNECT'} ·{' '}
+                  {league ? league.name : p.sttClass || 'CLUB'} ·{' '}
                   {r?.tier?.symbol} {r?.elo}
                 </option>
               );
@@ -5579,18 +5668,30 @@ function PlayerProfileModal({
   const [isEditing, setIsEditing] = useState(false);
   const [form, setForm] = useState({
     ...currentUser,
+    language: currentUser.language || 'Deutsch',
+    playstyle: currentUser.playstyle || 'Allround',
     typicalHallDays: currentUser.typicalHallDays || [],
     hallSchedule: getNormalizedHallSchedule(currentUser),
   });
+  const [profileError, setProfileError] = useState('');
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    setProfileError('');
+    if (String(form.phone || '').trim()) {
+      const phoneCheck = validateWhatsAppPhone(form.phone);
+      if (!phoneCheck.valid) {
+        setProfileError(phoneCheck.error);
+        return;
+      }
+    }
     const activeDays = DAYS_OF_WEEK.filter(
       (d) =>
         Array.isArray(form.hallSchedule?.[d]) && form.hallSchedule[d].length > 0
     );
     onSave({
       ...form,
+      phone: normalizeWhatsAppPhone(form.phone),
       typicalHallDays: activeDays,
       hallSchedule: form.hallSchedule || {},
     });
@@ -5643,13 +5744,25 @@ function PlayerProfileModal({
               <div className="flex items-center justify-between">
                 <span className="text-[#8E95A2]">Modus</span>
                 <span className="font-bold text-[#E6C79C]">
-                  {currentUser.connectOnly ? 'Nur CONNECT' : 'LEAGUE & CONNECT'}
+                  {currentUser.connectOnly ? 'Nur CLUB' : 'CLUB & LEAGUE'}
                 </span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-[#8E95A2]">Spielstärke / Klassierung</span>
                 <span className="font-bold text-[#F3F4F6]">
                   {currentUser.sttClass || 'Hobby'}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-[#8E95A2]">Spielstil</span>
+                <span className="font-bold text-[#F4ECC2]">
+                  {currentUser.playstyle || 'Allround'}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-[#8E95A2]">Sprache</span>
+                <span className="font-bold text-[#A8D0B1]">
+                  {currentUser.language || 'Deutsch'}
                 </span>
               </div>
               <div className="flex items-center justify-between">
@@ -5660,7 +5773,7 @@ function PlayerProfileModal({
               </div>
               <div className="flex items-start justify-between gap-3">
                 <span className="shrink-0 text-[#8E95A2]">Hallentage</span>
-                <span className="text-right font-bold text-[#9EB2C6]">
+                <span className="text-right font-bold text-[#A8D0B1]">
                   {formatHallScheduleSummary(currentUser) || 'Keine gewählt'}
                 </span>
               </div>
@@ -5671,6 +5784,8 @@ function PlayerProfileModal({
               onClick={() => {
                 setForm({
                   ...currentUser,
+                  language: currentUser.language || 'Deutsch',
+                  playstyle: currentUser.playstyle || 'Allround',
                   typicalHallDays: currentUser.typicalHallDays || [],
                   hallSchedule: getNormalizedHallSchedule(currentUser),
                 });
@@ -5731,40 +5846,37 @@ function PlayerProfileModal({
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-2">
-              <div className="space-y-1">
-                <input
-                  type="text"
-                  value={form.nickname}
-                  onChange={(e) => setForm({ ...form, nickname: e.target.value })}
-                  placeholder="Nickname"
-                  className="w-full rounded-xl border border-[#2E323B] bg-[#131417] px-3 py-2 text-xs font-bold text-[#F3F4F6]"
-                />
-                <button
-                  type="button"
-                  onClick={() =>
-                    setForm((prev) => ({
-                      ...prev,
-                      nickname: generateFunnyNickname(
-                        prev.firstName,
-                        prev.nickname
-                      ),
-                    }))
-                  }
-                  className="inline-flex w-full items-center justify-center gap-1 rounded-lg border border-[#C8A26E]/35 bg-[#1B1813] px-2 py-1 text-[10px] font-bold text-[#E6C79C] transition hover:border-[#C8A26E] hover:bg-[#252018]"
-                >
-                  <span>🎲</span>
-                  <span>Lustiger Vorschlag</span>
-                </button>
-              </div>
+            <div className="flex gap-2">
               <input
                 type="text"
-                value={form.phone}
-                onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                placeholder="WhatsApp Telefon"
-                className="self-start rounded-xl border border-[#2E323B] bg-[#131417] px-3 py-2 text-xs text-[#F3F4F6]"
+                value={form.nickname}
+                onChange={(e) => setForm({ ...form, nickname: e.target.value })}
+                placeholder="Nickname"
+                className="flex-1 rounded-xl border border-[#2E323B] bg-[#131417] px-3 py-2 text-xs font-bold text-[#F3F4F6]"
               />
+              <button
+                type="button"
+                onClick={() =>
+                  setForm((prev) => ({
+                    ...prev,
+                    nickname: generateFunnyNickname(
+                      prev.firstName,
+                      prev.nickname
+                    ),
+                  }))
+                }
+                className="inline-flex shrink-0 items-center justify-center gap-1 rounded-xl border border-[#C8A26E]/35 bg-[#1B1813] px-3 py-2 text-[11px] font-bold text-[#E6C79C] transition hover:border-[#C8A26E] hover:bg-[#252018]"
+              >
+                <span>🎲</span>
+                <span>Lustiger Vorschlag</span>
+              </button>
             </div>
+
+            <WhatsAppPhoneField
+              value={form.phone}
+              onChange={(val) => setForm({ ...form, phone: val })}
+              placeholder="+41 79 123 45 67 / +49 170 1234567"
+            />
 
             <div>
               <label className="mb-1 block text-[11px] font-semibold text-[#8E95A2]">
@@ -5781,6 +5893,50 @@ function PlayerProfileModal({
                   </option>
                 ))}
               </select>
+            </div>
+
+            <div>
+              <label className="mb-1 block text-[11px] font-semibold text-[#8E95A2]">
+                Spielstil
+              </label>
+              <div className="grid grid-cols-3 gap-1.5">
+                {PLAYSTYLE_OPTIONS.map((opt) => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => setForm({ ...form, playstyle: opt.value })}
+                    className={`rounded-xl py-2 text-[11px] font-black transition ${
+                      form.playstyle === opt.value
+                        ? 'bg-[#6FB3A2] text-[#060708]'
+                        : 'border border-[#2E323B] bg-[#131417] text-[#9CA3AF] hover:text-[#F3F4F6]'
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <label className="mb-1 block text-[11px] font-semibold text-[#8E95A2]">
+                Sprache
+              </label>
+              <div className="grid grid-cols-3 gap-1.5">
+                {LANGUAGE_OPTIONS.map((opt) => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => setForm({ ...form, language: opt.value })}
+                    className={`rounded-xl py-2 text-[11px] font-black transition ${
+                      form.language === opt.value
+                        ? 'bg-[#6FB3A2] text-[#060708]'
+                        : 'border border-[#2E323B] bg-[#131417] text-[#9CA3AF] hover:text-[#F3F4F6]'
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
             </div>
 
             <div>
@@ -5808,6 +5964,12 @@ function PlayerProfileModal({
                 }
               />
             </label>
+
+            {profileError && (
+              <div className="rounded-xl border border-rose-500/40 bg-rose-950/30 px-3 py-2 text-[11px] font-bold text-rose-300">
+                {profileError}
+              </div>
+            )}
 
             <div className="grid grid-cols-2 gap-2">
               <button
@@ -5858,6 +6020,8 @@ function AddMemberModal({ activeSeason, onAdd, onClose }) {
   const [nickname, setNickname] = useState('');
   const [phone, setPhone] = useState('');
   const [sttClass, setSttClass] = useState('Hobby');
+  const [language, setLanguage] = useState('Deutsch');
+  const [playstyle, setPlaystyle] = useState('Allround');
   const [connectOnly, setConnectOnly] = useState(true);
   const [leagueId, setLeagueId] = useState(activeSeason.leagues[1]?.id || '');
   const [avatarUrl, setAvatarUrl] = useState('');
@@ -5883,8 +6047,10 @@ function AddMemberModal({ activeSeason, onAdd, onClose }) {
         nickname: nickname.trim(),
         pin: '1234',
         avatarUrl,
-        phone: phone.trim(),
+        phone: normalizeWhatsAppPhone(phone),
         sttClass,
+        language,
+        playstyle,
         connectOnly,
         isNewMember: true,
         joinedLabel: 'Nov 2026',
@@ -5953,23 +6119,20 @@ function AddMemberModal({ activeSeason, onAdd, onClose }) {
           />
         </div>
 
-        <div className="grid grid-cols-2 gap-2">
-          <input
-            type="text"
-            required
-            value={nickname}
-            onChange={(e) => setNickname(e.target.value)}
-            placeholder="Nickname *"
-            className="rounded-xl border border-[#2E323B] bg-[#131417] px-3 py-2 text-xs font-bold text-[#F3F4F6]"
-          />
-          <input
-            type="text"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            placeholder="WhatsApp (+41...)"
-            className="rounded-xl border border-[#2E323B] bg-[#131417] px-3 py-2 text-xs text-[#F3F4F6]"
-          />
-        </div>
+        <input
+          type="text"
+          required
+          value={nickname}
+          onChange={(e) => setNickname(e.target.value)}
+          placeholder="Nickname *"
+          className="w-full rounded-xl border border-[#2E323B] bg-[#131417] px-3 py-2 text-xs font-bold text-[#F3F4F6]"
+        />
+
+        <WhatsAppPhoneField
+          value={phone}
+          onChange={setPhone}
+          placeholder="+41 79 123 45 67 / +49 170 1234567"
+        />
 
         <div>
           <label className="mb-1 block text-[11px] font-semibold text-[#8E95A2]">
@@ -5988,6 +6151,50 @@ function AddMemberModal({ activeSeason, onAdd, onClose }) {
           </select>
         </div>
 
+        <div>
+          <label className="mb-1 block text-[11px] font-semibold text-[#8E95A2]">
+            Spielstil
+          </label>
+          <div className="grid grid-cols-3 gap-1.5">
+            {PLAYSTYLE_OPTIONS.map((opt) => (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => setPlaystyle(opt.value)}
+                className={`rounded-xl py-2 text-[11px] font-black transition ${
+                  playstyle === opt.value
+                    ? 'bg-[#6FB3A2] text-[#060708]'
+                    : 'border border-[#2E323B] bg-[#131417] text-[#9CA3AF]'
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <label className="mb-1 block text-[11px] font-semibold text-[#8E95A2]">
+            Sprache
+          </label>
+          <div className="grid grid-cols-3 gap-1.5">
+            {LANGUAGE_OPTIONS.map((opt) => (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => setLanguage(opt.value)}
+                className={`rounded-xl py-2 text-[11px] font-black transition ${
+                  language === opt.value
+                    ? 'bg-[#6FB3A2] text-[#060708]'
+                    : 'border border-[#2E323B] bg-[#131417] text-[#9CA3AF]'
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
         <div className="space-y-2 rounded-xl border border-[#24272D] bg-[#131417] p-2.5 text-xs">
           <label className="flex items-center gap-2 text-[#E5E7EB]">
             <input
@@ -6004,14 +6211,6 @@ function AddMemberModal({ activeSeason, onAdd, onClose }) {
               onChange={() => setConnectOnly(false)}
             />
             <span>CLUB &amp; LEAGUE (Monatsliga)</span>
-          </label>
-          <label className="flex items-center gap-2 text-[#E5E7EB]">
-            <input
-              type="radio"
-              checked={!connectOnly}
-              onChange={() => setConnectOnly(false)}
-            />
-            <span>LEAGUE &amp; CONNECT (Monatsliga)</span>
           </label>
 
           {!connectOnly && (
@@ -6221,10 +6420,10 @@ function RecordLeagueMatchModal({ match, player1, player2, onSave, onClose }) {
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/75 p-3 sm:items-center">
       <form
         onSubmit={handleSubmit}
-        className="w-full max-w-md space-y-3.5 rounded-2xl border border-[#2E323B] bg-[#181A1E] p-4 shadow-2xl"
+        className="w-full max-w-md space-y-3.5 rounded-2xl border border-[#DE754B]/45 bg-[#181A1E] p-4 shadow-2xl"
       >
         <div className="flex items-center justify-between">
-          <h3 className="text-sm font-black text-[#F3F4F6]">
+          <h3 className="text-sm font-black text-[#F4ECC2]">
             Liga-Resultat schnell eintragen
           </h3>
           <button
@@ -6283,7 +6482,7 @@ function RecordLeagueMatchModal({ match, player1, player2, onSave, onClose }) {
                 onClick={() => setScorePreset(preset)}
                 className={`rounded-xl py-2.5 text-sm font-black tracking-wider transition ${
                   scorePreset === preset
-                    ? 'bg-[#6FB3A2] text-[#060708] shadow-md'
+                    ? 'bg-[#DE754B] text-[#060708] shadow-md'
                     : 'border border-[#2E323B] bg-[#131417] text-[#9CA3AF] hover:text-[#F3F4F6]'
                 }`}
               >
@@ -6298,12 +6497,12 @@ function RecordLeagueMatchModal({ match, player1, player2, onSave, onClose }) {
           <span className="font-black text-[#F3F4F6]">
             {winnerSide === 'p1' ? player1?.nickname : player2?.nickname}
           </span>{' '}
-          gewinnt <span className="font-black text-[#E6C79C]">{scorePreset}</span>
+          gewinnt <span className="font-black text-[#DE754B]">{scorePreset}</span>
         </div>
 
         <button
           type="submit"
-          className="w-full rounded-xl bg-[#6FB3A2] py-2.5 text-xs font-black text-[#060708]"
+          className="w-full rounded-xl bg-[#DE754B] py-2.5 text-xs font-black text-[#060708]"
         >
           Resultat speichern ✓
         </button>
@@ -6369,11 +6568,7 @@ function AdminPanelTab({
       const cols = line.split(sep).map((c) => c.trim().replace(/^"|"$/g, ''));
       if (cols.length === 0 || !cols[0]) return;
 
-      // Kopfzeile überspringen
-      if (
-        idx === 0 &&
-        /^(vorname|first|name|nachname)/i.test(cols[0])
-      ) {
+      if (idx === 0 && /^(vorname|first|name|nachname)/i.test(cols[0])) {
         return;
       }
 
@@ -6383,7 +6578,7 @@ function AdminPanelTab({
         cols[2] ||
         (lastName ? `${firstName}${lastName[0]}` : firstName) ||
         `Spieler${idx + 1}`;
-      const phone = cols[3] || '';
+      const phone = normalizeWhatsAppPhone(cols[3] || '');
       const rawStt = cols[4] || 'Hobby';
       const matchedStt =
         STT_LEVEL_OPTIONS.find(
@@ -6408,6 +6603,7 @@ function AdminPanelTab({
         avatarUrl: '',
         phone,
         sttClass: matchedStt,
+        language: 'Deutsch',
         connectOnly: true,
         isNewMember: bulkMarkNew,
         joinedLabel: '2026',
@@ -6512,9 +6708,9 @@ function AdminPanelTab({
           </div>
 
           {showBulkImport && (
-            <div className="space-y-2.5 rounded-2xl border border-[#7A93AC]/40 bg-[#181A1E] p-3.5">
+            <div className="space-y-2.5 rounded-2xl border border-[#6FB3A2]/40 bg-[#181A1E] p-3.5">
               <div className="flex items-center justify-between">
-                <div className="text-xs font-black text-[#9EB2C6]">
+                <div className="text-xs font-black text-[#A8D0B1]">
                   📥 Vereinsliste importieren (CSV oder Copy-Paste)
                 </div>
                 <button
@@ -6530,7 +6726,7 @@ function AdminPanelTab({
                 Spaltenformat (mit <code className="text-[#E6C79C]">;</code> oder{' '}
                 <code className="text-[#E6C79C]">,</code> getrennt):{' '}
                 <strong className="text-[#F3F4F6]">
-                  Vorname; Nachname; Nickname; Telefon; Klassierung; PIN
+                  Vorname; Nachname; Nickname; Telefon (+41/+49...); Klassierung; PIN
                 </strong>
               </p>
 
@@ -6574,7 +6770,7 @@ function AdminPanelTab({
                 rows={4}
                 value={bulkText}
                 onChange={(e) => setBulkText(e.target.value)}
-                placeholder={`Beispiel:\nMax; Muster; MaxPower; +41 79 123 45 67; C8; 1234\nAnna; Keller; AnnaK; +41 79 987 65 43; D4; 1234`}
+                placeholder={`Beispiel:\nMax; Muster; MaxPower; +41 79 123 45 67; C8; 1234\nAnna; Keller; AnnaK; +49 170 987 65 43; D4; 1234`}
                 className="w-full rounded-xl border border-[#2E323B] bg-[#131417] px-3 py-2 font-mono text-[11px] text-[#F3F4F6]"
               />
 
@@ -6626,9 +6822,10 @@ function AdminPanelTab({
                         </div>
                         <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-[10px] text-[#9CA3AF]">
                           <span className="rounded bg-[#131417] px-1.5 py-0.5 font-bold text-[#E6C79C]">
-                            {assignedLeague ? assignedLeague.name : 'Nur CONNECT'}
+                            {assignedLeague ? assignedLeague.name : 'Nur CLUB'}
                           </span>
                           <span>{p.sttClass}</span>
+                          <span>· {p.language || 'Deutsch'}</span>
                           <span>· Rating {connectRatings[p.id]?.elo || 1200}</span>
                         </div>
                       </div>
@@ -6758,7 +6955,7 @@ function AdminPanelTab({
             <button
               type="button"
               onClick={onAdvanceMonth}
-              className="rounded-xl bg-[#6FB3A2] px-3 py-2 text-[11px] font-black text-[#060708]"
+              className="rounded-xl bg-[#DE754B] px-3 py-2 text-[11px] font-black text-[#060708]"
             >
               Monat abschliessen →
             </button>
@@ -6778,14 +6975,14 @@ function AdminPanelTab({
                 onCreateLeague(newLeagueName);
                 setNewLeagueName('');
               }}
-              className="rounded-xl bg-[#6FB3A2] px-3 py-2 text-xs font-black text-[#060708]"
+              className="rounded-xl bg-[#DE754B] px-3 py-2 text-xs font-black text-[#060708]"
             >
               + Liga
             </button>
           </div>
 
           <div className="rounded-2xl border border-[#24272D] bg-[#181A1E] p-3.5">
-            <div className="mb-2 text-xs font-black text-[#E6C79C]">
+            <div className="mb-2 text-xs font-black text-[#DE754B]">
               Spieler-Zuteilung ({activeSeason.label})
             </div>
             <div className="space-y-2">
@@ -6819,7 +7016,7 @@ function AdminPanelTab({
                           {l.name}
                         </option>
                       ))}
-                      <option value="paused">Pause / Nur CONNECT</option>
+                      <option value="paused">Pause / Nur CLUB</option>
                     </select>
                   </div>
                 );
@@ -6839,7 +7036,7 @@ function AdminPanelTab({
                 onClick={() => setSelectedSeasonId(s.id)}
                 className={`rounded-lg px-2.5 py-1 text-xs font-bold ${
                   s.id === viewedSeason.id
-                    ? 'bg-[#6FB3A2] text-[#060708]'
+                    ? 'bg-[#DE754B] text-[#060708]'
                     : 'bg-[#181A1E] text-[#9CA3AF]'
                 }`}
               >
@@ -6849,7 +7046,7 @@ function AdminPanelTab({
           </div>
 
           <div className="rounded-2xl border border-[#24272D] bg-[#181A1E] p-3.5">
-            <div className="mb-2 text-xs font-black text-[#E6C79C]">
+            <div className="mb-2 text-xs font-black text-[#DE754B]">
               LEAGUE-Spiele ({viewedSeason.matches.length})
             </div>
             <div className="space-y-2">
@@ -6866,7 +7063,7 @@ function AdminPanelTab({
                       <span className="font-bold text-[#F3F4F6]">
                         {p1?.nickname} vs. {p2?.nickname}
                       </span>
-                      <span className="ml-2 font-black text-[#E6C79C]">
+                      <span className="ml-2 font-black text-[#F4ECC2]">
                         {isPlayed ? `${m.score1}:${m.score2}` : 'Offen'}
                       </span>
                     </div>
@@ -6896,7 +7093,7 @@ function AdminPanelTab({
           </div>
 
           <div className="rounded-2xl border border-[#24272D] bg-[#181A1E] p-3.5">
-            <div className="mb-2 text-xs font-black text-[#9EB2C6]">
+            <div className="mb-2 text-xs font-black text-[#A8D0B1]">
               CONNECT-Partien ({connectMatches.length})
             </div>
             <div className="space-y-2">
@@ -6991,7 +7188,7 @@ function AdminPanelTab({
           </div>
 
           <div className="rounded-2xl border border-[#24272D] bg-[#181A1E] p-3.5">
-            <div className="mb-2 text-xs font-black text-[#9EB2C6]">
+            <div className="mb-2 text-xs font-black text-[#A8D0B1]">
               Club-Abende ({clubEvenings.length})
             </div>
             <div className="space-y-1.5">
@@ -7058,101 +7255,6 @@ function AdminPanelTab({
           </div>
         </div>
       )}
-    </div>
-  );
-}
-
-function PlayerBadge({ player, season, ratingInfo }) {
-  if (!player) return null;
-  const league = season?.leagues?.find((l) => l.playerIds.includes(player.id));
-
-  return (
-    <div className="flex flex-wrap items-center gap-1">
-      {league ? (
-        <span className="rounded bg-[#2C1912] px-1.5 py-0.5 text-[9px] font-bold text-[#F4ECC2] ring-1 ring-[#DE754B]/40">
-          {league.name}
-        </span>
-      ) : (
-        <span className="rounded bg-[#152622] px-1.5 py-0.5 text-[9px] font-bold text-[#A8D0B1] ring-1 ring-[#6FB3A2]/35">
-          CLUB
-        </span>
-      )}
-      {player.sttClass && (
-        <span className="rounded bg-[#131417] px-1.5 py-0.5 text-[9px] font-semibold text-[#9CA3AF] ring-1 ring-[#262A31]">
-          {player.sttClass}
-        </span>
-      )}
-      {ratingInfo?.tier && (
-        <span
-          className={`rounded border px-1.5 py-0.5 text-[9px] font-bold leading-none ${ratingInfo.tier.badgeClass}`}
-        >
-          {ratingInfo.tier.symbol} {ratingInfo.elo}
-        </span>
-      )}
-    </div>
-  );
-}
-
-function PlatformInfoModal({ onClose }) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/80 p-3 backdrop-blur-sm sm:items-center">
-      <div className="w-full max-w-md space-y-3.5 rounded-2xl border border-[#2E323B] bg-[#14161A] p-4 shadow-2xl">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[#DE754B] text-xs font-black text-[#060708]">
-              i
-            </span>
-            <h3 className="text-sm font-black text-[#F4ECC2]">
-              Was ist CONNECT?
-            </h3>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-lg bg-[#202329] px-2.5 py-1 text-xs font-bold text-[#9CA3AF] hover:text-[#F3F4F6]"
-          >
-            ✕
-          </button>
-        </div>
-
-        <p className="text-xs leading-relaxed text-[#D1D5DB]">
-          <strong className="text-[#F4ECC2]">CONNECT</strong> verbindet unseren
-          gesamten Tischtennis-Club auf einer Plattform – unkompliziert und
-          ohne E-Mail-Stress:
-        </p>
-
-        <div className="space-y-2 text-xs">
-          <div className="rounded-xl border border-[#6FB3A2]/35 bg-[#152622]/60 p-3">
-            <div className="font-black text-[#A8D0B1]">
-              🏓 CLUB (Hallen-Community)
-            </div>
-            <p className="mt-1 text-[11px] leading-relaxed text-[#D1D5DB]">
-              Sieh sofort, wer gerade <strong>LIVE in der Halle</strong> ist,
-              melde dich für <strong>Club-Abende</strong> an, finde Trainingspartner
-              an deinen Hallentagen oder fordere andere spontan heraus.
-            </p>
-          </div>
-
-          <div className="rounded-xl border border-[#DE754B]/35 bg-[#291711]/60 p-3">
-            <div className="font-black text-[#F4ECC2]">
-              🏆 LEAGUE (Freiwillige Monatsliga)
-            </div>
-            <p className="mt-1 text-[11px] leading-relaxed text-[#D1D5DB]">
-              Spiele in ausgeglichenen 3er-/4er-Gruppen pro Monat mit{' '}
-              <strong>Auf- &amp; Abstieg</strong>. Du kannst monatlich flexibel
-              einsteigen oder pausieren.
-            </p>
-          </div>
-        </div>
-
-        <button
-          type="button"
-          onClick={onClose}
-          className="w-full rounded-xl bg-[#6FB3A2] py-2.5 text-xs font-black text-[#060708] transition hover:bg-[#82C1B1]"
-        >
-          Alles klar!
-        </button>
-      </div>
     </div>
   );
 }
