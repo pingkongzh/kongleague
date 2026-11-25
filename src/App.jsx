@@ -2927,7 +2927,282 @@ export default function App() {
   const [adminPinInput, setAdminPinInput] = useState('');
   const [adminPinError, setAdminPinError] = useState('');
   const [adminTab, setAdminTab] = useState('members');
+  const [cloudSyncStatus, setCloudSyncStatus] = useState('local');
   const lastActiveTimestampRef = useRef(Date.now());
+  const broadcastChannelRef = useRef(null);
+  const supabaseRealtimeRef = useRef(null);
+  const isApplyingRemoteSnapshotRef = useRef(false);
+
+  // Unterstützt wahlweise `window.__SUPABASE_CONFIG__ = { url, anonKey, table }`
+  // oder den bestehenden `window.__PINGKONG_SYNC_URL__`-Endpunkt als Fallback.
+  const supabaseConfig = useMemo(() => {
+    if (typeof window === 'undefined') return null;
+    const cfg = window.__SUPABASE_CONFIG__;
+    if (cfg && typeof cfg === 'object' && cfg.url && cfg.anonKey) {
+      return {
+        url: String(cfg.url).replace(/\/+$/, ''),
+        anonKey: String(cfg.anonKey),
+        table: cfg.table ? String(cfg.table) : 'club_state',
+        rowId: cfg.rowId ? String(cfg.rowId) : 'main',
+      };
+    }
+    return null;
+  }, []);
+
+  const cloudEndpoint =
+    typeof window !== 'undefined' && window.__PINGKONG_SYNC_URL__
+      ? String(window.__PINGKONG_SYNC_URL__)
+      : '';
+
+  const applySharedSnapshot = useCallback((snapshot, referenceNow = Date.now()) => {
+    if (!snapshot || typeof snapshot !== 'object') return;
+    isApplyingRemoteSnapshotRef.current = true;
+    try {
+      if (Array.isArray(snapshot.players) && snapshot.players.length > 0) {
+        setPlayers(snapshot.players);
+      }
+      if (Array.isArray(snapshot.seasons) && snapshot.seasons.length > 0) {
+        setSeasons(snapshot.seasons);
+      }
+      if (Array.isArray(snapshot.liveCheckins)) {
+        setLiveCheckins(
+          snapshot.liveCheckins.filter((item) => !item.expiresAt || item.expiresAt > referenceNow)
+        );
+      }
+      if (Array.isArray(snapshot.sessions)) {
+        setSessions(
+          snapshot.sessions
+            .filter((s) => s.type === 'spontaneous')
+            .filter((item) => !item.expiresAt || item.expiresAt > referenceNow)
+        );
+      }
+      if (Array.isArray(snapshot.connectMatches)) {
+        setConnectMatches(snapshot.connectMatches);
+      }
+    } finally {
+      setTimeout(() => {
+        isApplyingRemoteSnapshotRef.current = false;
+      }, 150);
+    }
+  }, []);
+
+  const pullSharedState = useCallback(
+    async (referenceNow = Date.now()) => {
+      if (supabaseConfig) {
+        try {
+          setCloudSyncStatus('syncing');
+          const endpoint = `${supabaseConfig.url}/rest/v1/${supabaseConfig.table}?id=eq.${encodeURIComponent(
+            supabaseConfig.rowId
+          )}&select=payload,updated_at`;
+          const res = await fetch(endpoint, {
+            method: 'GET',
+            headers: {
+              apikey: supabaseConfig.anonKey,
+              Authorization: `Bearer ${supabaseConfig.anonKey}`,
+              Accept: 'application/json',
+            },
+            cache: 'no-store',
+          });
+          if (!res.ok) {
+            setCloudSyncStatus('local');
+            return;
+          }
+          const rows = await res.json();
+          const row = Array.isArray(rows) ? rows[0] : rows;
+          if (row?.payload) {
+            applySharedSnapshot(row.payload, referenceNow);
+          }
+          setCloudSyncStatus('live');
+          return;
+        } catch {
+          setCloudSyncStatus('local');
+          return;
+        }
+      }
+
+      if (!cloudEndpoint) {
+        setCloudSyncStatus('local');
+        return;
+      }
+      try {
+        setCloudSyncStatus('syncing');
+        const res = await fetch(cloudEndpoint, {
+          method: 'GET',
+          headers: { Accept: 'application/json' },
+          cache: 'no-store',
+        });
+        if (!res.ok) {
+          setCloudSyncStatus('local');
+          return;
+        }
+        const data = await res.json();
+        const payload = data?.record || data?.data || data;
+        applySharedSnapshot(payload, referenceNow);
+        setCloudSyncStatus('live');
+      } catch {
+        setCloudSyncStatus('local');
+      }
+    },
+    [supabaseConfig, cloudEndpoint, applySharedSnapshot]
+  );
+
+  const pushSharedState = useCallback(async () => {
+    const snapshot = {
+      players,
+      seasons,
+      liveCheckins,
+      sessions,
+      connectMatches,
+      updatedAt: Date.now(),
+    };
+
+    if (supabaseConfig) {
+      try {
+        setCloudSyncStatus('syncing');
+        const endpoint = `${supabaseConfig.url}/rest/v1/${supabaseConfig.table}?on_conflict=id`;
+        const res = await fetch(endpoint, {
+          method: 'POST',
+          headers: {
+            apikey: supabaseConfig.anonKey,
+            Authorization: `Bearer ${supabaseConfig.anonKey}`,
+            'Content-Type': 'application/json',
+            Prefer: 'resolution=merge-duplicates,return=minimal',
+          },
+          body: JSON.stringify([
+            {
+              id: supabaseConfig.rowId,
+              payload: snapshot,
+              updated_at: new Date().toISOString(),
+            },
+          ]),
+        });
+        setCloudSyncStatus(res.ok ? 'live' : 'local');
+      } catch {
+        setCloudSyncStatus('local');
+      }
+      return;
+    }
+
+    if (!cloudEndpoint) return;
+    try {
+      setCloudSyncStatus('syncing');
+      const res = await fetch(cloudEndpoint, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(snapshot),
+      });
+      setCloudSyncStatus(res.ok ? 'live' : 'local');
+    } catch {
+      setCloudSyncStatus('local');
+    }
+  }, [supabaseConfig, cloudEndpoint, players, seasons, liveCheckins, sessions, connectMatches]);
+
+  // Supabase Realtime WebSocket-Verbindung für sofortige Updates auf anderen Geräten
+  useEffect(() => {
+    if (!supabaseConfig || typeof window === 'undefined' || typeof WebSocket !== 'function') {
+      return;
+    }
+
+    let isClosedIntentionally = false;
+    let reconnectTimer = null;
+    let heartbeatTimer = null;
+
+    const wsUrl = supabaseConfig.url
+      .replace(/^https:\/\//i, 'wss://')
+      .replace(/^http:\/\//i, 'ws://');
+    const socketUrl = `${wsUrl}/realtime/v1/websocket?apikey=${encodeURIComponent(
+      supabaseConfig.anonKey
+    )}&vsn=1.0.0`;
+
+    const connectRealtime = () => {
+      if (isClosedIntentionally) return;
+      try {
+        const socket = new WebSocket(socketUrl);
+        supabaseRealtimeRef.current = socket;
+
+        socket.onopen = () => {
+          setCloudSyncStatus('live');
+          const topic = `realtime:public:${supabaseConfig.table}`;
+          socket.send(
+            JSON.stringify({
+              topic,
+              event: 'phx_join',
+              payload: {
+                config: {
+                  postgres_changes: [
+                    {
+                      event: '*',
+                      schema: 'public',
+                      table: supabaseConfig.table,
+                      filter: `id=eq.${supabaseConfig.rowId}`,
+                    },
+                  ],
+                },
+              },
+              ref: '1',
+            })
+          );
+
+          heartbeatTimer = setInterval(() => {
+            if (socket.readyState === WebSocket.OPEN) {
+              socket.send(
+                JSON.stringify({
+                  topic: 'phoenix',
+                  event: 'heartbeat',
+                  payload: {},
+                  ref: String(Date.now()),
+                })
+              );
+            }
+          }, 25000);
+        };
+
+        socket.onmessage = (event) => {
+          try {
+            const msg = JSON.parse(event.data);
+            const recordPayload =
+              msg?.payload?.data?.record?.payload || msg?.payload?.record?.payload;
+            if (recordPayload && !isApplyingRemoteSnapshotRef.current) {
+              applySharedSnapshot(recordPayload, Date.now());
+            }
+          } catch {
+            // Ungültige Heartbeat-/System-Nachrichten ignorieren
+          }
+        };
+
+        socket.onclose = () => {
+          if (heartbeatTimer) clearInterval(heartbeatTimer);
+          if (!isClosedIntentionally) {
+            reconnectTimer = setTimeout(connectRealtime, 3000);
+          }
+        };
+
+        socket.onerror = () => {
+          if (socket.readyState === WebSocket.OPEN) {
+            socket.close();
+          }
+        };
+      } catch {
+        // Fallback auf Polling bleibt aktiv
+      }
+    };
+
+    connectRealtime();
+
+    return () => {
+      isClosedIntentionally = true;
+      if (heartbeatTimer) clearInterval(heartbeatTimer);
+      if (reconnectTimer) clearTimeout(reconnectTimer);
+      if (supabaseRealtimeRef.current) {
+        try {
+          supabaseRealtimeRef.current.close();
+        } catch {
+          // Ignorieren
+        }
+        supabaseRealtimeRef.current = null;
+      }
+    };
+  }, [supabaseConfig, applySharedSnapshot]);
 
   // localStorage-Synchronisation für Kernzustände
   useEffect(() => {
@@ -2953,6 +3228,53 @@ export default function App() {
   useEffect(() => {
     writeStorageJson(STORAGE_KEYS.connectMatches, connectMatches);
   }, [connectMatches]);
+
+  // Sofortiger Abgleich zwischen mehreren offenen Tabs/Fenstern desselben Browsers
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof window.BroadcastChannel !== 'function') {
+      return;
+    }
+    const channel = new window.BroadcastChannel('pingkong_connect_live_v1');
+    broadcastChannelRef.current = channel;
+
+    channel.onmessage = (event) => {
+      const msg = event?.data;
+      if (!msg || msg.type !== 'state_snapshot' || !msg.payload) return;
+      applySharedSnapshot(msg.payload, Date.now());
+    };
+
+    return () => {
+      channel.close();
+      broadcastChannelRef.current = null;
+    };
+  }, [applySharedSnapshot]);
+
+  useEffect(() => {
+    if (!broadcastChannelRef.current) return;
+    try {
+      broadcastChannelRef.current.postMessage({
+        type: 'state_snapshot',
+        payload: {
+          players,
+          seasons,
+          liveCheckins,
+          sessions,
+          connectMatches,
+        },
+      });
+    } catch {
+      // Ignorieren falls Kanal bereits geschlossen
+    }
+  }, [players, seasons, liveCheckins, sessions, connectMatches]);
+  // Gemeinsamen Cloud-Stand bei Änderungen speichern, sofern Supabase oder Sync-Endpoint aktiv ist
+  useEffect(() => {
+    if (!supabaseConfig && !cloudEndpoint) return;
+    if (isApplyingRemoteSnapshotRef.current) return;
+    const timer = setTimeout(() => {
+      pushSharedState();
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [supabaseConfig, cloudEndpoint, isApplyingRemoteSnapshotRef, pushSharedState]);
 
   // Seitentitel & Home-Bildschirm App-Icon ("PINGKONG") registrieren
   useEffect(() => {
@@ -3051,13 +3373,14 @@ export default function App() {
       const currentNow = Date.now();
       setNowMs(currentNow);
       pruneExpiredItems(currentNow);
+      pullSharedState(currentNow);
       if (notify) {
         setTimeout(() => {
           showToast('✓ App & Ablaufzeiten aktualisiert');
         }, 300);
       }
     },
-    [pruneExpiredItems, showToast]
+    [pruneExpiredItems, pullSharedState, showToast]
   );
 
   // Automatischer 30-Sekunden-Cleanup-Zyklus für `expiresAt` & Restlaufzeiten
@@ -3071,6 +3394,18 @@ export default function App() {
     const interval = setInterval(runCycle, 30000);
     return () => clearInterval(interval);
   }, [pruneExpiredItems]);
+
+  // Periodisches Live-Refresh im Hintergrund bei sichtbarem Tab (ergänzend zu Realtime)
+  useEffect(() => {
+    const livePollInterval = setInterval(() => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'hidden') {
+        return;
+      }
+      syncLiveAndAppState(false);
+    }, supabaseConfig ? 30000 : 15000);
+
+    return () => clearInterval(livePollInterval);
+  }, [syncLiveAndAppState, supabaseConfig]);
 
   // Auto-Sync bei Rückkehr in die App / Startbildschirm-Resume
   useEffect(() => {
@@ -4103,7 +4438,17 @@ export default function App() {
                   Schnellaktionen
                 </span>
                 <span className="text-[10px] font-medium text-[#8E95A2]">
-                  Auto-Ablauf aktiv
+                  {supabaseConfig
+                    ? cloudSyncStatus === 'live'
+                      ? 'Supabase Realtime aktiv'
+                      : cloudSyncStatus === 'syncing'
+                      ? 'Supabase synchronisiert...'
+                      : 'Supabase lokal gepuffert'
+                    : cloudSyncStatus === 'live'
+                    ? 'Cloud-Sync aktiv (alle ~15s)'
+                    : cloudSyncStatus === 'syncing'
+                    ? 'Synchronisiert...'
+                    : 'Nur lokaler Browser (kein Cloud-Endpunkt)'}
                 </span>
               </div>
 
