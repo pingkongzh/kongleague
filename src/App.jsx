@@ -35,6 +35,29 @@ const PLAYSTYLE_OPTIONS = [
   { value: 'Abwehr / Noppen', label: 'Abwehr / Noppen' },
 ];
 
+const LIVE_MOOD_PRESETS = [
+  '🏓 Offen für ein paar Sätze',
+  '🔥 Lockeres Einspielen',
+  '🏆 Suche Match- / Liga-Gegner',
+  '👀 Bin gleich da / schaue rein',
+  '🤝 Habe bereits abgemacht',
+];
+
+const LIVE_DURATION_OPTIONS = [
+  { id: '1h', label: '+1 Std', minutes: 60 },
+  { id: '1.5h', label: '+1.5 Std', minutes: 90 },
+  { id: '2h', label: '+2 Std', minutes: 120 },
+  { id: 'open', label: 'Offen', minutes: null },
+];
+
+function formatFutureClockTime(minutesToAdd) {
+  if (minutesToAdd === null || minutesToAdd === undefined) return 'Offen';
+  const target = new Date(Date.now() + minutesToAdd * 60 * 1000);
+  const hh = String(target.getHours()).padStart(2, '0');
+  const mm = String(target.getMinutes()).padStart(2, '0');
+  return `bis ${hh}:${mm}`;
+}
+
 function normalizeWhatsAppPhone(rawPhone = '') {
   const trimmed = String(rawPhone || '').trim();
   if (!trimmed) return '';
@@ -137,9 +160,11 @@ function WhatsAppPhoneField({ value, onChange, required = false, placeholder = '
             : 'bg-[#0F1114]/80 text-[#8E95A2]'
         }`}
       >
-        <span className="shrink-0">
-          {hint.status === 'warning' ? '⚠️' : hint.status === 'valid' ? '✓' : '🌍'}
-        </span>
+        {hint.status === 'warning' ? (
+          <span className="shrink-0">⚠️</span>
+        ) : hint.status === 'valid' ? (
+          <span className="shrink-0">✓</span>
+        ) : null}
         <span>{hint.text}</span>
       </div>
     </div>
@@ -267,7 +292,6 @@ const INITIAL_PLAYERS = [
     connectOnly: false,
     isNewMember: false,
     joinedLabel: '2022',
-    bio: 'Spiele gerne lange Topspin-Ballwechsel und bin oft dienstags & donnerstags in der Halle.',
     typicalHallDays: ['Di', 'Do'],
   },
   {
@@ -285,7 +309,6 @@ const INITIAL_PLAYERS = [
     connectOnly: false,
     isNewMember: false,
     joinedLabel: '2023',
-    bio: 'Suche jederzeit unkomplizierte Trainingspartner für Sätze oder Systemtraining.',
     typicalHallDays: ['Mo', 'Do'],
   },
   {
@@ -303,7 +326,6 @@ const INITIAL_PLAYERS = [
     connectOnly: false,
     isNewMember: false,
     joinedLabel: '2021',
-    bio: 'Immer für ein Best-of-5 oder ein lockeres Einspielen vor dem Feierabend zu haben.',
     typicalHallDays: ['Di', 'Fr'],
   },
   {
@@ -321,7 +343,6 @@ const INITIAL_PLAYERS = [
     connectOnly: false,
     isNewMember: false,
     joinedLabel: '2024',
-    bio: 'Freue mich über neue Gesichter im Club – meldet euch gerne spontan!',
     typicalHallDays: ['Mi', 'Fr'],
   },
   {
@@ -339,7 +360,6 @@ const INITIAL_PLAYERS = [
     connectOnly: false,
     isNewMember: false,
     joinedLabel: '2024',
-    bio: 'Gerne lockeres Matchplay unter der Woche ab 19:00 Uhr.',
     typicalHallDays: ['Mo', 'Mi'],
   },
   {
@@ -357,7 +377,6 @@ const INITIAL_PLAYERS = [
     connectOnly: false,
     isNewMember: true,
     joinedLabel: 'Nov 2026',
-    bio: 'Neu im Verein – spiele Abwehr mit langen Noppen und freue mich auf Trainingspartner!',
     typicalHallDays: ['Di', 'Do'],
   },
   {
@@ -375,7 +394,6 @@ const INITIAL_PLAYERS = [
     connectOnly: true,
     isNewMember: true,
     joinedLabel: 'Okt 2026',
-    bio: 'Seit Oktober dabei! Spiele aktuell keine Monatsliga, komme aber oft frei in die Halle.',
     typicalHallDays: ['Mi', 'Sa'],
   },
   {
@@ -393,60 +411,347 @@ const INITIAL_PLAYERS = [
     connectOnly: true,
     isNewMember: true,
     joinedLabel: 'Nov 2026',
-    bio: 'Ganz frisch im Club und suche unkomplizierte Leute zum Einspielen und Sätze zählen.',
     typicalHallDays: ['Do', 'So'],
   },
-];
-
-const INITIAL_CONNECT_MATCHES = [
   {
-    id: 'cm1',
-    player1Id: 'p1',
-    player2Id: 'p3',
-    winnerId: 'p1',
-    score: '3:1',
-    dateLabel: 'Gestern, 20:15',
+    id: 'p9',
+    firstName: 'Jan',
+    lastName: 'Weber',
+    nickname: 'LoopKingJan',
+    pin: '1234',
+    avatarUrl:
+      'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=160&q=80',
+    phone: '+41 79 901 11 22',
+    sttClass: 'B13',
+    language: 'Deutsch',
+    playstyle: 'Offensiv',
+    connectOnly: false,
+    isNewMember: false,
+    joinedLabel: '2020',
+    typicalHallDays: ['Mo', 'Do'],
   },
   {
-    id: 'cm2',
-    player1Id: 'p2',
-    player2Id: 'p7',
-    winnerId: 'p7',
-    score: '3:2',
-    dateLabel: 'Vor 2 Tagen',
+    id: 'p10',
+    firstName: 'Mia',
+    lastName: 'Schmid',
+    nickname: 'FlickMia',
+    pin: '1234',
+    avatarUrl:
+      'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=160&q=80',
+    phone: '+41 79 902 22 33',
+    sttClass: 'C10',
+    language: 'Beides',
+    playstyle: 'Offensiv',
+    connectOnly: false,
+    isNewMember: false,
+    joinedLabel: '2022',
+    typicalHallDays: ['Di', 'Fr'],
   },
   {
-    id: 'cm3',
-    player1Id: 'p6',
-    player2Id: 'p5',
-    winnerId: 'p6',
-    score: '3:1',
-    dateLabel: 'Vor 4 Tagen',
-  },
-];
-
-const INITIAL_CLUB_EVENINGS = [
-  {
-    id: 'ce1',
-    title: 'Freitags-Rundlauf & Doppel-Plausch',
-    dateLabel: 'Freitag, 27. Nov · 19:30 Uhr',
-    tables: 'Tisch 1–4 reserviert',
-    hostId: 'p2',
-    maxParticipants: 12,
-    description:
-      'Lockere Doppel-Rotation & Kaiser-Tisch für alle Spielstärken – perfekt zum Kennenlernen!',
-    attendeeIds: ['p2', 'p3', 'p6', 'p7', 'p8'],
+    id: 'p11',
+    firstName: 'Noah',
+    lastName: 'Fischer',
+    nickname: 'BlockNoah',
+    pin: '1234',
+    avatarUrl:
+      'https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?auto=format&fit=crop&w=160&q=80',
+    phone: '+41 79 903 33 44',
+    sttClass: 'C6',
+    language: 'Deutsch',
+    playstyle: 'Allround',
+    connectOnly: true,
+    isNewMember: false,
+    joinedLabel: '2023',
+    typicalHallDays: ['Mi', 'Sa'],
   },
   {
-    id: 'ce2',
-    title: 'Balleimer & Aufschlag-Workshop',
-    dateLabel: 'Dienstag, 1. Dez · 19:00 Uhr',
-    tables: 'Tisch 1 & 2',
-    hostId: 'p1',
-    maxParticipants: 8,
-    description:
-      '45 Min gezieltes Topspin- & Aufschlagtraining, danach freies Matchplay.',
-    attendeeIds: ['p1', 'p4', 'p5'],
+    id: 'p12',
+    firstName: 'Laura',
+    lastName: 'Huber',
+    nickname: 'CutLaura',
+    pin: '1234',
+    avatarUrl:
+      'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=160&q=80',
+    phone: '+41 79 904 44 55',
+    sttClass: 'D5',
+    language: 'Deutsch',
+    playstyle: 'Abwehr / Noppen',
+    connectOnly: false,
+    isNewMember: false,
+    joinedLabel: '2021',
+    typicalHallDays: ['Mo', 'Mi'],
+  },
+  {
+    id: 'p13',
+    firstName: 'Simon',
+    lastName: 'Moser',
+    nickname: 'SidespinSimon',
+    pin: '1234',
+    avatarUrl:
+      'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?auto=format&fit=crop&w=160&q=80',
+    phone: '+41 79 905 55 66',
+    sttClass: 'D2',
+    language: 'Deutsch',
+    playstyle: 'Allround',
+    connectOnly: true,
+    isNewMember: false,
+    joinedLabel: '2024',
+    typicalHallDays: ['Do', 'Fr'],
+  },
+  {
+    id: 'p14',
+    firstName: 'Chloe',
+    lastName: 'Dubois',
+    nickname: 'AceChloe',
+    pin: '1234',
+    avatarUrl:
+      'https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?auto=format&fit=crop&w=160&q=80',
+    phone: '+41 79 906 66 77',
+    sttClass: '≈ B-Niveau',
+    language: 'Englisch',
+    playstyle: 'Offensiv',
+    connectOnly: true,
+    isNewMember: true,
+    joinedLabel: 'Nov 2026',
+    typicalHallDays: ['Di', 'Do'],
+  },
+  {
+    id: 'p15',
+    firstName: 'Pascal',
+    lastName: 'Gerber',
+    nickname: 'NoppenPascal',
+    pin: '1234',
+    avatarUrl:
+      'https://images.unsplash.com/photo-1504257432389-52343af06ae3?auto=format&fit=crop&w=160&q=80',
+    phone: '+41 79 907 77 88',
+    sttClass: 'C7',
+    language: 'Deutsch',
+    playstyle: 'Abwehr / Noppen',
+    connectOnly: false,
+    isNewMember: false,
+    joinedLabel: '2019',
+    typicalHallDays: ['Mo', 'Fr'],
+  },
+  {
+    id: 'p16',
+    firstName: 'Anna',
+    lastName: 'Graf',
+    nickname: 'SpeedyAnna',
+    pin: '1234',
+    avatarUrl:
+      'https://images.unsplash.com/photo-1488426862026-3ee34a7d66df?auto=format&fit=crop&w=160&q=80',
+    phone: '+41 79 908 88 99',
+    sttClass: 'D4',
+    language: 'Beides',
+    playstyle: 'Offensiv',
+    connectOnly: true,
+    isNewMember: false,
+    joinedLabel: '2025',
+    typicalHallDays: ['Mi', 'So'],
+  },
+  {
+    id: 'p17',
+    firstName: 'Fabian',
+    lastName: 'Roth',
+    nickname: 'CounterFab',
+    pin: '1234',
+    avatarUrl:
+      'https://images.unsplash.com/photo-1507591064344-4c6ce005b128?auto=format&fit=crop&w=160&q=80',
+    phone: '+41 79 909 99 11',
+    sttClass: 'B12',
+    language: 'Beides',
+    playstyle: 'Allround',
+    connectOnly: false,
+    isNewMember: false,
+    joinedLabel: '2020',
+    typicalHallDays: ['Di', 'Do'],
+  },
+  {
+    id: 'p18',
+    firstName: 'Sofia',
+    lastName: 'Rossi',
+    nickname: 'SpinSofia',
+    pin: '1234',
+    avatarUrl:
+      'https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?auto=format&fit=crop&w=160&q=80',
+    phone: '+41 79 910 10 20',
+    sttClass: '≈ D-Niveau',
+    language: 'Englisch',
+    playstyle: 'Allround',
+    connectOnly: true,
+    isNewMember: true,
+    joinedLabel: 'Okt 2026',
+    typicalHallDays: ['Sa', 'So'],
+  },
+  {
+    id: 'p19',
+    firstName: 'Reto',
+    lastName: 'Bühler',
+    nickname: 'HammerReto',
+    pin: '1234',
+    avatarUrl:
+      'https://images.unsplash.com/photo-1519345182560-3f2917c472ef?auto=format&fit=crop&w=160&q=80',
+    phone: '+41 79 911 21 31',
+    sttClass: 'C9',
+    language: 'Deutsch',
+    playstyle: 'Offensiv',
+    connectOnly: false,
+    isNewMember: false,
+    joinedLabel: '2021',
+    typicalHallDays: ['Mo', 'Do'],
+  },
+  {
+    id: 'p20',
+    firstName: 'Julia',
+    lastName: 'Wyss',
+    nickname: 'TouchJulia',
+    pin: '1234',
+    avatarUrl:
+      'https://images.unsplash.com/photo-1544725176-7c40e5a71c5e?auto=format&fit=crop&w=160&q=80',
+    phone: '+41 79 912 32 42',
+    sttClass: 'D1',
+    language: 'Deutsch',
+    playstyle: 'Allround',
+    connectOnly: true,
+    isNewMember: false,
+    joinedLabel: '2025',
+    typicalHallDays: ['Di', 'Mi'],
+  },
+  {
+    id: 'p21',
+    firstName: 'Kevin',
+    lastName: 'Zürcher',
+    nickname: 'EdgeKevin',
+    pin: '1234',
+    avatarUrl:
+      'https://images.unsplash.com/photo-1521119989659-a83eee488004?auto=format&fit=crop&w=160&q=80',
+    phone: '+41 79 913 43 53',
+    sttClass: 'C6',
+    language: 'Deutsch',
+    playstyle: 'Offensiv',
+    connectOnly: true,
+    isNewMember: false,
+    joinedLabel: '2023',
+    typicalHallDays: ['Fr', 'Sa'],
+  },
+  {
+    id: 'p22',
+    firstName: 'Hannah',
+    lastName: 'Koch',
+    nickname: 'WallHannah',
+    pin: '1234',
+    avatarUrl:
+      'https://images.unsplash.com/photo-1513956589380-bad6acb9b9d4?auto=format&fit=crop&w=160&q=80',
+    phone: '+41 79 914 54 64',
+    sttClass: 'D5',
+    language: 'Beides',
+    playstyle: 'Abwehr / Noppen',
+    connectOnly: false,
+    isNewMember: false,
+    joinedLabel: '2022',
+    typicalHallDays: ['Mo', 'Mi'],
+  },
+  {
+    id: 'p23',
+    firstName: 'Daniel',
+    lastName: 'Arnold',
+    nickname: 'ServeDan',
+    pin: '1234',
+    avatarUrl:
+      'https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?auto=format&fit=crop&w=160&q=80',
+    phone: '+41 79 915 65 75',
+    sttClass: 'A16+',
+    language: 'Beides',
+    playstyle: 'Offensiv',
+    connectOnly: true,
+    isNewMember: false,
+    joinedLabel: '2018',
+    typicalHallDays: ['Di', 'Do'],
+  },
+  {
+    id: 'p24',
+    firstName: 'Nora',
+    lastName: 'Hofmann',
+    nickname: 'QuickNora',
+    pin: '1234',
+    avatarUrl:
+      'https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91?auto=format&fit=crop&w=160&q=80',
+    phone: '+41 79 916 76 86',
+    sttClass: 'Hobby',
+    language: 'Deutsch',
+    playstyle: 'Allround',
+    connectOnly: true,
+    isNewMember: true,
+    joinedLabel: 'Nov 2026',
+    typicalHallDays: ['Mi', 'Fr'],
+  },
+  {
+    id: 'p25',
+    firstName: 'Tobias',
+    lastName: 'Frey',
+    nickname: 'FlipTobi',
+    pin: '1234',
+    avatarUrl:
+      'https://images.unsplash.com/photo-1463453091185-61582044d556?auto=format&fit=crop&w=160&q=80',
+    phone: '+41 79 917 87 97',
+    sttClass: 'C8',
+    language: 'Deutsch',
+    playstyle: 'Allround',
+    connectOnly: false,
+    isNewMember: false,
+    joinedLabel: '2023',
+    typicalHallDays: ['Do', 'So'],
+  },
+  {
+    id: 'p26',
+    firstName: 'Melina',
+    lastName: 'Suter',
+    nickname: 'ChopMelina',
+    pin: '1234',
+    avatarUrl:
+      'https://images.unsplash.com/photo-1520813792240-56fc4a3765a7?auto=format&fit=crop&w=160&q=80',
+    phone: '+41 79 918 98 18',
+    sttClass: 'D3',
+    language: 'Deutsch',
+    playstyle: 'Abwehr / Noppen',
+    connectOnly: true,
+    isNewMember: false,
+    joinedLabel: '2024',
+    typicalHallDays: ['Mo', 'Di'],
+  },
+  {
+    id: 'p27',
+    firstName: 'Alex',
+    lastName: 'Carter',
+    nickname: 'SmashAlex',
+    pin: '1234',
+    avatarUrl:
+      'https://images.unsplash.com/photo-1534030347209-467a5b0ad3e6?auto=format&fit=crop&w=160&q=80',
+    phone: '+41 79 919 19 29',
+    sttClass: '≈ C-Niveau',
+    language: 'Englisch',
+    playstyle: 'Offensiv',
+    connectOnly: true,
+    isNewMember: false,
+    joinedLabel: '2025',
+    typicalHallDays: ['Mi', 'Sa'],
+  },
+  {
+    id: 'p28',
+    firstName: 'Celine',
+    lastName: 'Müller',
+    nickname: 'RallyCeline',
+    pin: '1234',
+    avatarUrl:
+      'https://images.unsplash.com/photo-1517365830460-955ce3ccd263?auto=format&fit=crop&w=160&q=80',
+    phone: '+41 79 920 20 30',
+    sttClass: 'B14',
+    language: 'Beides',
+    playstyle: 'Allround',
+    connectOnly: false,
+    isNewMember: false,
+    joinedLabel: '2021',
+    typicalHallDays: ['Di', 'Fr'],
   },
 ];
 
@@ -495,18 +800,20 @@ const INITIAL_LIVE_CHECKINS = [
   {
     id: 'lc1',
     playerId: 'p3',
-    tableInfo: 'Tisch 2',
-    untilTime: '21:30',
-    note: 'Lockeres Einspielen & Sätze zählen – komm gern vorbei!',
+    durationLabel: 'bis 21:30',
+    expiresAt: Date.now() + 90 * 60 * 1000,
+    note: '🔥 Lockeres Einspielen',
     checkedInAt: 'vor 18 Min.',
+    comingTooIds: ['p4'],
   },
   {
     id: 'lc2',
     playerId: 'p7',
-    tableInfo: 'Tisch 4',
-    untilTime: '21:00',
-    note: 'Suche noch jemanden für 30 Min Matchtraining.',
+    durationLabel: 'bis 21:00',
+    expiresAt: Date.now() + 60 * 60 * 1000,
+    note: '🏆 Suche Match- / Liga-Gegner',
     checkedInAt: 'vor 7 Min.',
+    comingTooIds: [],
   },
 ];
 
@@ -525,7 +832,7 @@ const INITIAL_SESSIONS = [
     type: 'spontaneous',
     authorId: 'p1',
     dateLabel: 'Heute · 19:00 Uhr',
-    note: 'Spontan ab 19:00 an Tisch 1 – noch 1 Platz frei!',
+    note: 'Spontan ab 19:00 in der Halle – noch 1 Platz frei!',
     joinedIds: ['p1'],
     createdAt: 'vor 25 Min.',
   },
@@ -546,7 +853,7 @@ const INITIAL_CHALLENGES = [
     challengerId: 'p3',
     targetId: 'p1',
     format: 'Best of 5 Match',
-    whenLabel: 'Jetzt in der Halle (Tisch 2)',
+    whenLabel: 'Jetzt in der Halle',
     note: 'Revanche für letzten Monat! Bist du heute noch da?',
     status: 'open',
     createdAt: 'vor 9 Min.',
@@ -557,9 +864,36 @@ const INITIAL_CHALLENGES = [
     targetId: null,
     format: '3 Sätze locker',
     whenLabel: 'Heute Abend ab 20:00 Uhr',
-    note: 'Offene Challenge an alle im Club – wer traut sich an Tisch 4?',
+    note: 'Offene Challenge an alle im Club – wer traut sich?',
     status: 'open',
     createdAt: 'vor 22 Min.',
+  },
+];
+
+const INITIAL_CONNECT_MATCHES = [
+  {
+    id: 'cm1',
+    player1Id: 'p1',
+    player2Id: 'p7',
+    winnerId: 'p1',
+    score: '3:1',
+    dateLabel: 'Gestern',
+  },
+  {
+    id: 'cm2',
+    player1Id: 'p2',
+    player2Id: 'p3',
+    winnerId: 'p3',
+    score: '3:2',
+    dateLabel: 'Vor 2 Tagen',
+  },
+  {
+    id: 'cm3',
+    player1Id: 'p4',
+    player2Id: 'p8',
+    winnerId: 'p4',
+    score: '3:0',
+    dateLabel: 'Vor 3 Tagen',
   },
 ];
 
@@ -882,12 +1216,8 @@ function getContextWhatsAppMessage(context, currentUser, targetPlayer, extra = {
       return `Hoi ${targetName}, ich bin ${myName} aus dem Club – auch wenn du diesen Monat in der Liga pausierst: Hast du Lust auf ein lockeres Match in der Halle?`;
     case 'live_hall':
       return `Hoi ${targetName}, ich bin ${myName} – habe in PINGKONG gesehen, dass du gerade LIVE in der Halle bist (${
-        extra.tableInfo || 'an den Tischen'
-      }). Ich komme gleich vorbei!`;
-    case 'club_evening':
-      return `Hoi ${targetName}, ich bin ${myName} – sehe dich auch beim Club-Abend «${
-        extra.title || ''
-      }»! Wollen wir dort mal zusammen ein paar Sätze spielen?`;
+        extra.durationLabel || 'in der Halle'
+      }). Ich komme auch vorbei!`;
     case 'new_member':
       return `Hoi ${targetName}, herzlich willkommen im Club! Ich bin ${myName} – hast du Lust, demnächst mal zusammen ein paar Bälle zu schlagen?`;
     case 'hall_day':
@@ -897,22 +1227,35 @@ function getContextWhatsAppMessage(context, currentUser, targetPlayer, extra = {
         extra.timeSlot ? ` (${extra.timeSlot})` : ''
       } in der Halle. Wollen wir uns mal für ein paar Sätze verabreden?`;
     case 'rating_directory':
-      return `Hoi ${targetName}, ich bin ${myName} aus unserem Tischtennis-Club – hast du demnächst mal Lust auf ein freies CONNECT-Match in der Halle?`;
+      return `Hoi ${targetName}, ich bin ${myName} aus unserem Tischtennis-Club – hast du demnächst mal Lust auf ein freies CLUB-Match in der Halle?`;
     case 'rematch':
       return `Hoi ${targetName}, danke nochmals für unser letztes Match (${
         extra.score || ''
       })! Wann spielen wir die Revanche in der Halle?`;
     case 'challenge_reply':
-      return `Hoi ${targetName}, ich nehme deine Herausforderung (${extra.format || ''} · ${
-        extra.whenLabel || ''
-      }) in PINGKONG gerne an!`;
+      return `Hoi ${targetName}, ich bin ${myName} – habe deine Challenge (${
+        extra.format || 'Match'
+      } · ${extra.whenLabel || ''}) gesehen! Passt es dir in der Halle?`;
     case 'session_join':
-      return `Hoi ${targetName}, ich habe deinen Post «${
+      return `Hoi ${targetName}, ich bin ${myName} – habe deine Session (${
         extra.dateLabel || ''
-      }» in PINGKONG gesehen – ich wäre gerne dabei!`;
+      }) gesehen und wäre gern dabei!`;
     default:
-      return `Hoi ${targetName}, ich bin ${myName} aus unserem Tischtennis-Club – hast du demnächst Lust, zusammen in der Halle zu spielen?`;
+      return `Hoi ${targetName}, ich bin ${myName} aus unserem Tischtennis-Club!`;
   }
+}
+
+function WhatsAppIcon({ className = 'h-3.5 w-3.5' }) {
+  return (
+    <svg
+      viewBox="0 0 32 32"
+      fill="currentColor"
+      aria-hidden="true"
+      className={`${className} shrink-0`}
+    >
+      <path d="M16.004 3.2c-7.06 0-12.8 5.736-12.8 12.796 0 2.256.592 4.46 1.716 6.4L3.1 29.02l6.8-1.784a12.74 12.74 0 0 0 6.104 1.556h.004c7.056 0 12.792-5.736 12.792-12.796 0-3.416-1.332-6.628-3.748-9.044A12.71 12.71 0 0 0 16.004 3.2Zm0 23.432h-.004a10.6 10.6 0 0 1-5.404-1.48l-.388-.232-4.036 1.06 1.076-3.936-.252-.404a10.57 10.57 0 0 1-1.624-5.644c0-5.864 4.772-10.636 10.636-10.636 2.84 0 5.508 1.108 7.516 3.116a10.56 10.56 0 0 1 3.112 7.52c0 5.864-4.772 10.636-10.632 10.636Zm5.832-7.964c-.32-.16-1.892-.932-2.184-1.04-.292-.108-.504-.16-.716.16-.212.32-.824 1.04-1.012 1.252-.184.212-.372.24-.692.08-.32-.16-1.352-.496-2.572-1.584-.952-.848-1.592-1.896-1.78-2.216-.184-.32-.02-.492.14-.652.144-.144.32-.372.48-.56.16-.184.212-.32.32-.532.108-.212.052-.4-.028-.56-.08-.16-.716-1.728-.984-2.368-.26-.62-.52-.536-.716-.548h-.612c-.212 0-.56.08-.852.4-.292.32-1.116 1.092-1.116 2.66 0 1.568 1.144 3.084 1.304 3.296.16.212 2.248 3.432 5.444 4.812.76.328 1.352.524 1.816.672.764.244 1.46.208 2.008.128.612-.092 1.892-.772 2.16-1.52.268-.748.268-1.388.188-1.52-.08-.132-.292-.212-.612-.372Z" />
+    </svg>
+  );
 }
 
 function WhatsAppActionButton({
@@ -928,12 +1271,12 @@ function WhatsAppActionButton({
       target="_blank"
       rel="noopener noreferrer"
       title={title || message}
-      className={`inline-flex shrink-0 items-center justify-center gap-1 rounded-lg bg-[#1F3A2E] font-bold text-emerald-300 ring-1 ring-emerald-500/30 transition hover:bg-[#27493A] hover:text-emerald-200 ${
+      className={`inline-flex shrink-0 items-center justify-center gap-1.5 rounded-lg bg-[#1F3A2E] font-bold text-[#25D366] ring-1 ring-[#25D366]/35 transition hover:bg-[#27493A] hover:text-emerald-200 ${
         compact ? 'px-2 py-1 text-[10px]' : 'px-2.5 py-1.5 text-[11px]'
       }`}
     >
-      <span>💬</span>
-      {label && <span>{label}</span>}
+      <WhatsAppIcon className={compact ? 'h-3.5 w-3.5' : 'h-4 w-4'} />
+      {label && <span className="text-emerald-300">{label}</span>}
     </a>
   );
 }
@@ -1137,10 +1480,10 @@ function PlatformInfoModal({ onClose }) {
               1. CLUB · Halle &amp; Community
             </div>
             <ul className="mt-1.5 space-y-1 text-[11px] text-[#E5E7EB]">
-              <li>• Sieh live, wer gerade in der Halle an welchem Tisch steht</li>
-              <li>• Plane Club-Abende, Trainings &amp; spontane Herausforderungen</li>
+              <li>• Sieh per 1-Tap LIVE, wer gerade in der Halle steht</li>
+              <li>• Plane Trainings, Sessions &amp; spontane Herausforderungen</li>
               <li>• Finde Trainingspartner nach Spielstärke, Spielstil, Sprache &amp; Hallentagen</li>
-              <li>• Sammle Punkte im freien CONNECT-Rating – ganz ohne Ligapflicht</li>
+              <li>• Sammle Punkte im freien CLUB-Rating – ganz ohne Ligapflicht</li>
             </ul>
           </div>
 
@@ -1189,7 +1532,7 @@ function AuthGateScreen({
   const [pinConfirm, setPinConfirm] = useState('');
   const [formError, setFormError] = useState('');
   const [connectOnly, setConnectOnly] = useState(true);
-  const [leagueJoinTiming, setLeagueJoinTiming] = useState('current');
+  const [leagueJoinTiming, setLeagueJoinTiming] = useState('next');
   const [avatarUrl, setAvatarUrl] = useState('');
   const [hallSchedule, setHallSchedule] = useState({
     Mi: ['Abend'],
@@ -1199,6 +1542,83 @@ function AuthGateScreen({
   const [pendingProfile, setPendingProfile] = useState(null);
   const [loginPin, setLoginPin] = useState('');
   const [loginPinError, setLoginPinError] = useState('');
+  const [viewportBox, setViewportBox] = useState({ height: null, offsetTop: 0 });
+  const pinInputRef = React.useRef(null);
+
+  React.useEffect(() => {
+    if (!(mode === 'select' && pendingProfile)) {
+      setViewportBox({ height: null, offsetTop: 0 });
+      return;
+    }
+
+    const prevHtmlOverflow = document.documentElement.style.overflow;
+    const prevBodyOverflow = document.body.style.overflow;
+    const prevBodyPosition = document.body.style.position;
+    const prevBodyWidth = document.body.style.width;
+    const prevBodyTop = document.body.style.top;
+    const prevBodyOverscroll = document.body.style.overscrollBehavior;
+
+    document.documentElement.style.overflow = 'hidden';
+    document.body.style.overflow = 'hidden';
+    document.body.style.position = 'fixed';
+    document.body.style.width = '100%';
+    document.body.style.top = '0px';
+    document.body.style.overscrollBehavior = 'none';
+
+    const lockScroll = () => {
+      if (window.scrollY !== 0 || window.scrollX !== 0) {
+        window.scrollTo(0, 0);
+      }
+    };
+
+    const preventTouchMove = (e) => {
+      e.preventDefault();
+    };
+
+    const updateViewport = () => {
+      lockScroll();
+      const vv = window.visualViewport;
+      if (vv) {
+        setViewportBox({ height: vv.height, offsetTop: vv.offsetTop });
+      } else {
+        setViewportBox({ height: window.innerHeight, offsetTop: 0 });
+      }
+    };
+
+    updateViewport();
+    const t1 = setTimeout(updateViewport, 120);
+    const t2 = setTimeout(updateViewport, 320);
+    const t3 = setTimeout(updateViewport, 550);
+
+    const vv = window.visualViewport;
+    if (vv) {
+      vv.addEventListener('resize', updateViewport);
+      vv.addEventListener('scroll', updateViewport);
+    }
+    window.addEventListener('resize', updateViewport);
+    window.addEventListener('scroll', lockScroll, { passive: true });
+    document.addEventListener('touchmove', preventTouchMove, { passive: false });
+
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+      clearTimeout(t3);
+      if (vv) {
+        vv.removeEventListener('resize', updateViewport);
+        vv.removeEventListener('scroll', updateViewport);
+      }
+      window.removeEventListener('resize', updateViewport);
+      window.removeEventListener('scroll', lockScroll);
+      document.removeEventListener('touchmove', preventTouchMove);
+
+      document.documentElement.style.overflow = prevHtmlOverflow;
+      document.body.style.overflow = prevBodyOverflow;
+      document.body.style.position = prevBodyPosition;
+      document.body.style.width = prevBodyWidth;
+      document.body.style.top = prevBodyTop;
+      document.body.style.overscrollBehavior = prevBodyOverscroll;
+    };
+  }, [mode, pendingProfile]);
 
   const filteredPlayers = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -1261,10 +1681,6 @@ function AuthGateScreen({
       return;
     }
 
-    const summaryText = activeDays
-      .map((d) => `${d} (${hallSchedule[d].join('/')})`)
-      .join(', ');
-
     const newPlayer = {
       id: `p-${Date.now()}`,
       firstName: firstName.trim(),
@@ -1280,7 +1696,6 @@ function AuthGateScreen({
       leagueStartNextMonth: !connectOnly && leagueJoinTiming === 'next',
       isNewMember: true,
       joinedLabel: 'Nov 2026',
-      bio: `Neu im Club – meistens am ${summaryText} in der Halle!`,
       typicalHallDays: activeDays,
       hallSchedule,
     };
@@ -1321,22 +1736,33 @@ function AuthGateScreen({
 
   const handleVerifyProfilePin = (e) => {
     e.preventDefault();
-    if (!pendingProfile) return;
-    verifyPinAndUnlock(pendingProfile, loginPin.trim());
+    verifyPinAndUnlock(pendingProfile, loginPin);
   };
+
+  const isMobilePinFocus = mode === 'select' && Boolean(pendingProfile);
 
   return (
     <div
+      style={
+        isMobilePinFocus && viewportBox.height
+          ? {
+              height: `${viewportBox.height}px`,
+              top: `${viewportBox.offsetTop}px`,
+            }
+          : undefined
+      }
       className={`overflow-x-hidden bg-[#060708] px-3.5 text-[#F3F4F6] sm:px-4 ${
-        mode === 'select'
+        mode === 'select' && !pendingProfile
           ? 'flex h-[100dvh] flex-col overflow-hidden py-3 sm:min-h-screen sm:h-auto sm:overflow-visible sm:py-6'
-          : 'min-h-screen py-4 sm:py-6'
+          : isMobilePinFocus
+          ? 'fixed inset-x-0 top-0 z-50 flex touch-none items-center justify-center overflow-hidden overscroll-none p-4 sm:static sm:h-auto sm:min-h-screen sm:touch-auto sm:py-6'
+          : 'min-h-screen py-3 sm:py-6'
       }`}
     >
       <style>{`
         @media (max-width: 639px) {
           .pk-mobile-nozoom-wrap {
-            height: 34px;
+            height: 36px;
             overflow: hidden;
           }
           .pk-mobile-nozoom-input {
@@ -1351,16 +1777,34 @@ function AuthGateScreen({
           .pk-mobile-nozoom-input::placeholder {
             font-size: 15px !important;
           }
+          .pk-mobile-pin-input {
+            font-size: 16px !important;
+            line-height: 20px !important;
+            width: 133.33% !important;
+            transform: scale(0.75);
+            transform-origin: left top;
+            padding-top: 12px !important;
+            padding-bottom: 12px !important;
+          }
+          .pk-mobile-pin-input::placeholder {
+            font-size: 14px !important;
+            letter-spacing: 0.01em !important;
+            font-weight: 700 !important;
+          }
         }
       `}</style>
       <div
         className={`mx-auto flex w-full max-w-md flex-col overflow-x-hidden ${
-          mode === 'select'
+          mode === 'select' && !pendingProfile
             ? 'min-h-0 flex-1 space-y-2.5 sm:flex-initial sm:space-y-4'
-            : 'space-y-3 sm:space-y-4'
+            : 'space-y-2.5 sm:space-y-4'
         }`}
       >
-        <div className="shrink-0 rounded-2xl border border-[#22252B] bg-[#121417] px-4 py-3.5 text-center sm:rounded-3xl sm:px-6 sm:py-6">
+        <div
+          className={`shrink-0 rounded-2xl border border-[#22252B] bg-[#121417] px-4 py-3.5 text-center sm:rounded-3xl sm:px-6 sm:py-6 ${
+            mode === 'select' && pendingProfile ? 'hidden sm:block' : ''
+          }`}
+        >
           <div className="flex flex-col items-center">
             <PingkongFullLogo
               className="w-16 max-w-full sm:w-28"
@@ -1393,7 +1837,11 @@ function AuthGateScreen({
           </div>
         </div>
 
-        <div className="grid shrink-0 grid-cols-2 gap-1.5 rounded-2xl border border-[#24272E] bg-[#14161A] p-1 sm:p-1.5">
+        <div
+          className={`grid shrink-0 grid-cols-2 gap-1.5 rounded-2xl border border-[#24272E] bg-[#14161A] p-1 sm:p-1.5 ${
+            mode === 'select' && pendingProfile ? 'hidden sm:grid' : ''
+          }`}
+        >
           <button
             type="button"
             onClick={() => {
@@ -1425,7 +1873,11 @@ function AuthGateScreen({
         </div>
 
         {mode === 'select' && (
-          <div className="flex min-h-0 flex-1 flex-col gap-2.5 rounded-2xl border border-[#24272E] bg-[#14161A] p-3 sm:flex-initial sm:gap-3 sm:p-4">
+          <div
+            className={`flex flex-col gap-2.5 rounded-2xl border border-[#24272E] bg-[#14161A] p-3 sm:flex-initial sm:gap-3 sm:p-4 ${
+              pendingProfile ? '' : 'min-h-0 flex-1'
+            }`}
+          >
             {pendingProfile ? (
               <form onSubmit={handleVerifyProfilePin} className="space-y-3">
                 <div className="flex items-center justify-between">
@@ -1462,15 +1914,21 @@ function AuthGateScreen({
                     4-stelligen Profil-PIN eingeben *
                   </label>
                   <input
+                    ref={pinInputRef}
                     type="password"
                     inputMode="numeric"
+                    pattern="[0-9]*"
                     maxLength={4}
-                    required
                     autoFocus
+                    required
                     value={loginPin}
+                    onFocus={() => {
+                      requestAnimationFrame(() => window.scrollTo(0, 0));
+                      setTimeout(() => window.scrollTo(0, 0), 250);
+                    }}
                     onChange={(e) => handlePinInputChange(e.target.value)}
                     placeholder="••••"
-                    className="w-full rounded-xl border border-[#2B2F37] bg-[#0F1114] px-3 py-2.5 text-center text-base font-black tracking-[0.4em] text-[#F4ECC2]"
+                    className="w-full rounded-xl border border-[#2B2F37] bg-[#0F1114] px-3 py-2.5 text-center text-base font-black tracking-[0.4em] text-[#F4ECC2] focus:border-[#6FB3A2] focus:outline-none"
                   />
                 </div>
 
@@ -1514,6 +1972,9 @@ function AuthGateScreen({
                             setPendingProfile(p);
                             setLoginPin('');
                             setLoginPinError('');
+                            requestAnimationFrame(() => {
+                              pinInputRef.current?.focus({ preventScroll: true });
+                            });
                           }}
                           className="flex flex-col justify-between rounded-xl border border-[#24272E] bg-[#0F1114] p-2 text-left transition hover:border-[#DE754B] hover:bg-[#1E1410] sm:p-2.5"
                         >
@@ -1568,8 +2029,7 @@ function AuthGateScreen({
                 <strong className="font-black text-[#A8D0B1]">
                   In 1 Minute startklar – ganz ohne E-Mail:
                 </strong>{' '}
-                Kein langes Formular, keine Bestätigungs-Mail. Du teilst dir nur
-                einen persönlichen 4-stelligen PIN zu.
+                Du teilst dir nur deinen 4-stelligen PIN zu.
               </p>
             </div>
 
@@ -1605,7 +2065,7 @@ function AuthGateScreen({
                     Nur CLUB
                   </div>
                   <div className="mt-0.5 text-[10px] leading-snug text-[#9CA3AF]">
-                    Halle, Club-Abende &amp; freie Spiele – ohne Monatsliga
+                    Halle, Sessions &amp; freie Spiele – ohne Monatsliga
                   </div>
                 </button>
 
@@ -1643,21 +2103,6 @@ function AuthGateScreen({
                   <div className="grid grid-cols-1 gap-1.5">
                     <button
                       type="button"
-                      onClick={() => setLeagueJoinTiming('current')}
-                      className={`flex items-center justify-between rounded-xl border px-3 py-2 text-left text-[11px] font-bold transition ${
-                        leagueJoinTiming === 'current'
-                          ? 'border-[#DE754B] bg-[#291711] text-[#F4ECC2]'
-                          : 'border-[#24272E] bg-[#14161A] text-[#9CA3AF]'
-                      }`}
-                    >
-                      <span>Wenn möglich im laufenden Monat einspringen</span>
-                      <span className="font-black text-[#DE754B]">
-                        {leagueJoinTiming === 'current' ? '✓' : '○'}
-                      </span>
-                    </button>
-
-                    <button
-                      type="button"
                       onClick={() => setLeagueJoinTiming('next')}
                       className={`flex items-center justify-between rounded-xl border px-3 py-2 text-left text-[11px] font-bold transition ${
                         leagueJoinTiming === 'next'
@@ -1668,6 +2113,21 @@ function AuthGateScreen({
                       <span>Ich starte die Liga auf den nächsten Monat</span>
                       <span className="font-black text-[#DE754B]">
                         {leagueJoinTiming === 'next' ? '✓' : '○'}
+                      </span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setLeagueJoinTiming('current')}
+                      className={`flex items-center justify-between rounded-xl border px-3 py-2 text-left text-[11px] font-bold transition ${
+                        leagueJoinTiming === 'current'
+                          ? 'border-[#DE754B] bg-[#291711] text-[#F4ECC2]'
+                          : 'border-[#24272E] bg-[#14161A] text-[#9CA3AF]'
+                      }`}
+                    >
+                      <span>Wenn möglich im laufenden Monat einspringen</span>
+                      <span className="font-black text-[#DE754B]">
+                        {leagueJoinTiming === 'current' ? '✓' : '○'}
                       </span>
                     </button>
                   </div>
@@ -1754,7 +2214,7 @@ function AuthGateScreen({
               value={phone}
               onChange={setPhone}
               required
-              placeholder="+41 79 123 45 67 / +49 170 1234567"
+              placeholder="+41 79 123 45 67"
             />
 
             <div>
@@ -1834,30 +2294,34 @@ function AuthGateScreen({
                 Eigenen 4-stelligen Profil-PIN festlegen *
               </label>
               <div className="grid grid-cols-2 gap-2">
-                <input
-                  type="password"
-                  inputMode="numeric"
-                  maxLength={4}
-                  required
-                  value={pin}
-                  onChange={(e) =>
-                    setPin(e.target.value.replace(/\D/g, '').slice(0, 4))
-                  }
-                  placeholder="PIN (4 Ziffern) *"
-                  className="w-full min-w-0 rounded-xl border border-[#2B2F37] bg-[#14161A] px-3 py-2 text-center text-base sm:text-xs font-black tracking-[0.25em] text-[#F4ECC2]"
-                />
-                <input
-                  type="password"
-                  inputMode="numeric"
-                  maxLength={4}
-                  required
-                  value={pinConfirm}
-                  onChange={(e) =>
-                    setPinConfirm(e.target.value.replace(/\D/g, '').slice(0, 4))
-                  }
-                  placeholder="PIN bestätigen *"
-                  className="w-full min-w-0 rounded-xl border border-[#2B2F37] bg-[#14161A] px-3 py-2 text-center text-base sm:text-xs font-black tracking-[0.25em] text-[#F4ECC2]"
-                />
+                <div className="pk-mobile-nozoom-wrap w-full overflow-hidden rounded-xl border border-[#2B2F37] bg-[#14161A]">
+                  <input
+                    type="password"
+                    inputMode="numeric"
+                    maxLength={4}
+                    required
+                    value={pin}
+                    onChange={(e) =>
+                      setPin(e.target.value.replace(/\D/g, '').slice(0, 4))
+                    }
+                    placeholder="PIN (4 Ziffern) *"
+                    className="pk-mobile-pin-input w-full bg-transparent px-2.5 py-2 text-center text-xs font-black tracking-[0.2em] placeholder:font-semibold placeholder:tracking-normal text-[#F4ECC2] focus:outline-none"
+                  />
+                </div>
+                <div className="pk-mobile-nozoom-wrap w-full overflow-hidden rounded-xl border border-[#2B2F37] bg-[#14161A]">
+                  <input
+                    type="password"
+                    inputMode="numeric"
+                    maxLength={4}
+                    required
+                    value={pinConfirm}
+                    onChange={(e) =>
+                      setPinConfirm(e.target.value.replace(/\D/g, '').slice(0, 4))
+                    }
+                    placeholder="PIN bestätigen *"
+                    className="pk-mobile-pin-input w-full bg-transparent px-2.5 py-2 text-center text-xs font-black tracking-[0.2em] placeholder:font-semibold placeholder:tracking-normal text-[#F4ECC2] focus:outline-none"
+                  />
+                </div>
               </div>
             </div>
 
@@ -1882,6 +2346,363 @@ function AuthGateScreen({
   );
 }
 
+function MemberDetailModal({
+  player,
+  currentUser,
+  playersById,
+  activeSeason,
+  seasons,
+  ratingInfo,
+  connectMatches,
+  liveCheckin,
+  onChallenge,
+  onRecordMatch,
+  onClose,
+}) {
+  if (!player) return null;
+
+  const isMe = player.id === currentUser.id;
+  const scheduleSummary = formatHallScheduleSummary(player);
+  const league = activeSeason?.leagues?.find((l) =>
+    l.playerIds.includes(player.id)
+  );
+
+  const memberMetrics = useMemo(() => {
+    const playerConnectGames = connectMatches.filter(
+      (m) => m.player1Id === player.id || m.player2Id === player.id
+    );
+    const recentConnectGames = playerConnectGames.slice(0, 3);
+
+    let streakType = null;
+    let streakCount = 0;
+    for (const m of playerConnectGames) {
+      const won = m.winnerId === player.id;
+      const outcome = won ? 'W' : 'L';
+      if (streakType === null) {
+        streakType = outcome;
+        streakCount = 1;
+      } else if (streakType === outcome) {
+        streakCount += 1;
+      } else {
+        break;
+      }
+    }
+
+    const formBadges = playerConnectGames
+      .slice(0, 5)
+      .map((m) => (m.winnerId === player.id ? 'S' : 'N'));
+
+    let myWins = 0;
+    let theirWins = 0;
+    connectMatches.forEach((m) => {
+      const involvesBoth =
+        (m.player1Id === currentUser.id && m.player2Id === player.id) ||
+        (m.player1Id === player.id && m.player2Id === currentUser.id);
+      if (!involvesBoth) return;
+      if (m.winnerId === currentUser.id) myWins += 1;
+      else if (m.winnerId === player.id) theirWins += 1;
+    });
+
+    let leagueWins = 0;
+    let leagueLosses = 0;
+    (seasons || []).forEach((s) => {
+      (s.matches || []).forEach((m) => {
+        if (m.score1 === null || m.score2 === null) return;
+        const p1Won = m.score1 > m.score2;
+        if (m.player1Id === player.id) {
+          if (p1Won) leagueWins += 1;
+          else leagueLosses += 1;
+        } else if (m.player2Id === player.id) {
+          if (!p1Won) leagueWins += 1;
+          else leagueLosses += 1;
+        }
+
+        const involvesBoth =
+          (m.player1Id === currentUser.id && m.player2Id === player.id) ||
+          (m.player1Id === player.id && m.player2Id === currentUser.id);
+        if (involvesBoth) {
+          const iAmP1 = m.player1Id === currentUser.id;
+          const iWon = (iAmP1 && p1Won) || (!iAmP1 && !p1Won);
+          if (iWon) myWins += 1;
+          else theirWins += 1;
+        }
+      });
+    });
+
+    const mySchedule = getNormalizedHallSchedule(currentUser);
+    const theirSchedule = getNormalizedHallSchedule(player);
+    const sharedDays = DAYS_OF_WEEK.filter(
+      (d) =>
+        (mySchedule[d] || []).length > 0 && (theirSchedule[d] || []).length > 0
+    );
+
+    const totalGames = (ratingInfo?.played || 0) + leagueWins + leagueLosses;
+    const totalWins = (ratingInfo?.wins || 0) + leagueWins;
+    const winRate =
+      totalGames > 0 ? Math.round((totalWins / totalGames) * 100) : null;
+
+    return {
+      recentConnectGames,
+      streakType,
+      streakCount,
+      formBadges,
+      myWins,
+      theirWins,
+      h2hTotal: myWins + theirWins,
+      leagueWins,
+      leagueLosses,
+      sharedDays,
+      totalGames,
+      winRate,
+    };
+  }, [connectMatches, seasons, currentUser, player, ratingInfo]);
+
+  return (
+    <div
+      onClick={onClose}
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/80 p-3 backdrop-blur-xs sm:items-center"
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="max-h-[88dvh] w-full max-w-md space-y-3 overflow-y-auto rounded-2xl border border-[#6FB3A2]/45 bg-[#14161A] p-4 shadow-2xl"
+      >
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-3">
+            <PlayerAvatar
+              player={player}
+              sizeClass="h-14 w-14 text-base"
+              isConnectAccent={player.connectOnly}
+            />
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-1.5">
+                <h3 className="truncate text-base font-black text-[#F3F4F6]">
+                  {player.nickname}
+                </h3>
+                {liveCheckin && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/20 px-2 py-0.5 text-[10px] font-black text-emerald-300 ring-1 ring-emerald-500/40">
+                    <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" />
+                    LIVE · {liveCheckin.durationLabel}
+                  </span>
+                )}
+              </div>
+              <div className="truncate text-xs text-[#9CA3AF]">
+                {player.firstName} {player.lastName}
+              </div>
+              <div className="mt-1.5">
+                <PlayerBadge
+                  player={player}
+                  season={activeSeason}
+                  ratingInfo={ratingInfo}
+                />
+              </div>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={onClose}
+            className="shrink-0 rounded-lg bg-[#202329] px-2.5 py-1 text-xs font-bold text-[#9CA3AF] hover:text-[#F4ECC2]"
+          >
+            ✕
+          </button>
+        </div>
+
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+          <div className="rounded-xl border border-[#24272E] bg-[#0F1114] p-2.5 text-center">
+            <div className="text-[9px] font-bold uppercase tracking-wider text-[#8E95A2]">
+              Rating
+            </div>
+            <div className="mt-0.5 text-sm font-black text-[#F4ECC2]">
+              {ratingInfo?.tier?.symbol} {ratingInfo?.elo || 1200}
+            </div>
+            <div className="text-[10px] font-semibold text-[#A8D0B1]">
+              {ratingInfo?.tier?.label || 'Rookie'}
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-[#24272E] bg-[#0F1114] p-2.5 text-center">
+            <div className="text-[9px] font-bold uppercase tracking-wider text-[#8E95A2]">
+              Siegquote
+            </div>
+            <div className="mt-0.5 text-sm font-black text-[#F3F4F6]">
+              {memberMetrics.winRate !== null ? `${memberMetrics.winRate}%` : '–'}
+            </div>
+            <div className="text-[10px] text-[#8E95A2]">
+              {ratingInfo?.wins || 0}S / {ratingInfo?.losses || 0}N
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-[#24272E] bg-[#0F1114] p-2.5 text-center">
+            <div className="text-[9px] font-bold uppercase tracking-wider text-[#8E95A2]">
+              {isMe ? 'Aktuelle Form' : 'Duell vs. Dich'}
+            </div>
+            <div className="mt-0.5 text-sm font-black text-[#6FB3A2]">
+              {isMe
+                ? memberMetrics.streakCount > 0
+                  ? `${memberMetrics.streakCount}× ${
+                      memberMetrics.streakType === 'W' ? 'Sieg' : 'Nied.'
+                    }`
+                  : '–'
+                : `${memberMetrics.myWins} : ${memberMetrics.theirWins}`}
+            </div>
+            <div className="text-[10px] text-[#8E95A2]">
+              {isMe
+                ? `${ratingInfo?.played || 0} Partien`
+                : memberMetrics.h2hTotal === 0
+                ? 'Noch kein Duell'
+                : `${memberMetrics.h2hTotal}× gespielt`}
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-[#24272E] bg-[#0F1114] p-2.5 text-center">
+            <div className="text-[9px] font-bold uppercase tracking-wider text-[#8E95A2]">
+              {isMe ? 'Spiele gesamt' : 'Überschneidung'}
+            </div>
+            <div className="mt-0.5 text-sm font-black text-[#DE754B]">
+              {isMe
+                ? `${memberMetrics.totalGames}`
+                : memberMetrics.sharedDays.length > 0
+                ? memberMetrics.sharedDays.join(', ')
+                : '–'}
+            </div>
+            <div className="text-[10px] text-[#8E95A2]">
+              {isMe
+                ? 'CLUB & LEAGUE'
+                : memberMetrics.sharedDays.length > 0
+                ? 'Gleiche Hallentage'
+                : 'Andere Tage'}
+            </div>
+          </div>
+        </div>
+
+        <div className="space-y-1.5 rounded-xl border border-[#24272E] bg-[#0F1114] p-3 text-xs">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-[#8E95A2]">Spielstärke &amp; Stil</span>
+            <span className="font-bold text-[#F3F4F6]">
+              {player.sttClass || 'Hobby'} · {player.playstyle || 'Allround'}
+            </span>
+          </div>
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-[#8E95A2]">Sprache</span>
+            <span className="font-bold text-[#A8D0B1]">
+              {player.language || 'Deutsch'}
+            </span>
+          </div>
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-[#8E95A2]">Liga-Status</span>
+            <span className="font-bold text-[#F4ECC2]">
+              {league
+                ? `${league.name} (${memberMetrics.leagueWins}S / ${memberMetrics.leagueLosses}N gesamt)`
+                : 'Nur CLUB'}
+            </span>
+          </div>
+          <div className="flex items-start justify-between gap-3">
+            <span className="shrink-0 text-[#8E95A2]">Hallentage</span>
+            <span className="text-right font-bold text-[#F4ECC2]">
+              {scheduleSummary || 'Keine festen Tage hinterlegt'}
+            </span>
+          </div>
+
+          {memberMetrics.formBadges.length > 0 && (
+            <div className="flex items-center justify-between gap-2 border-t border-[#1D2026] pt-1.5">
+              <span className="text-[#8E95A2]">Letzte Form</span>
+              <div className="flex items-center gap-1">
+                {memberMetrics.formBadges.map((res, idx) => (
+                  <span
+                    key={idx}
+                    className={`flex h-5 w-5 items-center justify-center rounded text-[10px] font-black ${
+                      res === 'S'
+                        ? 'bg-emerald-500/20 text-emerald-300 ring-1 ring-emerald-500/35'
+                        : 'bg-rose-500/20 text-rose-300 ring-1 ring-rose-500/35'
+                    }`}
+                  >
+                    {res}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {memberMetrics.recentConnectGames.length > 0 && (
+          <div className="space-y-1.5 rounded-xl border border-[#24272E] bg-[#0F1114] p-3">
+            <div className="text-[10px] font-black uppercase tracking-wider text-[#8E95A2]">
+              Letzte CLUB-Partien
+            </div>
+            <div className="space-y-1">
+              {memberMetrics.recentConnectGames.map((m) => {
+                const oppId =
+                  m.player1Id === player.id ? m.player2Id : m.player1Id;
+                const opp = playersById?.[oppId];
+                const won = m.winnerId === player.id;
+                return (
+                  <div
+                    key={m.id}
+                    className="flex items-center justify-between text-[11px]"
+                  >
+                    <span className="truncate text-[#D1D5DB]">
+                      vs. <strong className="text-[#F3F4F6]">{opp?.nickname || 'Spieler'}</strong>{' '}
+                      <span className="text-[10px] text-[#6B7280]">
+                        ({m.dateLabel})
+                      </span>
+                    </span>
+                    <span
+                      className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] font-black ${
+                        won
+                          ? 'bg-emerald-500/15 text-emerald-300'
+                          : 'bg-rose-500/15 text-rose-300'
+                      }`}
+                    >
+                      {won ? 'Sieg' : 'Nied.'} · {m.score}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {!isMe && (
+          <div className="grid grid-cols-3 gap-2 pt-0.5">
+            <button
+              type="button"
+              onClick={() => {
+                onClose();
+                onChallenge(player.id);
+              }}
+              className="rounded-xl bg-[#6FB3A2] py-2.5 text-xs font-black text-[#060708] transition hover:bg-[#82C1B1]"
+            >
+              ⚡ Duell
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                onClose();
+                onRecordMatch(player.id);
+              }}
+              className="rounded-xl border border-[#2E323B] bg-[#181A1E] py-2.5 text-xs font-bold text-[#F4ECC2] transition hover:border-[#6FB3A2]"
+            >
+              + Partie
+            </button>
+            <a
+              href={buildWhatsAppLink(
+                player.phone,
+                getContextWhatsAppMessage('rating_directory', currentUser, player)
+              )}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-center gap-1.5 rounded-xl bg-[#1F3A2E] py-2.5 text-xs font-bold text-emerald-300 ring-1 ring-[#25D366]/35 transition hover:bg-[#27493A]"
+            >
+              <WhatsAppIcon className="h-4 w-4 text-[#25D366]" />
+              <span>WhatsApp</span>
+            </a>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function App() {
   const [players, setPlayers] = useState(INITIAL_PLAYERS);
   const [seasons, setSeasons] = useState(INITIAL_SEASONS);
@@ -1895,12 +2716,11 @@ export default function App() {
   const [sessions, setSessions] = useState(INITIAL_SESSIONS);
   const [challenges, setChallenges] = useState(INITIAL_CHALLENGES);
   const [connectMatches, setConnectMatches] = useState(INITIAL_CONNECT_MATCHES);
-  const [clubEvenings, setClubEvenings] = useState(INITIAL_CLUB_EVENINGS);
 
   const [showPlatformInfo, setShowPlatformInfo] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
+  const [selectedMemberId, setSelectedMemberId] = useState(null);
   const [showAddMemberModal, setShowAddMemberModal] = useState(false);
-  const [showCheckInModal, setShowCheckInModal] = useState(false);
   const [createSessionType, setCreateSessionType] = useState(null);
   const [recordingLeagueMatch, setRecordingLeagueMatch] = useState(null);
   const [recordConnectTargetId, setRecordConnectTargetId] = useState(null);
@@ -1914,11 +2734,131 @@ export default function App() {
   const [adminPinInput, setAdminPinInput] = useState('');
   const [adminPinError, setAdminPinError] = useState('');
   const [adminTab, setAdminTab] = useState('members');
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [pullDistance, setPullDistance] = useState(0);
+  const pullStartYRef = React.useRef(null);
+  const lastActiveTimestampRef = React.useRef(Date.now());
 
   const showToast = (msg) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(''), 2600);
   };
+
+  const syncLiveAndAppState = React.useCallback((notify = false) => {
+    setIsRefreshing(true);
+    const now = Date.now();
+    setLiveCheckins((prev) => {
+      const filtered = prev.filter(
+        (item) => !item.expiresAt || item.expiresAt > now
+      );
+      return filtered.length === prev.length ? prev : filtered;
+    });
+    setTimeout(() => {
+      setIsRefreshing(false);
+      if (notify) showToast('✓ App aktualisiert');
+    }, 350);
+  }, []);
+
+  // Automatische Aktualisierung beim Öffnen vom Home-Bildschirm / Zurückkehren aus dem Hintergrund
+  React.useEffect(() => {
+    const handleAppResume = () => {
+      if (document.visibilityState === 'hidden') {
+        lastActiveTimestampRef.current = Date.now();
+        return;
+      }
+      const awayMs = Date.now() - lastActiveTimestampRef.current;
+      lastActiveTimestampRef.current = Date.now();
+
+      // War die App länger als 15 Minuten im Hintergrund: frischen Reload anstossen (für Home-Screen PWA)
+      if (awayMs > 15 * 60 * 1000 && typeof window !== 'undefined') {
+        try {
+          window.location.reload();
+          return;
+        } catch {
+          // Fallback auf State-Sync
+        }
+      }
+      syncLiveAndAppState(awayMs > 20 * 1000);
+    };
+
+    const handlePageShow = (event) => {
+      if (event.persisted) {
+        try {
+          window.location.reload();
+          return;
+        } catch {
+          syncLiveAndAppState(true);
+        }
+      } else {
+        syncLiveAndAppState(false);
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleAppResume);
+    window.addEventListener('pageshow', handlePageShow);
+    window.addEventListener('focus', handleAppResume);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleAppResume);
+      window.removeEventListener('pageshow', handlePageShow);
+      window.removeEventListener('focus', handleAppResume);
+    };
+  }, [syncLiveAndAppState]);
+
+  // Pull-to-Refresh Gestensteuerung ganz oben auf der Seite
+  React.useEffect(() => {
+    const handleTouchStart = (e) => {
+      if (window.scrollY <= 0 && e.touches.length === 1) {
+        pullStartYRef.current = e.touches[0].clientY;
+      } else {
+        pullStartYRef.current = null;
+      }
+    };
+
+    const handleTouchMove = (e) => {
+      if (pullStartYRef.current === null) return;
+      const deltaY = e.touches[0].clientY - pullStartYRef.current;
+      if (deltaY > 0 && window.scrollY <= 0) {
+        setPullDistance(Math.min(72, Math.round(deltaY * 0.45)));
+      } else {
+        setPullDistance(0);
+      }
+    };
+
+    const handleTouchEnd = () => {
+      if (pullDistance >= 54) {
+        syncLiveAndAppState(true);
+      }
+      pullStartYRef.current = null;
+      setPullDistance(0);
+    };
+
+    window.addEventListener('touchstart', handleTouchStart, { passive: true });
+    window.addEventListener('touchmove', handleTouchMove, { passive: true });
+    window.addEventListener('touchend', handleTouchEnd);
+
+    return () => {
+      window.removeEventListener('touchstart', handleTouchStart);
+      window.removeEventListener('touchmove', handleTouchMove);
+      window.removeEventListener('touchend', handleTouchEnd);
+    };
+  }, [pullDistance, syncLiveAndAppState]);
+
+  // Automatischer Check-out nach Ablauf der gewählten Zeit
+  React.useEffect(() => {
+    const pruneExpired = () => {
+      const now = Date.now();
+      setLiveCheckins((prev) => {
+        const filtered = prev.filter(
+          (item) => !item.expiresAt || item.expiresAt > now
+        );
+        return filtered.length === prev.length ? prev : filtered;
+      });
+    };
+    pruneExpired();
+    const interval = setInterval(pruneExpired, 30000);
+    return () => clearInterval(interval);
+  }, []);
 
   const playersById = useMemo(() => {
     const map = {};
@@ -2274,7 +3214,7 @@ export default function App() {
 
   const handleAdminDeleteConnectMatch = (matchId) => {
     setConnectMatches((prev) => prev.filter((m) => m.id !== matchId));
-    showToast('CONNECT-Partie gelöscht');
+    showToast('CLUB-Partie gelöscht');
   };
 
   const handleSaveLeagueMatchScore = (matchId, score1, score2) => {
@@ -2305,36 +3245,7 @@ export default function App() {
     };
     setConnectMatches((prev) => [newMatch, ...prev]);
     setRecordConnectTargetId(null);
-    showToast('CONNECT-Partie gespeichert & Rating aktualisiert!');
-  };
-
-  const handleCreateClubEvening = (eveningData) => {
-    setClubEvenings((prev) => [
-      {
-        id: `ce-${Date.now()}`,
-        hostId: currentUser.id,
-        attendeeIds: [currentUser.id],
-        ...eveningData,
-      },
-      ...prev,
-    ]);
-    showToast('Club-Abend angekündigt!');
-  };
-
-  const handleToggleClubEveningJoin = (eveningId) => {
-    setClubEvenings((prev) =>
-      prev.map((ev) => {
-        if (ev.id !== eveningId) return ev;
-        const joined = ev.attendeeIds.includes(currentUser.id);
-        if (!joined && ev.attendeeIds.length >= ev.maxParticipants) return ev;
-        return {
-          ...ev,
-          attendeeIds: joined
-            ? ev.attendeeIds.filter((id) => id !== currentUser.id)
-            : [...ev.attendeeIds, currentUser.id],
-        };
-      })
-    );
+    showToast('CLUB-Partie gespeichert & Rating aktualisiert!');
   };
 
   const handleAdvanceMonth = () => {
@@ -2430,22 +3341,87 @@ export default function App() {
     showToast(`${nextLabel} mit Auf-/Abstieg gestartet!`);
   };
 
-  const handleCheckIn = ({ tableInfo, untilTime, note }) => {
+  // Echter 1-Tap Check-in ohne Modal und ohne Tischauswahl
+  const handleOneTapCheckIn = () => {
+    const defaultMinutes = 90;
+    const durationLabel = formatFutureClockTime(defaultMinutes);
     setLiveCheckins((prev) => [
       {
         id: `lc-${Date.now()}`,
         playerId: currentUser.id,
-        tableInfo,
-        untilTime,
-        note,
+        durationLabel,
+        expiresAt: Date.now() + defaultMinutes * 60 * 1000,
+        note: LIVE_MOOD_PRESETS[0],
         checkedInAt: 'Gerade eben',
+        comingTooIds: [],
       },
       ...prev.filter((item) => item.playerId !== currentUser.id),
     ]);
-    setShowCheckInModal(false);
     setWorld('connect');
-    setConnectTab('live');
-    showToast('Du bist jetzt LIVE in der Halle!');
+    setConnectTab('overview');
+    showToast(`🟢 Du bist jetzt LIVE (${durationLabel})!`);
+  };
+
+  const handleUpdateMyLiveCheckin = ({ minutes, note }) => {
+    setLiveCheckins((prev) =>
+      prev.map((item) => {
+        if (item.playerId !== currentUser.id) return item;
+        const nextMinutes = minutes !== undefined ? minutes : undefined;
+        return {
+          ...item,
+          durationLabel:
+            nextMinutes !== undefined
+              ? formatFutureClockTime(nextMinutes)
+              : item.durationLabel,
+          expiresAt:
+            nextMinutes !== undefined
+              ? nextMinutes === null
+                ? null
+                : Date.now() + nextMinutes * 60 * 1000
+              : item.expiresAt,
+          note: note !== undefined ? note : item.note,
+        };
+      })
+    );
+    showToast('LIVE-Status aktualisiert ✓');
+  };
+
+  const handleExtendMyLiveCheckin = () => {
+    setLiveCheckins((prev) =>
+      prev.map((item) => {
+        if (item.playerId !== currentUser.id) return item;
+        const baseTime =
+          item.expiresAt && item.expiresAt > Date.now()
+            ? item.expiresAt
+            : Date.now();
+        const nextExpiresAt = baseTime + 30 * 60 * 1000;
+        const target = new Date(nextExpiresAt);
+        const hh = String(target.getHours()).padStart(2, '0');
+        const mm = String(target.getMinutes()).padStart(2, '0');
+        return {
+          ...item,
+          durationLabel: `bis ${hh}:${mm}`,
+          expiresAt: nextExpiresAt,
+        };
+      })
+    );
+    showToast('⏱ Um +30 Min. verlängert!');
+  };
+
+  const handleToggleComingToo = (checkinId) => {
+    setLiveCheckins((prev) =>
+      prev.map((item) => {
+        if (item.id !== checkinId) return item;
+        const list = item.comingTooIds || [];
+        const exists = list.includes(currentUser.id);
+        return {
+          ...item,
+          comingTooIds: exists
+            ? list.filter((id) => id !== currentUser.id)
+            : [...list, currentUser.id],
+        };
+      })
+    );
   };
 
   const handleCheckOut = () => {
@@ -2468,7 +3444,7 @@ export default function App() {
     ]);
     setCreateSessionType(null);
     setWorld('connect');
-    setConnectTab('board');
+    setConnectTab('overview');
     showToast(type === 'announcement' ? 'Vorankündigung gepostet' : 'Spontan-Session gepostet');
   };
 
@@ -2501,7 +3477,7 @@ export default function App() {
     setChallenges((prev) => [newChallenge, ...prev]);
     setChallengeTargetId(undefined);
     setWorld('connect');
-    setConnectTab('board');
+    setConnectTab('overview');
 
     if (sendWhatsApp && targetId && playersById[targetId]) {
       const target = playersById[targetId];
@@ -2539,6 +3515,23 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-[#060708] pb-24 text-[#F3F4F6] antialiased selection:bg-[#DE754B] selection:text-[#060708]">
+      {(pullDistance > 12 || isRefreshing) && (
+        <div
+          style={{ height: isRefreshing ? 36 : pullDistance }}
+          className="flex items-center justify-center overflow-hidden bg-[#0C0E12] text-[11px] font-bold text-[#6FB3A2] transition-all"
+        >
+          <span className={isRefreshing ? 'animate-spin inline-block mr-1.5' : 'mr-1.5'}>
+            ↻
+          </span>
+          <span>
+            {isRefreshing
+              ? 'Aktualisiere...'
+              : pullDistance >= 54
+              ? 'Loslassen zum Aktualisieren'
+              : 'Nach unten ziehen zum Aktualisieren'}
+          </span>
+        </div>
+      )}
       <header className="sticky top-0 z-30 border-b border-[#22252B] bg-[#060708]/95 backdrop-blur-md">
         <div className="mx-auto max-w-2xl px-4 pt-3 pb-2.5">
           <div className="flex items-center justify-between gap-2">
@@ -2550,7 +3543,7 @@ export default function App() {
               }}
               className="flex items-center gap-2.5 text-left"
             >
-              <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-xl border border-[#2B2F37] bg-[#0C0D10] p-1 text-[#DE754B]">
+              <div className="hidden h-10 w-10 items-center justify-center overflow-hidden rounded-xl border border-[#2B2F37] bg-[#0C0D10] p-1 text-[#DE754B] sm:flex">
                 {customLogoUrl ? (
                   <img
                     src={customLogoUrl}
@@ -2575,31 +3568,29 @@ export default function App() {
             <div className="flex items-center gap-1.5">
               <button
                 type="button"
+                onClick={() => syncLiveAndAppState(true)}
+                title="Ansicht aktualisieren"
+                aria-label="Ansicht aktualisieren"
+                className="flex h-8 w-8 items-center justify-center rounded-full bg-[#15171B] text-xs font-black text-[#A8D0B1] ring-1 ring-[#2B2F37] transition hover:border-[#6FB3A2] hover:text-[#6FB3A2]"
+              >
+                <span className={isRefreshing ? 'animate-spin inline-block' : ''}>
+                  ↻
+                </span>
+              </button>
+
+              <button
+                type="button"
                 onClick={() => setShowPlatformInfo(true)}
                 title="Was ist CONNECT?"
                 aria-label="Was ist CONNECT?"
-                className="flex h-8 w-8 items-center justify-center rounded-full bg-[#15171B] text-xs font-black text-[#F4ECC2] ring-1 ring-[#2B2F37] transition hover:border-[#DE754B] hover:text-[#DE754B]"
+                className="hidden h-8 w-8 items-center justify-center rounded-full bg-[#15171B] text-xs font-black text-[#F4ECC2] ring-1 ring-[#2B2F37] transition hover:border-[#DE754B] hover:text-[#DE754B] sm:flex"
               >
                 i
               </button>
 
               <button
                 type="button"
-                onClick={handleOpenAdmin}
-                title="Club-Admin Bereich"
-                className={`flex items-center gap-1 rounded-full px-2.5 py-1.5 text-xs font-bold transition ${
-                  world === 'admin'
-                    ? 'bg-[#DE754B] text-[#060708]'
-                    : 'bg-[#15171B] text-[#9CA3AF] ring-1 ring-[#2B2F37] hover:border-[#DE754B] hover:text-[#F4ECC2]'
-                }`}
-              >
-                <span>🛡️</span>
-                <span className="hidden sm:inline">Admin</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => (isCurrentUserLive ? handleCheckOut() : setShowCheckInModal(true))}
+                onClick={() => (isCurrentUserLive ? handleCheckOut() : handleOneTapCheckIn())}
                 className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold transition ${
                   isCurrentUserLive
                     ? 'bg-[#6FB3A2]/25 text-[#A8D0B1] ring-1 ring-[#6FB3A2]/60'
@@ -2619,21 +3610,23 @@ export default function App() {
                   type="button"
                   onClick={() => setShowProfileModal(true)}
                   title="Mein Profil anzeigen"
-                  className="flex items-center gap-2 py-1.5 pl-1.5 pr-3 text-xs font-bold text-[#F4ECC2] transition hover:bg-[#1E2127]"
+                  className="flex items-center gap-2 py-1.5 pl-3 pr-3 text-xs font-bold text-[#F4ECC2] transition hover:bg-[#1E2127] sm:pl-1.5"
                 >
-                  <PlayerAvatar
-                    player={currentUser}
-                    sizeClass="h-6 w-6 text-[10px]"
-                    isConnectAccent={currentUser.connectOnly}
-                  />
-                  <span className="max-w-[90px] truncate">{currentUser.nickname}</span>
+                  <span className="hidden sm:inline-flex">
+                    <PlayerAvatar
+                      player={currentUser}
+                      sizeClass="h-6 w-6 text-[10px]"
+                      isConnectAccent={currentUser.connectOnly}
+                    />
+                  </span>
+                  <span className="max-w-[96px] truncate">{currentUser.nickname}</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setCurrentUserId(null)}
                   title="Abmelden & zur Startseite"
                   aria-label="Abmelden"
-                  className="flex items-center justify-center border-l border-[#2E323B] px-3 py-2 text-[#D1D5DB] transition hover:bg-rose-950/40 hover:text-rose-300"
+                  className="flex items-center justify-center border-l border-[#2E323B] px-2.5 py-2 text-[#D1D5DB] transition hover:bg-rose-950/40 hover:text-rose-300 sm:px-3"
                 >
                   <svg
                     viewBox="0 0 24 24"
@@ -2670,7 +3663,7 @@ export default function App() {
                     world === 'connect' ? 'text-[#060708]/80' : 'text-[#8E95A2]'
                   }`}
                 >
-                  {liveCheckins.length} LIVE · {clubEvenings.length} Abende
+                  {liveCheckins.length} LIVE · {players.length} Mitglieder
                 </div>
               </div>
               <span
@@ -2755,7 +3748,6 @@ export default function App() {
             connectRatings={ratingsByPlayer}
             connectMatches={connectMatches}
             liveCheckins={liveCheckins}
-            clubEvenings={clubEvenings}
             sessions={sessions}
             challenges={challenges}
             adminPinCode={adminPinCode}
@@ -2799,10 +3791,6 @@ export default function App() {
             onRemoveLiveCheckin={(id) => {
               setLiveCheckins((prev) => prev.filter((c) => c.id !== id));
               showToast('Check-in beendet');
-            }}
-            onDeleteClubEvening={(id) => {
-              setClubEvenings((prev) => prev.filter((ev) => ev.id !== id));
-              showToast('Club-Abend gelöscht');
             }}
             onDeleteSession={(id) => {
               setSessions((prev) => prev.filter((s) => s.id !== id));
@@ -2930,54 +3918,88 @@ export default function App() {
 
         {world === 'connect' && (
           <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => setShowCheckInModal(true)}
-                className="flex items-center justify-center gap-1.5 rounded-xl bg-[#6FB3A2]/20 px-3 py-2.5 text-xs font-extrabold text-[#A8D0B1] ring-1 ring-[#6FB3A2]/45 transition hover:bg-[#6FB3A2]/30"
-              >
-                <span className="h-2 w-2 rounded-full bg-[#6FB3A2]" />
-                <span>In Halle einchecken</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setChallengeTargetId(null)}
-                className="rounded-xl bg-[#6FB3A2] px-3 py-2.5 text-xs font-black text-[#060708] transition hover:bg-[#82C1B1]"
-              >
-                ⚡ Herausfordern
-              </button>
-            </div>
+            <div className="rounded-2xl border border-[#6FB3A2]/35 bg-[#14161A] p-3 shadow-lg shadow-black/25">
+              <div className="mb-2 flex items-center justify-between px-0.5">
+                <span className="text-[10px] font-black uppercase tracking-[0.14em] text-[#6FB3A2]">
+                  ⚡ Schnellaktionen
+                </span>
+                <span className="text-[10px] font-medium text-[#8E95A2]">
+                  1-Tap Check-in · Auto-Ablauf
+                </span>
+              </div>
 
-            <div className="flex gap-1.5 overflow-x-auto pb-1">
-              {[
-                { id: 'overview', label: 'Übersicht' },
-                { id: 'evenings', label: `Club-Abende (${clubEvenings.length})` },
-                { id: 'live', label: `LIVE (${liveCheckins.length})` },
-                {
-                  id: 'board',
-                  label: `Pinnwand (${sessions.length + openChallengesCount})`,
-                },
-                { id: 'players', label: `Rating (${players.length})` },
-                { id: 'matches', label: `Partien (${connectMatches.length})` },
-                {
-                  id: 'newbies',
-                  label: `Neu im Club (${players.filter((p) => p.isNewMember).length})`,
-                },
-                { id: 'halldays', label: 'Hallentage' },
-              ].map((t) => (
+              <div className="grid grid-cols-2 gap-2">
                 <button
-                  key={t.id}
                   type="button"
-                  onClick={() => setConnectTab(t.id)}
-                  className={`whitespace-nowrap rounded-full px-3.5 py-1.5 text-xs font-bold transition ${
-                    connectTab === t.id
-                      ? 'bg-[#6FB3A2] text-[#060708]'
-                      : 'bg-[#14161A] text-[#9CA3AF] ring-1 ring-[#22252B] hover:text-[#F4ECC2]'
+                  onClick={() =>
+                    isCurrentUserLive ? handleCheckOut() : handleOneTapCheckIn()
+                  }
+                  className={`flex items-center justify-center gap-1.5 rounded-xl px-3 py-2.5 text-xs font-extrabold transition ${
+                    isCurrentUserLive
+                      ? 'bg-emerald-500/20 text-emerald-300 ring-1 ring-emerald-500/45 hover:bg-emerald-500/30'
+                      : 'bg-[#6FB3A2]/20 text-[#A8D0B1] ring-1 ring-[#6FB3A2]/45 hover:bg-[#6FB3A2]/30'
                   }`}
                 >
-                  {t.label}
+                  <span
+                    className={`h-2 w-2 rounded-full ${
+                      isCurrentUserLive ? 'animate-pulse bg-emerald-400' : 'bg-[#6FB3A2]'
+                    }`}
+                  />
+                  <span>
+                    {isCurrentUserLive ? 'Auschecken (LIVE ✓)' : 'In Halle einchecken'}
+                  </span>
                 </button>
-              ))}
+
+                <button
+                  type="button"
+                  onClick={() => setChallengeTargetId(null)}
+                  className="flex items-center justify-center gap-1.5 rounded-xl bg-[#6FB3A2] px-3 py-2.5 text-xs font-black text-[#060708] transition hover:bg-[#82C1B1]"
+                >
+                  <span>⚡</span>
+                  <span>Herausfordern</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setRecordConnectTargetId('')}
+                  className="flex items-center justify-center gap-1.5 rounded-xl border border-[#2B2F37] bg-[#0F1114] px-3 py-2.5 text-xs font-bold text-[#F4ECC2] transition hover:border-[#6FB3A2] hover:bg-[#191C21]"
+                >
+                  <span>🏆</span>
+                  <span>Partie eintragen</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setCreateSessionType('announcement')}
+                  className="flex items-center justify-center gap-1.5 rounded-xl border border-[#2B2F37] bg-[#0F1114] px-3 py-2.5 text-xs font-bold text-[#A8D0B1] transition hover:border-[#6FB3A2] hover:bg-[#191C21]"
+                >
+                  <span>📌</span>
+                  <span>Training posten</span>
+                </button>
+              </div>
+            </div>
+
+            <div className="border-t border-[#22252B] pt-3.5">
+              <div className="grid grid-cols-3 gap-1.5 rounded-xl bg-[#14161A] p-1 ring-1 ring-[#6FB3A2]/25">
+                {[
+                  { id: 'overview', label: 'Übersicht' },
+                  { id: 'rating', label: 'Rating & Partien' },
+                  { id: 'halldays', label: 'Hallentage' },
+                ].map((t) => (
+                  <button
+                    key={t.id}
+                    type="button"
+                    onClick={() => setConnectTab(t.id)}
+                    className={`rounded-lg py-2 text-xs font-bold transition ${
+                      connectTab === t.id
+                        ? 'bg-[#6FB3A2] text-[#060708]'
+                        : 'text-[#8E95A2] hover:text-[#F4ECC2]'
+                    }`}
+                  >
+                    {t.label}
+                  </button>
+                ))}
+              </div>
             </div>
 
             {connectTab === 'overview' && (
@@ -2987,56 +4009,52 @@ export default function App() {
                 players={players}
                 playersById={playersById}
                 liveCheckins={liveCheckins}
+                sessions={sessions}
                 challenges={challenges}
-                clubEvenings={clubEvenings}
                 connectMatches={connectMatches}
                 connectRatings={ratingsByPlayer}
                 matchDeltas={matchDeltas}
                 onNavigateTab={(tab) => setConnectTab(tab)}
-                onToggleJoinClubEvening={handleToggleClubEveningJoin}
+                onToggleJoinSession={handleToggleJoinSession}
                 onRespondChallenge={handleRespondChallenge}
                 onOpenChallenge={(targetId = null) => setChallengeTargetId(targetId)}
-                onOpenCheckIn={() => setShowCheckInModal(true)}
                 onOpenCreateSession={(type) => setCreateSessionType(type)}
-              />
-            )}
-
-            {connectTab === 'evenings' && (
-              <ClubEveningsTab
-                clubEvenings={clubEvenings}
-                currentUser={currentUser}
-                playersById={playersById}
-                onCreateEvening={handleCreateClubEvening}
-                onToggleJoinEvening={handleToggleClubEveningJoin}
-              />
-            )}
-
-            {connectTab === 'live' && (
-              <LiveHallTab
-                liveCheckins={liveCheckins}
-                playersById={playersById}
-                currentUser={currentUser}
-                activeSeason={activeSeason}
-                connectRatings={ratingsByPlayer}
+                onOneTapCheckIn={handleOneTapCheckIn}
+                onUpdateMyLiveCheckin={handleUpdateMyLiveCheckin}
+                onExtendMyLiveCheckin={handleExtendMyLiveCheckin}
+                onToggleComingToo={handleToggleComingToo}
                 onCheckOut={handleCheckOut}
-                onOpenCheckIn={() => setShowCheckInModal(true)}
-                onOpenChallenge={(targetId) => setChallengeTargetId(targetId)}
+                onOpenEditProfile={() => setShowProfileModal(true)}
+                onSelectMember={(memberId) => setSelectedMemberId(memberId)}
               />
             )}
 
-            {connectTab === 'board' && (
-              <BoardTab
-                sessions={sessions}
-                challenges={challenges}
-                playersById={playersById}
-                currentUser={currentUser}
-                activeSeason={activeSeason}
-                connectRatings={ratingsByPlayer}
-                onToggleJoin={handleToggleJoinSession}
-                onOpenCreate={(type) => setCreateSessionType(type)}
-                onOpenChallenge={(targetId = null) => setChallengeTargetId(targetId)}
-                onRespondChallenge={handleRespondChallenge}
-              />
+            {connectTab === 'rating' && (
+              <div className="space-y-5">
+                <ClubPlayersTab
+                  players={players}
+                  currentUser={currentUser}
+                  activeSeason={activeSeason}
+                  liveCheckins={liveCheckins}
+                  connectRatings={ratingsByPlayer}
+                  onOpenAddMember={() => setShowAddMemberModal(true)}
+                  onOpenChallenge={(targetId) => setChallengeTargetId(targetId)}
+                  onOpenRecordConnectMatch={(opponentId) =>
+                    setRecordConnectTargetId(opponentId)
+                  }
+                  onSelectMember={(memberId) => setSelectedMemberId(memberId)}
+                />
+
+                <div className="border-t border-[#22252B] pt-4">
+                  <ConnectMatchesTab
+                    connectMatches={connectMatches}
+                    matchDeltas={matchDeltas}
+                    playersById={playersById}
+                    currentUser={currentUser}
+                    connectRatings={ratingsByPlayer}
+                  />
+                </div>
+              </div>
             )}
 
             {connectTab === 'halldays' && (
@@ -3047,49 +4065,59 @@ export default function App() {
                 connectRatings={ratingsByPlayer}
                 onOpenEditProfile={() => setShowProfileModal(true)}
                 onOpenChallenge={(targetId) => setChallengeTargetId(targetId)}
-              />
-            )}
-
-            {connectTab === 'players' && (
-              <ClubPlayersTab
-                players={players}
-                currentUser={currentUser}
-                liveCheckins={liveCheckins}
-                connectRatings={ratingsByPlayer}
-                onOpenAddMember={() => setShowAddMemberModal(true)}
-                onOpenChallenge={(targetId) => setChallengeTargetId(targetId)}
-                onOpenRecordConnectMatch={(opponentId) =>
-                  setRecordConnectTargetId(opponentId)
-                }
-              />
-            )}
-
-            {connectTab === 'matches' && (
-              <ConnectMatchesTab
-                connectMatches={connectMatches}
-                matchDeltas={matchDeltas}
-                playersById={playersById}
-                currentUser={currentUser}
-                connectRatings={ratingsByPlayer}
-              />
-            )}
-
-            {connectTab === 'newbies' && (
-              <NewMembersTab
-                players={players}
-                currentUser={currentUser}
-                activeSeason={activeSeason}
-                connectRatings={ratingsByPlayer}
-                onOpenChallenge={(targetId) => setChallengeTargetId(targetId)}
-                onOpenEditProfile={() => setShowProfileModal(true)}
+                onSelectMember={(memberId) => setSelectedMemberId(memberId)}
               />
             )}
           </div>
         )}
       </main>
 
+      <footer className="mx-auto mt-10 max-w-2xl border-t border-[#1D2026] px-4 pt-4 pb-6">
+        <div className="flex items-center justify-between text-[11px] text-[#6B7280]">
+          <button
+            type="button"
+            onClick={() => setShowPlatformInfo(true)}
+            className="inline-flex items-center gap-1.5 font-semibold text-[#8E95A2] transition hover:text-[#F4ECC2]"
+          >
+            <span className="flex h-4 w-4 items-center justify-center rounded-full bg-[#1C1F26] text-[10px] font-black text-[#DE754B]">
+              i
+            </span>
+            <span>Über CONNECT</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={handleOpenAdmin}
+            className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 font-bold transition ${
+              world === 'admin'
+                ? 'bg-[#DE754B] text-[#060708]'
+                : 'bg-[#14161A] text-[#9CA3AF] ring-1 ring-[#24272E] hover:border-[#DE754B] hover:text-[#F4ECC2]'
+            }`}
+          >
+            <span>🛡️</span>
+            <span>Club-Admin</span>
+          </button>
+        </div>
+      </footer>
+
       {showPlatformInfo && (
         <PlatformInfoModal onClose={() => setShowPlatformInfo(false)} />
+      )}
+
+      {selectedMemberId && playersById[selectedMemberId] && (
+        <MemberDetailModal
+          player={playersById[selectedMemberId]}
+          currentUser={currentUser}
+          playersById={playersById}
+          activeSeason={activeSeason}
+          seasons={seasons}
+          ratingInfo={ratingsByPlayer[selectedMemberId]}
+          connectMatches={connectMatches}
+          liveCheckin={liveCheckins.find((c) => c.playerId === selectedMemberId)}
+          onChallenge={(targetId) => setChallengeTargetId(targetId)}
+          onRecordMatch={(opponentId) => setRecordConnectTargetId(opponentId)}
+          onClose={() => setSelectedMemberId(null)}
+        />
       )}
 
       {showProfileModal && (
@@ -3109,13 +4137,6 @@ export default function App() {
           activeSeason={activeSeason}
           onAdd={handleAddMember}
           onClose={() => setShowAddMemberModal(false)}
-        />
-      )}
-
-      {showCheckInModal && (
-        <CheckInModal
-          onSubmit={handleCheckIn}
-          onClose={() => setShowCheckInModal(false)}
         />
       )}
 
@@ -3365,30 +4386,60 @@ function LeagueMatchesTab({
 
 function ConnectOverviewTab({
   currentUser,
+  activeSeason,
   players,
   playersById,
   liveCheckins,
+  sessions,
   challenges,
-  clubEvenings,
   connectMatches,
   connectRatings,
   matchDeltas,
   onNavigateTab,
-  onToggleJoinClubEvening,
+  onToggleJoinSession,
   onRespondChallenge,
   onOpenChallenge,
-  onOpenCheckIn,
   onOpenCreateSession,
+  onOneTapCheckIn,
+  onUpdateMyLiveCheckin,
+  onExtendMyLiveCheckin,
+  onToggleComingToo,
+  onCheckOut,
+  onOpenEditProfile,
+  onSelectMember,
 }) {
+  const [onlyMatchingLevel, setOnlyMatchingLevel] = useState(false);
+  const [editingMyLive, setEditingMyLive] = useState(false);
+  const [customLiveNote, setCustomLiveNote] = useState('');
+
+  const myLiveCheckin = useMemo(
+    () => liveCheckins.find((c) => c.playerId === currentUser.id),
+    [liveCheckins, currentUser.id]
+  );
+
   const newMembers = useMemo(
     () => players.filter((p) => p.isNewMember),
     [players]
   );
 
-  const openChallenges = useMemo(
-    () => challenges.filter((c) => c.status === 'open'),
-    [challenges]
-  );
+  const visibleChallenges = useMemo(() => {
+    return challenges.filter((c) => {
+      if (c.status === 'declined') return false;
+      if (!onlyMatchingLevel) return true;
+      const author = playersById[c.challengerId];
+      if (!author || author.id === currentUser.id) return true;
+      return isMatchingLevel(currentUser, author, activeSeason);
+    });
+  }, [challenges, onlyMatchingLevel, playersById, currentUser, activeSeason]);
+
+  const visibleSessions = useMemo(() => {
+    if (!onlyMatchingLevel) return sessions;
+    return sessions.filter((s) => {
+      const author = playersById[s.authorId];
+      if (!author || author.id === currentUser.id) return true;
+      return isMatchingLevel(currentUser, author, activeSeason);
+    });
+  }, [sessions, onlyMatchingLevel, playersById, currentUser, activeSeason]);
 
   const topRatedPlayers = useMemo(() => {
     return [...players]
@@ -3403,11 +4454,10 @@ function ConnectOverviewTab({
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-4 gap-1.5">
-        <button
-          type="button"
-          onClick={() => onNavigateTab('live')}
-          className="rounded-xl border border-emerald-500/30 bg-[#181A1E] p-2.5 text-center"
+      <div className="grid grid-cols-3 gap-2">
+        <a
+          href="#club-live-section"
+          className="rounded-xl border border-emerald-500/30 bg-[#181A1E] p-2.5 text-center transition hover:border-emerald-400/60"
         >
           <div className="text-sm font-black text-emerald-300">
             {liveCheckins.length}
@@ -3415,25 +4465,12 @@ function ConnectOverviewTab({
           <div className="mt-0.5 text-[10px] font-bold text-[#9CA3AF]">
             LIVE Halle
           </div>
-        </button>
+        </a>
 
         <button
           type="button"
-          onClick={() => onNavigateTab('evenings')}
-          className="rounded-xl border border-[#6FB3A2]/30 bg-[#181A1E] p-2.5 text-center"
-        >
-          <div className="text-sm font-black text-[#A8D0B1]">
-            {clubEvenings.length}
-          </div>
-          <div className="mt-0.5 text-[10px] font-bold text-[#9CA3AF]">
-            Club-Abende
-          </div>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => onNavigateTab('players')}
-          className="rounded-xl border border-[#C8A26E]/30 bg-[#181A1E] p-2.5 text-center"
+          onClick={() => onNavigateTab('rating')}
+          className="rounded-xl border border-[#C8A26E]/30 bg-[#181A1E] p-2.5 text-center transition hover:border-[#C8A26E]/60"
         >
           <div className="text-sm font-black text-[#E6C79C]">
             {myRating?.elo || 1200}
@@ -3443,10 +4480,9 @@ function ConnectOverviewTab({
           </div>
         </button>
 
-        <button
-          type="button"
-          onClick={() => onNavigateTab('newbies')}
-          className="rounded-xl border border-[#24272D] bg-[#181A1E] p-2.5 text-center"
+        <a
+          href="#club-newbies-section"
+          className="rounded-xl border border-[#24272D] bg-[#181A1E] p-2.5 text-center transition hover:border-[#6FB3A2]/50"
         >
           <div className="text-sm font-black text-[#F3F4F6]">
             {newMembers.length}
@@ -3454,331 +4490,652 @@ function ConnectOverviewTab({
           <div className="mt-0.5 text-[10px] font-bold text-[#9CA3AF]">
             Neu im Club
           </div>
-        </button>
+        </a>
       </div>
 
-      <div className="rounded-2xl border border-[#24272D] bg-[#181A1E] p-3.5">
+      {/* 1. LIVE in der Halle (1-Tap Check-in, Stimmungs-Chips, +30 Min, 👋 Komme auch) */}
+      <div
+        id="club-live-section"
+        className="rounded-2xl border border-emerald-500/25 bg-[#181A1E] p-3.5"
+      >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-1.5">
-            <span className="h-2 w-2 rounded-full bg-emerald-400" />
+            <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-400" />
             <span className="text-xs font-black uppercase tracking-wide text-[#F3F4F6]">
-              Gerade LIVE in der Halle
+              Gerade LIVE in der Halle ({liveCheckins.length})
             </span>
           </div>
-          <button
-            type="button"
-            onClick={() => onNavigateTab('live')}
-            className="text-[11px] font-bold text-emerald-300 underline"
-          >
-            Alle ({liveCheckins.length})
-          </button>
+          {!myLiveCheckin ? (
+            <button
+              type="button"
+              onClick={onOneTapCheckIn}
+              className="rounded-lg bg-emerald-500/20 px-2.5 py-1 text-[11px] font-black text-emerald-300 ring-1 ring-emerald-500/40 transition hover:bg-emerald-500/30"
+            >
+              🟢 1-Tap Einchecken
+            </button>
+          ) : (
+            <span className="text-[10px] font-semibold text-emerald-300/80">
+              Auto-Ablauf aktiv
+            </span>
+          )}
         </div>
 
         {liveCheckins.length === 0 ? (
-          <div className="mt-2.5 flex items-center justify-between rounded-xl bg-[#131417] p-3 text-xs text-[#9CA3AF]">
-            <span>Aktuell niemand eingecheckt.</span>
+          <div className="mt-2.5 flex items-center justify-between gap-2 rounded-xl bg-[#131417] p-3 text-xs text-[#9CA3AF]">
+            <span>Momentan ist noch niemand LIVE eingecheckt.</span>
             <button
               type="button"
-              onClick={onOpenCheckIn}
-              className="rounded-lg bg-emerald-500/20 px-2.5 py-1 text-[11px] font-bold text-emerald-300"
+              onClick={onOneTapCheckIn}
+              className="shrink-0 rounded-lg bg-[#6FB3A2] px-3 py-1.5 text-[11px] font-black text-[#060708]"
             >
               Jetzt einchecken
             </button>
           </div>
         ) : (
-          <div className="mt-2.5 space-y-2">
-            {liveCheckins.slice(0, 2).map((item) => {
+          <div className="mt-2.5 space-y-2.5">
+            {liveCheckins.map((item) => {
               const p = playersById[item.playerId];
               if (!p) return null;
+              const isMe = p.id === currentUser.id;
+              const comingTooIds = item.comingTooIds || [];
+              const iAmComingToo = comingTooIds.includes(currentUser.id);
+              const comingNames = comingTooIds
+                .map((id) => playersById[id]?.nickname)
+                .filter(Boolean);
+
+              const waMsg = getContextWhatsAppMessage('live_hall', currentUser, p, {
+                durationLabel: item.durationLabel,
+              });
+
               return (
                 <div
                   key={item.id}
-                  className="flex items-center justify-between gap-2 rounded-xl bg-[#131417] px-3 py-2"
+                  className={`rounded-xl border p-3 ${
+                    isMe
+                      ? 'border-[#6FB3A2]/45 bg-[#121D1A]'
+                      : 'border-[#22262E] bg-[#131417]'
+                  }`}
                 >
-                  <div className="flex min-w-0 items-center gap-2">
+                  <div className="flex items-start justify-between gap-2">
+                    <button
+                      type="button"
+                      onClick={() => onSelectMember?.(p.id)}
+                      className="flex min-w-0 items-center gap-2.5 text-left transition hover:opacity-85"
+                    >
+                      <PlayerAvatar
+                        player={p}
+                        sizeClass="h-8 w-8 text-[10px]"
+                        isConnectAccent
+                      />
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <span className="truncate text-xs font-black text-[#F3F4F6] underline decoration-[#6FB3A2]/50 underline-offset-2">
+                            {p.nickname}
+                          </span>
+                          {isMe && (
+                            <span className="rounded bg-[#6FB3A2]/20 px-1.5 py-0.5 text-[9px] font-black text-[#A8D0B1]">
+                              Du
+                            </span>
+                          )}
+                        </div>
+                        <div className="mt-0.5">
+                          <PlayerBadge
+                            player={p}
+                            season={activeSeason}
+                            ratingInfo={connectRatings[p.id]}
+                          />
+                        </div>
+                      </div>
+                    </button>
+
+                    <span className="shrink-0 rounded-full bg-emerald-500/15 px-2.5 py-0.5 text-[10px] font-bold text-emerald-300">
+                      {item.durationLabel}
+                    </span>
+                  </div>
+
+                  {item.note && (
+                    <div className="mt-2 rounded-lg bg-[#181A1E] px-2.5 py-1.5 text-[11px] font-semibold text-[#E5E7EB]">
+                      {item.note}
+                    </div>
+                  )}
+
+                  {comingNames.length > 0 && (
+                    <div className="mt-1.5 flex items-center gap-1 text-[10px] font-bold text-[#A8D0B1]">
+                      <span>👋 Kommt auch:</span>
+                      <span>{comingNames.join(', ')}</span>
+                    </div>
+                  )}
+
+                  {/* Nachträgliches Anpassen für den eigenen Check-in */}
+                  {isMe && editingMyLive && (
+                    <div className="mt-2.5 space-y-2.5 rounded-xl border border-[#2B2F37] bg-[#0F1114] p-2.5">
+                      <div>
+                        <div className="mb-1 text-[10px] font-bold uppercase tracking-wider text-[#8E95A2]">
+                          Stimmung wählen
+                        </div>
+                        <div className="flex flex-wrap gap-1.5">
+                          {LIVE_MOOD_PRESETS.map((preset) => (
+                            <button
+                              key={preset}
+                              type="button"
+                              onClick={() => {
+                                onUpdateMyLiveCheckin({ note: preset });
+                                setCustomLiveNote('');
+                              }}
+                              className={`rounded-lg px-2 py-1 text-[10px] font-bold transition ${
+                                item.note === preset
+                                  ? 'bg-[#6FB3A2] text-[#060708]'
+                                  : 'bg-[#181A1E] text-[#D1D5DB] ring-1 ring-[#262A32] hover:border-[#6FB3A2]'
+                              }`}
+                            >
+                              {preset}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div>
+                        <div className="mb-1 text-[10px] font-bold uppercase tracking-wider text-[#8E95A2]">
+                          Dauer (checkt danach automatisch aus)
+                        </div>
+                        <div className="grid grid-cols-4 gap-1.5">
+                          {LIVE_DURATION_OPTIONS.map((dur) => (
+                            <button
+                              key={dur.id}
+                              type="button"
+                              onClick={() =>
+                                onUpdateMyLiveCheckin({ minutes: dur.minutes })
+                              }
+                              className="rounded-lg bg-[#181A1E] py-1.5 text-[10px] font-extrabold text-[#F4ECC2] ring-1 ring-[#262A32] transition hover:bg-[#6FB3A2] hover:text-[#060708]"
+                            >
+                              {dur.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="flex gap-1.5">
+                        <input
+                          type="text"
+                          value={customLiveNote}
+                          onChange={(e) => setCustomLiveNote(e.target.value)}
+                          placeholder="Oder kurze eigene Notiz..."
+                          className="min-w-0 flex-1 rounded-lg border border-[#262A32] bg-[#181A1E] px-2.5 py-1.5 text-[11px] text-[#F3F4F6] focus:border-[#6FB3A2] focus:outline-none"
+                        />
+                        <button
+                          type="button"
+                          disabled={!customLiveNote.trim()}
+                          onClick={() => {
+                            onUpdateMyLiveCheckin({
+                              note: customLiveNote.trim(),
+                            });
+                            setCustomLiveNote('');
+                          }}
+                          className="shrink-0 rounded-lg bg-[#6FB3A2] px-2.5 py-1.5 text-[10px] font-black text-[#060708] disabled:opacity-40"
+                        >
+                          OK
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="mt-2.5 flex flex-wrap items-center justify-between gap-2 text-[10px] text-[#8E95A2]">
+                    <span>Check-in {item.checkedInAt}</span>
+
+                    {isMe ? (
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={onExtendMyLiveCheckin}
+                          className="rounded-lg bg-[#182924] px-2.5 py-1 font-extrabold text-[#A8D0B1] ring-1 ring-[#6FB3A2]/35 transition hover:bg-[#203630]"
+                        >
+                          ⏱ +30 Min
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setEditingMyLive((v) => !v)}
+                          className={`rounded-lg px-2.5 py-1 font-bold transition ${
+                            editingMyLive
+                              ? 'bg-[#6FB3A2] text-[#060708]'
+                              : 'bg-[#202329] text-[#F4ECC2] hover:bg-[#2A2E36]'
+                          }`}
+                        >
+                          {editingMyLive ? 'Fertig ✓' : 'Anpassen'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEditingMyLive(false);
+                            onCheckOut();
+                          }}
+                          className="rounded-lg bg-[#252830] px-2.5 py-1 font-bold text-[#9CA3AF] hover:text-rose-300"
+                        >
+                          Auschecken
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => onToggleComingToo(item.id)}
+                          className={`rounded-lg px-2.5 py-1 font-extrabold transition ${
+                            iAmComingToo
+                              ? 'bg-[#6FB3A2] text-[#060708]'
+                              : 'bg-[#1D2229] text-[#F4ECC2] ring-1 ring-[#2E343E] hover:border-[#6FB3A2]'
+                          }`}
+                        >
+                          {iAmComingToo ? '👋 Komme auch ✓' : '👋 Komme auch'}
+                        </button>
+                        <WhatsAppActionButton
+                          phone={p.phone}
+                          message={waMsg}
+                          label=""
+                          compact
+                          title={`${p.nickname} per WhatsApp anschreiben`}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => onOpenChallenge(p.id)}
+                          className="rounded-lg bg-[#6FB3A2] px-2.5 py-1 font-black text-[#060708]"
+                        >
+                          ⚡ Duell
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* 2. Pinnwand: Herausforderungen & Sessions (vollständig integriert) */}
+      <div className="space-y-2.5 rounded-2xl border border-[#24272D] bg-[#181A1E] p-3.5">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <span className="text-xs font-black uppercase tracking-wide text-[#F3F4F6]">
+            📌 Pinnwand ({visibleChallenges.length + visibleSessions.length})
+          </span>
+
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => setOnlyMatchingLevel((v) => !v)}
+              className={`rounded-full px-2.5 py-1 text-[10px] font-bold transition ${
+                onlyMatchingLevel
+                  ? 'bg-[#6FB3A2] text-[#060708]'
+                  : 'bg-[#131417] text-[#9CA3AF] ring-1 ring-[#272A30]'
+              }`}
+            >
+              {onlyMatchingLevel ? '✓ Mein Niveau' : 'Mein Niveau'}
+            </button>
+            <button
+              type="button"
+              onClick={() => onOpenCreateSession('spontaneous')}
+              className="rounded-lg bg-[#22252C] px-2 py-1 text-[10px] font-bold text-[#E6C79C]"
+            >
+              + Spontan
+            </button>
+          </div>
+        </div>
+
+        {visibleChallenges.map((ch) => {
+          const challenger = playersById[ch.challengerId];
+          const target = ch.targetId ? playersById[ch.targetId] : null;
+          if (!challenger) return null;
+
+          const isMyOutgoing = challenger.id === currentUser.id;
+          const canAccept =
+            ch.status === 'open' &&
+            !isMyOutgoing &&
+            (ch.targetId === currentUser.id || ch.targetId === null);
+
+          const waReply = getContextWhatsAppMessage(
+            'challenge_reply',
+            currentUser,
+            challenger,
+            { format: ch.format, whenLabel: ch.whenLabel }
+          );
+
+          return (
+            <div
+              key={ch.id}
+              className="rounded-xl border border-[#C8A26E]/45 bg-[#201B14] p-3"
+            >
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span className="rounded bg-[#C8A26E] px-1.5 py-0.5 text-[9px] font-black text-[#0F1012]">
+                      ⚡ DUELL
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => onSelectMember?.(challenger.id)}
+                      className="text-xs font-black text-[#F3F4F6] underline decoration-[#C8A26E]/50 underline-offset-2"
+                    >
+                      {challenger.nickname}
+                    </button>
+                    <span className="text-xs text-[#9CA3AF]">→</span>
+                    <span className="text-xs font-extrabold text-[#E6C79C]">
+                      {target ? target.nickname : 'Offen an alle'}
+                    </span>
+                  </div>
+                  <div className="mt-1 text-[11px] font-bold text-[#E6C79C]">
+                    {ch.format} · <span className="text-[#D1D5DB]">{ch.whenLabel}</span>
+                  </div>
+                </div>
+
+                <span
+                  className={`shrink-0 rounded-full px-2 py-0.5 text-[9px] font-black ${
+                    ch.status === 'accepted'
+                      ? 'bg-emerald-500/20 text-emerald-300'
+                      : 'bg-[#2E261A] text-[#E6C79C]'
+                  }`}
+                >
+                  {ch.status === 'accepted' ? 'Angenommen ✓' : 'Offen'}
+                </span>
+              </div>
+
+              {ch.note && (
+                <p className="mt-1.5 text-[11px] text-[#D1D5DB]">«{ch.note}»</p>
+              )}
+
+              <div className="mt-2.5 flex flex-wrap items-center justify-between gap-2">
+                <span className="text-[10px] text-[#8E95A2]">{ch.createdAt}</span>
+
+                <div className="flex items-center gap-1.5">
+                  {canAccept && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => onRespondChallenge(ch.id, 'accepted')}
+                        className="rounded-lg bg-emerald-500 px-2.5 py-1 text-[10px] font-black text-[#0F1012]"
+                      >
+                        Annehmen ✓
+                      </button>
+                      {ch.targetId === currentUser.id && (
+                        <button
+                          type="button"
+                          onClick={() => onRespondChallenge(ch.id, 'declined')}
+                          className="rounded-lg bg-[#252830] px-2 py-1 text-[10px] font-bold text-[#9CA3AF]"
+                        >
+                          Passt nicht
+                        </button>
+                      )}
+                    </>
+                  )}
+
+                  {!isMyOutgoing && (
+                    <WhatsAppActionButton
+                      phone={challenger.phone}
+                      message={waReply}
+                      label="WhatsApp"
+                      compact
+                    />
+                  )}
+                </div>
+              </div>
+            </div>
+          );
+        })}
+
+        {visibleSessions.map((s) => {
+          const author = playersById[s.authorId];
+          if (!author) return null;
+          const isJoined = s.joinedIds.includes(currentUser.id);
+          const waMsg = getContextWhatsAppMessage('session_join', currentUser, author, {
+            dateLabel: s.dateLabel,
+          });
+
+          return (
+            <div
+              key={s.id}
+              className="rounded-xl border border-[#22262E] bg-[#131417] p-3"
+            >
+              <div className="flex items-center justify-between gap-2">
+                <button
+                  type="button"
+                  onClick={() => onSelectMember?.(author.id)}
+                  className="flex min-w-0 items-center gap-2 text-left transition hover:opacity-85"
+                >
+                  <PlayerAvatar
+                    player={author}
+                    sizeClass="h-7 w-7 text-[10px]"
+                    isConnectAccent={author.connectOnly}
+                  />
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <span className="truncate text-xs font-black text-[#F3F4F6] underline decoration-[#6FB3A2]/50 underline-offset-2">
+                        {author.nickname}
+                      </span>
+                      <span
+                        className={`shrink-0 rounded px-1.5 py-0.5 text-[9px] font-bold ${
+                          s.type === 'announcement'
+                            ? 'bg-[#152622] text-[#A8D0B1]'
+                            : 'bg-[#2C2418] text-[#E6C79C]'
+                        }`}
+                      >
+                        {s.type === 'announcement' ? 'Vorankündigung' : 'Spontan'}
+                      </span>
+                    </div>
+                  </div>
+                </button>
+
+                <span className="shrink-0 text-[10px] text-[#8E95A2]">
+                  {s.createdAt}
+                </span>
+              </div>
+
+              <div className="mt-2 text-xs font-extrabold text-[#E6C79C]">
+                {s.dateLabel}
+              </div>
+              <p className="mt-0.5 text-[11px] text-[#D1D5DB]">{s.note}</p>
+
+              <div className="mt-2.5 flex flex-wrap items-center justify-between gap-2">
+                <div className="text-[10px] text-[#9CA3AF]">
+                  Dabei ({s.joinedIds.length}):{' '}
+                  {s.joinedIds
+                    .map((id) => playersById[id]?.nickname)
+                    .filter(Boolean)
+                    .join(', ')}
+                </div>
+
+                <div className="flex items-center gap-1.5">
+                  {author.id !== currentUser.id && (
+                    <WhatsAppActionButton
+                      phone={author.phone}
+                      message={waMsg}
+                      label=""
+                      compact
+                    />
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => onToggleJoinSession(s.id)}
+                    className={`rounded-lg px-2.5 py-1 text-[10px] font-bold transition ${
+                      isJoined
+                        ? 'bg-[#6FB3A2] text-[#060708]'
+                        : 'bg-[#252830] text-[#F3F4F6] hover:bg-[#313540]'
+                    }`}
+                  >
+                    {isJoined ? 'Dabei ✓' : 'Bin dabei'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+
+        {visibleChallenges.length === 0 && visibleSessions.length === 0 && (
+          <div className="rounded-xl bg-[#131417] p-3 text-center text-xs text-[#8E95A2]">
+            Keine passenden Einträge für diesen Filter vorhanden.
+          </div>
+        )}
+      </div>
+
+      {/* 3. Top-3 CLUB-Rating Vorschau */}
+      <div className="rounded-2xl border border-[#24272D] bg-[#181A1E] p-3.5">
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-black uppercase tracking-wide text-[#E6C79C]">
+            Top-3 CLUB-Rating
+          </span>
+          <button
+            type="button"
+            onClick={() => onNavigateTab('rating')}
+            className="text-[11px] font-bold text-[#E6C79C] underline"
+          >
+            Rangliste &amp; Partien →
+          </button>
+        </div>
+
+        <div className="mt-2.5 space-y-1.5">
+          {topRatedPlayers.map((p, idx) => {
+            const r = connectRatings[p.id];
+            return (
+              <div
+                key={p.id}
+                className="flex items-center justify-between gap-2 rounded-xl bg-[#131417] px-3 py-2"
+              >
+                <button
+                  type="button"
+                  onClick={() => onSelectMember?.(p.id)}
+                  className="flex min-w-0 flex-1 items-center gap-2 text-left transition hover:opacity-85"
+                >
+                  <span className="w-4 text-xs font-black text-[#E6C79C]">
+                    #{idx + 1}
+                  </span>
+                  <PlayerAvatar
+                    player={p}
+                    sizeClass="h-6 w-6 text-[9px]"
+                    isConnectAccent={p.connectOnly}
+                  />
+                  <span className="truncate text-xs font-bold text-[#F3F4F6] underline decoration-[#6FB3A2]/50 underline-offset-2">
+                    {p.nickname}
+                  </span>
+                </button>
+                {r?.tier && (
+                  <span
+                    className={`rounded border px-2 py-0.5 text-[10px] font-bold ${r.tier.badgeClass}`}
+                  >
+                    {r.tier.symbol} {r.elo}
+                  </span>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        {connectMatches.length > 0 && (
+          <div className="mt-2.5 border-t border-[#22252B] pt-2.5">
+            <div className="mb-1.5 flex items-center justify-between text-[10px] font-bold text-[#8E95A2]">
+              <span>Letzte freie Partie</span>
+              <button
+                type="button"
+                onClick={() => onNavigateTab('rating')}
+                className="text-[#A8D0B1] underline"
+              >
+                Alle ({connectMatches.length})
+              </button>
+            </div>
+            {connectMatches.slice(0, 1).map((m) => {
+              const p1 = playersById[m.player1Id];
+              const p2 = playersById[m.player2Id];
+              const deltas = matchDeltas[m.id] || { delta1: 0, delta2: 0 };
+              if (!p1 || !p2) return null;
+              return (
+                <div
+                  key={m.id}
+                  className="flex items-center justify-between gap-2 rounded-xl bg-[#131417] px-3 py-2 text-xs"
+                >
+                  <div className="truncate font-bold text-[#F3F4F6]">
+                    {p1.nickname}{' '}
+                    <span className="text-[10px] text-[#8E95A2]">
+                      ({deltas.delta1 >= 0 ? `+${deltas.delta1}` : deltas.delta1})
+                    </span>{' '}
+                    vs. {p2.nickname}
+                  </div>
+                  <span className="shrink-0 rounded bg-[#181A1E] px-2 py-0.5 font-black text-[#E6C79C]">
+                    {m.score}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* 4. Neu im Club (vollständig integriert) */}
+      {newMembers.length > 0 && (
+        <div
+          id="club-newbies-section"
+          className="rounded-2xl border border-[#24272D] bg-[#181A1E] p-3.5"
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-black uppercase tracking-wide text-[#F3F4F6]">
+              Neu im Club ({newMembers.length})
+            </span>
+            <button
+              type="button"
+              onClick={onOpenEditProfile}
+              className="text-[11px] font-bold text-[#A8D0B1] underline"
+            >
+              Mein Status
+            </button>
+          </div>
+
+          <div className="mt-2.5 space-y-2">
+            {newMembers.map((p) => (
+              <div
+                key={p.id}
+                className="rounded-xl border border-[#6FB3A2]/25 bg-[#131417] p-3"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <button
+                    type="button"
+                    onClick={() => onSelectMember?.(p.id)}
+                    className="flex min-w-0 flex-1 items-center gap-2.5 text-left transition hover:opacity-85"
+                  >
                     <PlayerAvatar
                       player={p}
-                      sizeClass="h-7 w-7 text-[10px]"
+                      sizeClass="h-9 w-9 text-xs"
                       isConnectAccent
                     />
                     <div className="min-w-0">
-                      <div className="truncate text-xs font-bold text-[#F3F4F6]">
-                        {p.nickname}
+                      <div className="truncate text-xs font-black text-[#F3F4F6] underline decoration-emerald-400/50 underline-offset-2">
+                        {p.nickname} ({p.firstName})
                       </div>
-                      <div className="truncate text-[10px] text-[#8E95A2]">
-                        {item.tableInfo} · bis {item.untilTime}
+                      <div className="mt-0.5">
+                        <PlayerBadge
+                          player={p}
+                          season={activeSeason}
+                          ratingInfo={connectRatings[p.id]}
+                        />
                       </div>
                     </div>
-                  </div>
+                  </button>
+
                   {p.id !== currentUser.id && (
                     <div className="flex shrink-0 items-center gap-1.5">
                       <WhatsAppActionButton
                         phone={p.phone}
-                        message={getContextWhatsAppMessage('live_hall', currentUser, p, {
-                          tableInfo: item.tableInfo,
-                        })}
+                        message={getContextWhatsAppMessage('new_member', currentUser, p)}
                         label=""
                         compact
                       />
                       <button
                         type="button"
                         onClick={() => onOpenChallenge(p.id)}
-                        className="shrink-0 rounded-lg bg-[#6FB3A2] px-2.5 py-1 text-[11px] font-black text-[#060708]"
+                        className="shrink-0 rounded-lg bg-[#6FB3A2] px-2.5 py-1.5 text-[10px] font-black text-[#060708]"
                       >
-                        ⚡ Duell
+                        ⚡ Einladen
                       </button>
                     </div>
                   )}
                 </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
 
-      <div className="rounded-2xl border border-[#6FB3A2]/35 bg-[#181A1E] p-3.5">
-        <div className="flex items-center justify-between">
-          <span className="text-xs font-black uppercase tracking-wide text-[#A8D0B1]">
-            🎉 Nächster Club-Abend
-          </span>
-          <button
-            type="button"
-            onClick={() => onNavigateTab('evenings')}
-            className="text-[11px] font-bold text-[#A8D0B1] underline"
-          >
-            Alle Abende ({clubEvenings.length})
-          </button>
-        </div>
-
-        {clubEvenings[0] && (
-          <div className="mt-2.5 rounded-xl bg-[#131417] p-3">
-            <div className="flex items-start justify-between gap-2">
-              <div>
-                <div className="text-xs font-black text-[#F3F4F6]">
-                  {clubEvenings[0].title}
-                </div>
-                <div className="mt-0.5 text-[11px] font-semibold text-[#A8D0B1]">
-                  {clubEvenings[0].dateLabel} · {clubEvenings[0].tables}
-                </div>
-              </div>
-              <span className="shrink-0 rounded-full bg-[#152622] px-2 py-0.5 text-[10px] font-bold text-[#A8D0B1]">
-                {clubEvenings[0].attendeeIds.length}/
-                {clubEvenings[0].maxParticipants}
-              </span>
-            </div>
-
-            <p className="mt-1.5 text-[11px] text-[#D1D5DB]">
-              {clubEvenings[0].description}
-            </p>
-
-            <div className="mt-2.5 flex items-center justify-between">
-              <span className="text-[10px] text-[#8E95A2]">
-                Organisiert von{' '}
-                {playersById[clubEvenings[0].hostId]?.nickname || 'Club'}
-              </span>
-              <button
-                type="button"
-                onClick={() => onToggleJoinClubEvening(clubEvenings[0].id)}
-                className={`rounded-lg px-3 py-1 text-[11px] font-black ${
-                  clubEvenings[0].attendeeIds.includes(currentUser.id)
-                    ? 'bg-[#6FB3A2] text-[#060708]'
-                    : 'bg-[#252830] text-[#F3F4F6]'
-                }`}
-              >
-                {clubEvenings[0].attendeeIds.includes(currentUser.id)
-                  ? 'Angemeldet ✓'
-                  : 'Anmelden'}
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {openChallenges.length > 0 && (
-        <div className="rounded-2xl border border-[#C8A26E]/35 bg-[#1E1A14] p-3.5">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-black uppercase tracking-wide text-[#E6C79C]">
-              ⚡ Offene Herausforderungen ({openChallenges.length})
-            </span>
-            <button
-              type="button"
-              onClick={() => onNavigateTab('board')}
-              className="text-[11px] font-bold text-[#E6C79C] underline"
-            >
-              Zur Pinnwand
-            </button>
-          </div>
-
-          <div className="mt-2.5 space-y-2">
-            {openChallenges.slice(0, 2).map((ch) => {
-              const challenger = playersById[ch.challengerId];
-              const target = ch.targetId ? playersById[ch.targetId] : null;
-              if (!challenger) return null;
-              const canAccept =
-                challenger.id !== currentUser.id &&
-                (ch.targetId === currentUser.id || ch.targetId === null);
-
-              return (
-                <div
-                  key={ch.id}
-                  className="flex items-center justify-between gap-2 rounded-xl bg-[#131417] px-3 py-2"
-                >
-                  <div className="min-w-0">
-                    <div className="truncate text-xs font-bold text-[#F3F4F6]">
-                      {challenger.nickname} →{' '}
-                      <span className="text-[#E6C79C]">
-                        {target ? target.nickname : 'Alle'}
-                      </span>
-                    </div>
-                    <div className="truncate text-[10px] text-[#8E95A2]">
-                      {ch.format} · {ch.whenLabel}
-                    </div>
-                  </div>
-
-                  {canAccept && (
-                    <button
-                      type="button"
-                      onClick={() => onRespondChallenge(ch.id, 'accepted')}
-                      className="shrink-0 rounded-lg bg-emerald-500 px-2.5 py-1 text-[11px] font-black text-[#0F1012]"
-                    >
-                      Annehmen ✓
-                    </button>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <div className="rounded-2xl border border-[#24272D] bg-[#181A1E] p-3.5">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-black uppercase tracking-wide text-[#E6C79C]">
-              ★ Top-Rating
-            </span>
-            <button
-              type="button"
-              onClick={() => onNavigateTab('players')}
-              className="text-[11px] font-bold text-[#E6C79C] underline"
-            >
-              Rangliste
-            </button>
-          </div>
-          <div className="mt-2 space-y-1.5">
-            {topRatedPlayers.map((p, idx) => {
-              const r = connectRatings[p.id];
-              return (
-                <div
-                  key={p.id}
-                  className="flex items-center justify-between rounded-lg bg-[#131417] px-2.5 py-1.5 text-xs"
-                >
-                  <div className="flex items-center gap-2 truncate">
-                    <span className="font-black text-[#C8A26E]">{idx + 1}.</span>
-                    <span className="truncate font-bold text-[#F3F4F6]">
-                      {p.nickname}
-                    </span>
-                  </div>
-                  <span className="shrink-0 font-black text-[#E6C79C]">
-                    {r?.elo}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        <div className="rounded-2xl border border-[#24272D] bg-[#181A1E] p-3.5">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-black uppercase tracking-wide text-[#F3F4F6]">
-              Letzte Partien
-            </span>
-            <button
-              type="button"
-              onClick={() => onNavigateTab('matches')}
-              className="text-[11px] font-bold text-[#A8D0B1] underline"
-            >
-              Alle ({connectMatches.length})
-            </button>
-          </div>
-          <div className="mt-2 space-y-1.5">
-            {connectMatches.slice(0, 3).map((m) => {
-              const p1 = playersById[m.player1Id];
-              const p2 = playersById[m.player2Id];
-              const d = matchDeltas[m.id];
-              return (
-                <div
-                  key={m.id}
-                  className="flex items-center justify-between rounded-lg bg-[#131417] px-2.5 py-1.5 text-[11px]"
-                >
-                  <span className="truncate font-bold text-[#D1D5DB]">
-                    {p1?.nickname} vs. {p2?.nickname}
-                  </span>
-                  <span className="shrink-0 font-black text-[#E6C79C]">
-                    {m.score}{' '}
-                    {d ? (
-                      <span className="text-[10px] text-emerald-400">
-                        ({d.delta1 >= 0 ? `+${d.delta1}` : d.delta1})
-                      </span>
-                    ) : null}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </div>
-
-      {newMembers.length > 0 && (
-        <div className="rounded-2xl border border-[#24272D] bg-[#181A1E] p-3.5">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-black uppercase tracking-wide text-emerald-300">
-              👋 Neu im Club ({newMembers.length})
-            </span>
-            <button
-              type="button"
-              onClick={() => onNavigateTab('newbies')}
-              className="text-[11px] font-bold text-emerald-300 underline"
-            >
-              Alle vorstellen
-            </button>
-          </div>
-          <div className="mt-2.5 grid grid-cols-1 gap-2 sm:grid-cols-2">
-            {newMembers.slice(0, 2).map((p) => (
-              <div
-                key={p.id}
-                className="flex items-center justify-between gap-2 rounded-xl bg-[#131417] p-2.5"
-              >
-                <div className="flex min-w-0 items-center gap-2">
-                  <PlayerAvatar
-                    player={p}
-                    sizeClass="h-9 w-9 text-xs"
-                    isConnectAccent
-                  />
-                  <div className="min-w-0">
-                    <div className="truncate text-xs font-black text-[#F3F4F6]">
-                      {p.nickname}
-                    </div>
-                    <div className="truncate text-[10px] text-[#8E95A2]">
-                      {p.sttClass} · {p.joinedLabel}
-                    </div>
-                  </div>
-                </div>
-                {p.id !== currentUser.id && (
-                  <div className="flex shrink-0 items-center gap-1">
-                    <WhatsAppActionButton
-                      phone={p.phone}
-                      message={getContextWhatsAppMessage('new_member', currentUser, p)}
-                      label=""
-                      compact
-                    />
-                    <button
-                      type="button"
-                      onClick={() => onOpenChallenge(p.id)}
-                      className="shrink-0 rounded-lg bg-[#6FB3A2] px-2 py-1 text-[10px] font-black text-[#060708]"
-                    >
-                      ⚡ Einladen
-                    </button>
+                {formatHallScheduleSummary(p) && (
+                  <div className="mt-2 text-[10px] text-[#8E95A2]">
+                    Oft in der Halle: {formatHallScheduleSummary(p)}
                   </div>
                 )}
               </div>
@@ -3786,240 +5143,6 @@ function ConnectOverviewTab({
           </div>
         </div>
       )}
-
-      <div className="flex gap-2">
-        <button
-          type="button"
-          onClick={() => onOpenCreateSession('announcement')}
-          className="flex-1 rounded-xl border border-[#2B2F37] bg-[#181A1E] py-2.5 text-xs font-bold text-[#A8D0B1]"
-        >
-          + Training ankündigen
-        </button>
-        <button
-          type="button"
-          onClick={() => onNavigateTab('halldays')}
-          className="flex-1 rounded-xl border border-[#2B2F37] bg-[#181A1E] py-2.5 text-xs font-bold text-[#D1D5DB]"
-        >
-          📅 Hallentage prüfen
-        </button>
-      </div>
-    </div>
-  );
-}
-
-function ClubEveningsTab({
-  clubEvenings,
-  currentUser,
-  playersById,
-  onCreateEvening,
-  onToggleJoinEvening,
-}) {
-  const [showForm, setShowForm] = useState(false);
-  const [title, setTitle] = useState('');
-  const [dateLabel, setDateLabel] = useState('Freitag · 19:30 Uhr');
-  const [tables, setTables] = useState('Tisch 1–3');
-  const [maxParticipants, setMaxParticipants] = useState(10);
-  const [description, setDescription] = useState('');
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (!title.trim()) return;
-    onCreateEvening({
-      title: title.trim(),
-      dateLabel: dateLabel.trim() || 'Freitag · 19:30 Uhr',
-      tables: tables.trim() || 'Tisch 1 & 2',
-      maxParticipants: Number(maxParticipants) || 10,
-      description:
-        description.trim() ||
-        'Gemütlicher Club-Abend für alle Spielstärken – einfach anmelden!',
-    });
-    setTitle('');
-    setDescription('');
-    setShowForm(false);
-  };
-
-  return (
-    <div className="space-y-3">
-      <div className="flex items-center justify-between gap-2">
-        <div>
-          <h2 className="text-xs font-black tracking-wide text-[#F3F4F6] uppercase">
-            Club-Abende ({clubEvenings.length})
-          </h2>
-          <p className="text-[11px] text-[#8E95A2]">
-            Gemeinsame Spielabende ankündigen &amp; direkt anmelden
-          </p>
-        </div>
-
-        <button
-          type="button"
-          onClick={() => setShowForm((v) => !v)}
-          className="rounded-xl bg-[#6FB3A2] px-3 py-1.5 text-xs font-black text-[#060708]"
-        >
-          {showForm ? 'Schliessen' : '+ Abend ankündigen'}
-        </button>
-      </div>
-
-      {showForm && (
-        <form
-          onSubmit={handleSubmit}
-          className="space-y-2.5 rounded-2xl border border-[#6FB3A2]/40 bg-[#181A1E] p-3.5"
-        >
-          <input
-            type="text"
-            required
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            placeholder="Titel (z. B. Freitags-Rundlauf & Doppel) *"
-            className="w-full rounded-xl border border-[#2E323B] bg-[#131417] px-3 py-2 text-xs font-bold text-[#F3F4F6]"
-          />
-
-          <div className="grid grid-cols-3 gap-2">
-            <input
-              type="text"
-              value={dateLabel}
-              onChange={(e) => setDateLabel(e.target.value)}
-              placeholder="Wann?"
-              className="col-span-2 rounded-xl border border-[#2E323B] bg-[#131417] px-3 py-2 text-xs text-[#F3F4F6]"
-            />
-            <input
-              type="number"
-              min={2}
-              max={32}
-              value={maxParticipants}
-              onChange={(e) => setMaxParticipants(e.target.value)}
-              placeholder="Max. Plätze"
-              className="rounded-xl border border-[#2E323B] bg-[#131417] px-3 py-2 text-xs text-[#F3F4F6]"
-            />
-          </div>
-
-          <input
-            type="text"
-            value={tables}
-            onChange={(e) => setTables(e.target.value)}
-            placeholder="Tische (z. B. Tisch 1–3)"
-            className="w-full rounded-xl border border-[#2E323B] bg-[#131417] px-3 py-2 text-xs text-[#F3F4F6]"
-          />
-
-          <textarea
-            rows={2}
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            placeholder="Kurze Beschreibung für die Teilnehmer..."
-            className="w-full rounded-xl border border-[#2E323B] bg-[#131417] px-3 py-2 text-xs text-[#F3F4F6]"
-          />
-
-          <button
-            type="submit"
-            className="w-full rounded-xl bg-[#6FB3A2] py-2.5 text-xs font-black text-[#060708]"
-          >
-            Club-Abend veröffentlichen
-          </button>
-        </form>
-      )}
-
-      <div className="space-y-3">
-        {clubEvenings.map((ev) => {
-          const isJoined = ev.attendeeIds.includes(currentUser.id);
-          const isFull =
-            !isJoined && ev.attendeeIds.length >= ev.maxParticipants;
-          const host = playersById[ev.hostId];
-
-          return (
-            <div
-              key={ev.id}
-              className="rounded-2xl border border-[#24272D] bg-[#181A1E] p-4"
-            >
-              <div className="flex items-start justify-between gap-2">
-                <div>
-                  <h3 className="text-sm font-black text-[#F3F4F6]">
-                    {ev.title}
-                  </h3>
-                  <div className="mt-0.5 text-xs font-bold text-[#A8D0B1]">
-                    {ev.dateLabel} · {ev.tables}
-                  </div>
-                </div>
-                <span className="shrink-0 rounded-full bg-[#131417] px-2.5 py-1 text-[11px] font-black text-[#E6C79C] ring-1 ring-[#2B2F37]">
-                  {ev.attendeeIds.length}/{ev.maxParticipants} Plätze
-                </span>
-              </div>
-
-              <p className="mt-2 text-xs text-[#D1D5DB]">{ev.description}</p>
-
-              <div className="mt-3 flex flex-wrap gap-1.5">
-                {ev.attendeeIds.map((pid) => {
-                  const attendee = playersById[pid];
-                  if (!attendee) return null;
-                  const isMe = attendee.id === currentUser.id;
-                  const pillContent = (
-                    <>
-                      <PlayerAvatar
-                        player={attendee}
-                        sizeClass="h-4 w-4 text-[8px]"
-                        isConnectAccent
-                      />
-                      <span>{attendee.nickname}</span>
-                      {!isMe && <span className="text-[10px] text-emerald-300">💬</span>}
-                    </>
-                  );
-
-                  if (isMe) {
-                    return (
-                      <span
-                        key={pid}
-                        className="inline-flex items-center gap-1 rounded-full bg-[#131417] px-2 py-0.5 text-[11px] text-[#D1D5DB] ring-1 ring-[#272A30]"
-                      >
-                        {pillContent}
-                      </span>
-                    );
-                  }
-
-                  return (
-                    <a
-                      key={pid}
-                      href={buildWhatsAppLink(
-                        attendee.phone,
-                        getContextWhatsAppMessage('club_evening', currentUser, attendee, {
-                          title: ev.title,
-                        })
-                      )}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      title={`${attendee.nickname} per WhatsApp anschreiben`}
-                      className="inline-flex items-center gap-1 rounded-full bg-[#131417] px-2 py-0.5 text-[11px] text-[#D1D5DB] ring-1 ring-[#272A30] transition hover:border-emerald-500/40 hover:text-emerald-200"
-                    >
-                      {pillContent}
-                    </a>
-                  );
-                })}
-              </div>
-
-              <div className="mt-3.5 flex items-center justify-between border-t border-[#24272D] pt-2.5">
-                <span className="text-[11px] text-[#8E95A2]">
-                  Host: {host?.nickname || 'Club'}
-                </span>
-                <button
-                  type="button"
-                  disabled={isFull}
-                  onClick={() => onToggleJoinEvening(ev.id)}
-                  className={`rounded-xl px-4 py-1.5 text-xs font-black transition ${
-                    isJoined
-                      ? 'bg-[#6FB3A2]/20 text-[#A8D0B1] ring-1 ring-[#6FB3A2]/45'
-                      : isFull
-                      ? 'bg-[#22252C] text-[#6B7280]'
-                      : 'bg-[#6FB3A2] text-[#060708]'
-                  }`}
-                >
-                  {isJoined
-                    ? 'Dabei ✓ (Abmelden)'
-                    : isFull
-                    ? 'Ausgebucht'
-                    : 'Jetzt anmelden'}
-                </button>
-              </div>
-            </div>
-          );
-        })}
-      </div>
     </div>
   );
 }
@@ -4084,7 +5207,7 @@ function LeagueStandingsTab({ season, playersById, currentUser, connectRatings }
 
     const undefeated = activeStats
       .filter((s) => s.won > 0 && s.lost === 0)
-      .sort((a, b) => b.won - a.won || b.setsWon - a.setsWon);
+      .sort((a, b) => b.won - a.won || b.setsWon - b.setsWon);
     if (undefeated.length > 0) {
       const names = undefeated.map((u) => u.player?.nickname).join(', ');
       const top = undefeated[0];
@@ -4389,403 +5512,6 @@ function LeagueStatusTab({
   );
 }
 
-function LiveHallTab({
-  liveCheckins,
-  playersById,
-  currentUser,
-  activeSeason,
-  connectRatings,
-  onCheckOut,
-  onOpenCheckIn,
-  onOpenChallenge,
-}) {
-  return (
-    <div className="space-y-3">
-      <div className="flex items-center justify-between">
-        <span className="text-xs font-bold text-[#9CA3AF]">
-          Aktuell in der Halle ({liveCheckins.length})
-        </span>
-        <button
-          type="button"
-          onClick={onOpenCheckIn}
-          className="text-xs font-bold text-emerald-300 underline"
-        >
-          + Einchecken
-        </button>
-      </div>
-
-      {liveCheckins.length === 0 ? (
-        <div className="rounded-2xl border border-[#24272D] bg-[#181A1E] p-5 text-center text-xs text-[#9CA3AF]">
-          Momentan ist noch niemand LIVE eingecheckt. Mach den Anfang!
-        </div>
-      ) : (
-        liveCheckins.map((item) => {
-          const p = playersById[item.playerId];
-          if (!p) return null;
-          const isMe = p.id === currentUser.id;
-          const waMsg = getContextWhatsAppMessage('live_hall', currentUser, p, {
-            tableInfo: item.tableInfo,
-          });
-
-          return (
-            <div
-              key={item.id}
-              className="rounded-2xl border border-emerald-500/25 bg-[#181A1E] p-3.5"
-            >
-              <div className="flex items-start justify-between gap-2">
-                <div className="flex items-center gap-2.5">
-                  <PlayerAvatar
-                    player={p}
-                    sizeClass="h-9 w-9 text-xs"
-                    isConnectAccent
-                  />
-                  <div>
-                    <div className="flex items-center gap-1.5">
-                      <span className="h-2 w-2 rounded-full bg-emerald-400" />
-                      <span className="text-sm font-black text-[#F3F4F6]">
-                        {p.nickname}
-                      </span>
-                    </div>
-                    <div className="mt-0.5">
-                      <PlayerBadge
-                        player={p}
-                        season={activeSeason}
-                        ratingInfo={connectRatings[p.id]}
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <span className="shrink-0 rounded-full bg-emerald-500/15 px-2.5 py-0.5 text-[11px] font-bold text-emerald-300">
-                  {item.tableInfo} · bis {item.untilTime}
-                </span>
-              </div>
-
-              {item.note && (
-                <p className="mt-2.5 rounded-xl bg-[#131417] px-3 py-2 text-xs text-[#D1D5DB]">
-                  {item.note}
-                </p>
-              )}
-
-              <div className="mt-3 flex items-center justify-between text-[11px] text-[#8E95A2]">
-                <span>Check-in {item.checkedInAt}</span>
-                {isMe ? (
-                  <button
-                    type="button"
-                    onClick={onCheckOut}
-                    className="rounded-lg bg-[#252830] px-2.5 py-1 font-bold text-[#F3F4F6]"
-                  >
-                    Auschecken
-                  </button>
-                ) : (
-                  <div className="flex items-center gap-1.5">
-                    <button
-                      type="button"
-                      onClick={() => onOpenChallenge(p.id)}
-                      className="rounded-lg bg-[#6FB3A2] px-2.5 py-1 font-black text-[#060708]"
-                    >
-                      ⚡ Herausfordern
-                    </button>
-                    <a
-                      href={buildWhatsAppLink(p.phone, waMsg)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="rounded-lg bg-[#1F3A2E] px-2.5 py-1 font-bold text-emerald-300"
-                    >
-                      WhatsApp
-                    </a>
-                  </div>
-                )}
-              </div>
-            </div>
-          );
-        })
-      )}
-    </div>
-  );
-}
-
-function BoardTab({
-  sessions,
-  challenges,
-  playersById,
-  currentUser,
-  activeSeason,
-  connectRatings,
-  onToggleJoin,
-  onOpenCreate,
-  onOpenChallenge,
-  onRespondChallenge,
-}) {
-  const [onlyMatchingLevel, setOnlyMatchingLevel] = useState(false);
-
-  const visibleChallenges = useMemo(() => {
-    return challenges.filter((c) => {
-      if (c.status === 'declined') return false;
-      if (!onlyMatchingLevel) return true;
-      const author = playersById[c.challengerId];
-      if (!author || author.id === currentUser.id) return true;
-      return isMatchingLevel(currentUser, author, activeSeason);
-    });
-  }, [challenges, onlyMatchingLevel, playersById, currentUser, activeSeason]);
-
-  const visibleSessions = useMemo(() => {
-    if (!onlyMatchingLevel) return sessions;
-    return sessions.filter((s) => {
-      const author = playersById[s.authorId];
-      if (!author || author.id === currentUser.id) return true;
-      return isMatchingLevel(currentUser, author, activeSeason);
-    });
-  }, [sessions, onlyMatchingLevel, playersById, currentUser, activeSeason]);
-
-  return (
-    <div className="space-y-3">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <button
-          type="button"
-          onClick={() => setOnlyMatchingLevel((v) => !v)}
-          className={`rounded-full px-3 py-1 text-[11px] font-bold transition ${
-            onlyMatchingLevel
-              ? 'bg-[#6FB3A2] text-[#060708]'
-              : 'bg-[#181A1E] text-[#9CA3AF] ring-1 ring-[#272A30]'
-          }`}
-        >
-          {onlyMatchingLevel ? '✓ Passt zu meinem Niveau' : 'Filter: Mein Niveau'}
-        </button>
-
-        <div className="flex gap-1.5">
-          <button
-            type="button"
-            onClick={() => onOpenChallenge(null)}
-            className="rounded-lg bg-[#6FB3A2] px-2.5 py-1 text-[11px] font-black text-[#060708]"
-          >
-            ⚡ Herausfordern
-          </button>
-          <button
-            type="button"
-            onClick={() => onOpenCreate('announcement')}
-            className="rounded-lg bg-[#22252C] px-2.5 py-1 text-[11px] font-bold text-[#A8D0B1]"
-          >
-            + Vorankündigung
-          </button>
-        </div>
-      </div>
-
-      {visibleChallenges.length > 0 && (
-        <div className="space-y-2">
-          <div className="text-[11px] font-black uppercase tracking-wider text-[#E6C79C]">
-            ⚡ Spontane Herausforderungen
-          </div>
-          {visibleChallenges.map((ch) => {
-            const challenger = playersById[ch.challengerId];
-            const target = ch.targetId ? playersById[ch.targetId] : null;
-            if (!challenger) return null;
-
-            const isMyOutgoing = challenger.id === currentUser.id;
-            const canAccept =
-              ch.status === 'open' &&
-              !isMyOutgoing &&
-              (ch.targetId === currentUser.id || ch.targetId === null);
-
-            const waReply = getContextWhatsAppMessage(
-              'challenge_reply',
-              currentUser,
-              challenger,
-              { format: ch.format, whenLabel: ch.whenLabel }
-            );
-
-            return (
-              <div
-                key={ch.id}
-                className="rounded-2xl border border-[#C8A26E]/45 bg-[#201B14] p-3.5"
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <div>
-                    <div className="flex flex-wrap items-center gap-1.5">
-                      <span className="rounded bg-[#C8A26E] px-1.5 py-0.5 text-[10px] font-black text-[#0F1012]">
-                        ⚡ DUELL
-                      </span>
-                      <span className="text-xs font-black text-[#F3F4F6]">
-                        {challenger.nickname}
-                      </span>
-                      <span className="text-xs text-[#9CA3AF]">→</span>
-                      <span className="text-xs font-extrabold text-[#E6C79C]">
-                        {target ? target.nickname : 'Offen an alle'}
-                      </span>
-                    </div>
-                    <div className="mt-1">
-                      <PlayerBadge
-                        player={challenger}
-                        season={activeSeason}
-                        ratingInfo={connectRatings[challenger.id]}
-                      />
-                    </div>
-                  </div>
-
-                  <span
-                    className={`rounded-full px-2 py-0.5 text-[10px] font-black ${
-                      ch.status === 'accepted'
-                        ? 'bg-emerald-500/20 text-emerald-300'
-                        : 'bg-[#2E261A] text-[#E6C79C]'
-                    }`}
-                  >
-                    {ch.status === 'accepted' ? 'Angenommen ✓' : 'Offen'}
-                  </span>
-                </div>
-
-                <div className="mt-2 text-xs font-bold text-[#E6C79C]">
-                  {ch.format} · <span className="text-[#D1D5DB]">{ch.whenLabel}</span>
-                </div>
-
-                {ch.note && (
-                  <p className="mt-1 text-xs text-[#D1D5DB]">«{ch.note}»</p>
-                )}
-
-                <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
-                  <span className="text-[11px] text-[#8E95A2]">{ch.createdAt}</span>
-
-                  <div className="flex items-center gap-1.5">
-                    {canAccept && (
-                      <>
-                        <button
-                          type="button"
-                          onClick={() => onRespondChallenge(ch.id, 'accepted')}
-                          className="rounded-lg bg-emerald-500 px-3 py-1 text-xs font-black text-[#0F1012]"
-                        >
-                          Annehmen ✓
-                        </button>
-                        {ch.targetId === currentUser.id && (
-                          <button
-                            type="button"
-                            onClick={() => onRespondChallenge(ch.id, 'declined')}
-                            className="rounded-lg bg-[#252830] px-2.5 py-1 text-xs font-bold text-[#9CA3AF]"
-                          >
-                            Passt nicht
-                          </button>
-                        )}
-                      </>
-                    )}
-
-                    {!isMyOutgoing && (
-                      <a
-                        href={buildWhatsAppLink(challenger.phone, waReply)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="rounded-lg bg-[#1F3A2E] px-2.5 py-1 text-xs font-bold text-emerald-300"
-                      >
-                        WhatsApp
-                      </a>
-                    )}
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      {visibleSessions.map((s) => {
-        const author = playersById[s.authorId];
-        if (!author) return null;
-        const isJoined = s.joinedIds.includes(currentUser.id);
-        const waMsg = getContextWhatsAppMessage('session_join', currentUser, author, {
-          dateLabel: s.dateLabel,
-        });
-
-        return (
-          <div
-            key={s.id}
-            className="rounded-2xl border border-[#24272D] bg-[#181A1E] p-3.5"
-          >
-            <div className="flex items-center justify-between gap-2">
-              <div className="flex items-center gap-2">
-                <PlayerAvatar
-                  player={author}
-                  sizeClass="h-8 w-8 text-[10px]"
-                  isConnectAccent={author.connectOnly}
-                />
-                <div>
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-xs font-black text-[#F3F4F6]">
-                      {author.nickname}
-                    </span>
-                    <span
-                      className={`rounded px-1.5 py-0.5 text-[10px] font-bold ${
-                        s.type === 'announcement'
-                          ? 'bg-[#152622] text-[#A8D0B1]'
-                          : 'bg-[#2C2418] text-[#E6C79C]'
-                      }`}
-                    >
-                      {s.type === 'announcement' ? 'Vorankündigung' : 'Spontan'}
-                    </span>
-                  </div>
-                  <div className="mt-0.5">
-                    <PlayerBadge
-                      player={author}
-                      season={activeSeason}
-                      ratingInfo={connectRatings[author.id]}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <span className="text-[11px] text-[#8E95A2]">{s.createdAt}</span>
-            </div>
-
-            <div className="mt-2.5 text-xs font-extrabold text-[#E6C79C]">
-              {s.dateLabel}
-            </div>
-            <p className="mt-1 text-xs text-[#D1D5DB]">{s.note}</p>
-
-            <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
-              <div className="text-[11px] text-[#9CA3AF]">
-                Dabei ({s.joinedIds.length}):{' '}
-                {s.joinedIds
-                  .map((id) => playersById[id]?.nickname)
-                  .filter(Boolean)
-                  .join(', ')}
-              </div>
-
-              <div className="flex items-center gap-1.5">
-                {author.id !== currentUser.id && (
-                  <>
-                    <button
-                      type="button"
-                      onClick={() => onOpenChallenge(author.id)}
-                      className="rounded-lg bg-[#2C2418] px-2 py-1 text-xs font-bold text-[#E6C79C]"
-                    >
-                      ⚡
-                    </button>
-                    <a
-                      href={buildWhatsAppLink(author.phone, waMsg)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="rounded-lg bg-[#1F3A2E] px-2.5 py-1 text-xs font-bold text-emerald-300"
-                    >
-                      WhatsApp
-                    </a>
-                  </>
-                )}
-                <button
-                  type="button"
-                  onClick={() => onToggleJoin(s.id)}
-                  className={`rounded-lg px-3 py-1 text-xs font-bold transition ${
-                    isJoined
-                      ? 'bg-[#6FB3A2] text-[#060708]'
-                      : 'bg-[#252830] text-[#F3F4F6] hover:bg-[#313540]'
-                  }`}
-                >
-                  {isJoined ? 'Dabei ✓' : 'Bin dabei'}
-                </button>
-              </div>
-            </div>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
 function HallDaysTab({
   players,
   currentUser,
@@ -4793,6 +5519,7 @@ function HallDaysTab({
   connectRatings,
   onOpenEditProfile,
   onOpenChallenge,
+  onSelectMember,
 }) {
   const [selectedDay, setSelectedDay] = useState('Do');
   const [selectedTimeSlot, setSelectedTimeSlot] = useState('Alle');
@@ -4885,14 +5612,18 @@ function HallDaysTab({
                 key={p.id}
                 className="flex items-center justify-between gap-2 rounded-2xl border border-[#24272D] bg-[#181A1E] p-3"
               >
-                <div className="flex min-w-0 items-center gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => onSelectMember?.(p.id)}
+                  className="flex min-w-0 flex-1 items-center gap-2.5 text-left transition hover:opacity-85"
+                >
                   <PlayerAvatar
                     player={p}
                     sizeClass="h-8 w-8 text-[10px]"
                     isConnectAccent={p.connectOnly}
                   />
                   <div className="min-w-0">
-                    <div className="truncate text-xs font-black text-[#F3F4F6]">
+                    <div className="truncate text-xs font-black text-[#F3F4F6] underline decoration-[#6FB3A2]/50 underline-offset-2">
                       {p.nickname} ({p.firstName})
                     </div>
                     <div className="mt-1 flex flex-wrap items-center gap-1">
@@ -4911,7 +5642,7 @@ function HallDaysTab({
                       />
                     </div>
                   </div>
-                </div>
+                </button>
 
                 {p.id !== currentUser.id && (
                   <div className="flex shrink-0 items-center gap-1.5">
@@ -4922,14 +5653,11 @@ function HallDaysTab({
                     >
                       ⚡ Duell
                     </button>
-                    <a
-                      href={buildWhatsAppLink(p.phone, waMsg)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="rounded-lg bg-[#1F3A2E] px-2.5 py-1.5 text-[11px] font-bold text-emerald-300"
-                    >
-                      WhatsApp
-                    </a>
+                    <WhatsAppActionButton
+                      phone={p.phone}
+                      message={waMsg}
+                      label="WhatsApp"
+                    />
                   </div>
                 )}
               </div>
@@ -4944,13 +5672,16 @@ function HallDaysTab({
 function ClubPlayersTab({
   players,
   currentUser,
+  activeSeason,
   liveCheckins,
   connectRatings,
   onOpenAddMember,
   onOpenChallenge,
   onOpenRecordConnectMatch,
+  onSelectMember,
 }) {
   const [search, setSearch] = useState('');
+  const [quickFilter, setQuickFilter] = useState('all');
 
   const livePlayerIds = useMemo(
     () => new Set(liveCheckins.map((c) => c.playerId)),
@@ -4961,6 +5692,27 @@ function ClubPlayersTab({
     const q = search.trim().toLowerCase();
     return [...players]
       .filter((p) => {
+        if (quickFilter === 'live' && !livePlayerIds.has(p.id)) return false;
+        if (
+          quickFilter === 'level' &&
+          p.id !== currentUser.id &&
+          !isMatchingLevel(currentUser, p, activeSeason)
+        ) {
+          return false;
+        }
+        if (quickFilter === 'offensiv' && p.playstyle !== 'Offensiv') return false;
+        if (quickFilter === 'allround' && p.playstyle !== 'Allround') return false;
+        if (quickFilter === 'abwehr' && p.playstyle !== 'Abwehr / Noppen') {
+          return false;
+        }
+        if (
+          quickFilter === 'english' &&
+          p.language !== 'Englisch' &&
+          p.language !== 'Beides'
+        ) {
+          return false;
+        }
+
         if (!q) return true;
         const tierLabel = connectRatings[p.id]?.tier?.label || '';
         const haystack =
@@ -4973,14 +5725,22 @@ function ClubPlayersTab({
         if (eloB !== eloA) return eloB - eloA;
         return a.nickname.localeCompare(b.nickname);
       });
-  }, [players, search, connectRatings]);
+  }, [
+    players,
+    search,
+    quickFilter,
+    livePlayerIds,
+    currentUser,
+    activeSeason,
+    connectRatings,
+  ]);
 
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between gap-2">
         <div>
           <h2 className="text-xs font-black tracking-wide text-[#F3F4F6] uppercase">
-            CONNECT-Rating ({sortedAndFilteredPlayers.length})
+            CLUB-Rating ({sortedAndFilteredPlayers.length})
           </h2>
           <p className="text-[10px] text-[#8E95A2]">
             Sortiert nach Rating · Partie erfassen oder herausfordern
@@ -5013,6 +5773,31 @@ function ClubPlayersTab({
         className="w-full rounded-lg border border-[#2B2F37] bg-[#181A1E] px-2.5 py-1.5 text-xs text-[#F3F4F6]"
       />
 
+      <div className="flex gap-1.5 overflow-x-auto pb-0.5">
+        {[
+          { id: 'all', label: 'Alle' },
+          { id: 'live', label: `🟢 Jetzt LIVE (${liveCheckins.length})` },
+          { id: 'level', label: 'Mein Niveau' },
+          { id: 'offensiv', label: 'Offensiv' },
+          { id: 'allround', label: 'Allround' },
+          { id: 'abwehr', label: 'Abwehr / Noppen' },
+          { id: 'english', label: 'EN / Beides' },
+        ].map((chip) => (
+          <button
+            key={chip.id}
+            type="button"
+            onClick={() => setQuickFilter(chip.id)}
+            className={`whitespace-nowrap rounded-full px-2.5 py-1 text-[10px] font-bold transition ${
+              quickFilter === chip.id
+                ? 'bg-[#6FB3A2] text-[#060708]'
+                : 'bg-[#181A1E] text-[#9CA3AF] ring-1 ring-[#24272D] hover:text-[#F3F4F6]'
+            }`}
+          >
+            {chip.label}
+          </button>
+        ))}
+      </div>
+
       <div className="overflow-hidden rounded-xl border border-[#24272D] bg-[#181A1E] divide-y divide-[#202329]">
         {sortedAndFilteredPlayers.map((p, index) => {
           const isLive = livePlayerIds.has(p.id);
@@ -5027,7 +5812,11 @@ function ClubPlayersTab({
                 isMe ? 'bg-[#152622]/60' : 'hover:bg-[#1D2025]'
               }`}
             >
-              <div className="flex min-w-0 items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => onSelectMember?.(p.id)}
+                className="flex min-w-0 flex-1 items-center gap-1.5 text-left transition hover:opacity-85"
+              >
                 <span className="w-4 shrink-0 text-right text-[10px] font-black text-[#6B7280]">
                   {index + 1}
                 </span>
@@ -5038,7 +5827,9 @@ function ClubPlayersTab({
                   isConnectAccent={p.connectOnly}
                 />
 
-                <span className="truncate font-bold text-[#F3F4F6]">{p.nickname}</span>
+                <span className="truncate font-bold text-[#F3F4F6] underline decoration-[#6FB3A2]/45 underline-offset-2">
+                  {p.nickname}
+                </span>
 
                 {isLive && (
                   <span
@@ -5062,7 +5853,7 @@ function ClubPlayersTab({
                 <span className="shrink-0 rounded bg-[#131417] px-1 py-0.5 text-[9px] font-bold text-[#A8D0B1]">
                   {getLanguageShortLabel(p.language)}
                 </span>
-              </div>
+              </button>
 
               <div className="flex shrink-0 items-center gap-1.5">
                 {rating && rating.played > 0 && (
@@ -5137,10 +5928,10 @@ function ConnectMatchesTab({
       <div className="flex items-center justify-between gap-2">
         <div>
           <h2 className="text-xs font-black tracking-wide text-[#F3F4F6] uppercase">
-            CONNECT-Partien ({visibleMatches.length})
+            CLUB-Partien ({visibleMatches.length})
           </h2>
           <p className="text-[11px] text-[#8E95A2]">
-            Freie Spiele fliessen direkt in das CONNECT-Rating ein
+            Freie Spiele fliessen direkt in das CLUB-Rating ein
           </p>
         </div>
 
@@ -5155,7 +5946,7 @@ function ConnectMatchesTab({
 
       {visibleMatches.length === 0 ? (
         <div className="rounded-2xl border border-[#24272D] bg-[#181A1E] p-5 text-center text-xs text-[#9CA3AF]">
-          Noch keine CONNECT-Partien in dieser Ansicht eingetragen.
+          Noch keine CLUB-Partien in dieser Ansicht eingetragen.
         </div>
       ) : (
         <div className="space-y-2">
@@ -5173,7 +5964,7 @@ function ConnectMatchesTab({
                 className="rounded-2xl border border-[#24272D] bg-[#181A1E] p-3"
               >
                 <div className="flex items-center justify-between text-[10px] text-[#8E95A2]">
-                  <span className="font-bold text-[#6FB3A2]">CONNECT-Partie</span>
+                  <span className="font-bold text-[#6FB3A2]">CLUB-Partie</span>
                   <span>{m.dateLabel}</span>
                 </div>
 
@@ -5254,129 +6045,6 @@ function ConnectMatchesTab({
   );
 }
 
-function NewMembersTab({
-  players,
-  currentUser,
-  activeSeason,
-  connectRatings,
-  onOpenChallenge,
-  onOpenEditProfile,
-}) {
-  const newMembers = useMemo(
-    () => players.filter((p) => p.isNewMember),
-    [players]
-  );
-
-  return (
-    <div className="space-y-3">
-      <div className="flex items-center justify-between gap-2">
-        <div>
-          <h2 className="text-xs font-black tracking-wide text-[#F3F4F6] uppercase">
-            Neu im Club ({newMembers.length})
-          </h2>
-          <p className="text-[11px] text-[#8E95A2]">
-            Neue Gesichter im Verein – ideal für ein lockeres Willkommens-Spiel
-          </p>
-        </div>
-
-        <button
-          type="button"
-          onClick={onOpenEditProfile}
-          className="rounded-lg bg-[#181A1E] px-2.5 py-1.5 text-[11px] font-bold text-[#A8D0B1] ring-1 ring-[#2B2F37]"
-        >
-          Mein Status
-        </button>
-      </div>
-
-      {newMembers.length === 0 ? (
-        <div className="rounded-2xl border border-[#24272D] bg-[#181A1E] p-5 text-center text-xs text-[#9CA3AF]">
-          Aktuell sind keine Mitglieder als «Neu im Club» markiert.
-        </div>
-      ) : (
-        <div className="space-y-2.5">
-          {newMembers.map((p) => {
-            const isMe = p.id === currentUser.id;
-            const waMsg = getContextWhatsAppMessage('new_member', currentUser, p);
-
-            return (
-              <div
-                key={p.id}
-                className="rounded-2xl border border-[#6FB3A2]/35 bg-[#181A1E] p-3.5"
-              >
-                <div className="flex items-start gap-3">
-                  <PlayerAvatar
-                    player={p}
-                    sizeClass="h-14 w-14 text-base"
-                    isConnectAccent
-                  />
-
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0">
-                        <div className="flex flex-wrap items-center gap-1.5">
-                          <span className="truncate text-sm font-black text-[#F3F4F6]">
-                            {p.nickname}
-                          </span>
-                          <span className="text-xs text-[#9CA3AF]">
-                            ({p.firstName} {p.lastName})
-                          </span>
-                        </div>
-                        <div className="mt-1">
-                          <PlayerBadge
-                            player={p}
-                            season={activeSeason}
-                            ratingInfo={connectRatings[p.id]}
-                          />
-                        </div>
-                      </div>
-
-                      <span className="shrink-0 rounded-full bg-emerald-500/15 px-2.5 py-0.5 text-[10px] font-extrabold text-emerald-300 ring-1 ring-emerald-500/30">
-                        Neu · {p.joinedLabel || '2026'}
-                      </span>
-                    </div>
-
-                    {p.bio && (
-                      <p className="mt-2 rounded-xl bg-[#131417] px-3 py-2 text-xs text-[#D1D5DB]">
-                        {p.bio}
-                      </p>
-                    )}
-
-                    {formatHallScheduleSummary(p) && (
-                      <div className="mt-2 text-[11px] text-[#8E95A2]">
-                        Oft in der Halle: {formatHallScheduleSummary(p)}
-                      </div>
-                    )}
-
-                    {!isMe && (
-                      <div className="mt-2.5 flex items-center gap-1.5">
-                        <button
-                          type="button"
-                          onClick={() => onOpenChallenge(p.id)}
-                          className="rounded-lg bg-[#6FB3A2] px-2.5 py-1.5 text-[11px] font-black text-[#060708]"
-                        >
-                          ⚡ Einladen
-                        </button>
-                        <a
-                          href={buildWhatsAppLink(p.phone, waMsg)}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="rounded-lg bg-[#1F3A2E] px-2.5 py-1.5 text-[11px] font-bold text-emerald-300"
-                        >
-                          WhatsApp
-                        </a>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
-}
-
 function RecordConnectMatchModal({
   players,
   currentUser,
@@ -5413,7 +6081,7 @@ function RecordConnectMatchModal({
       >
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-black text-[#F3F4F6]">
-            CONNECT-Partie erfassen
+            CLUB-Partie erfassen
           </h3>
           <button
             type="button"
@@ -5633,7 +6301,7 @@ function ChallengeModal({
           type="text"
           value={note}
           onChange={(e) => setNote(e.target.value)}
-          placeholder="Kurze Kampfansage oder Tisch-Info (optional)..."
+          placeholder="Kurze Kampfansage oder Info (optional)..."
           className="w-full rounded-xl border border-[#2E323B] bg-[#131417] px-3 py-2 text-xs text-[#F3F4F6]"
         />
 
@@ -5673,6 +6341,8 @@ function PlayerProfileModal({
     typicalHallDays: currentUser.typicalHallDays || [],
     hallSchedule: getNormalizedHallSchedule(currentUser),
   });
+  const [newPin, setNewPin] = useState('');
+  const [newPinConfirm, setNewPinConfirm] = useState('');
   const [profileError, setProfileError] = useState('');
 
   const handleSubmit = (e) => {
@@ -5685,16 +6355,29 @@ function PlayerProfileModal({
         return;
       }
     }
+    if (newPin || newPinConfirm) {
+      if (!/^\d{4}$/.test(newPin)) {
+        setProfileError('Der neue Profil-PIN muss genau 4 Ziffern haben.');
+        return;
+      }
+      if (newPin !== newPinConfirm) {
+        setProfileError('Die beiden neuen PIN-Eingaben stimmen nicht überein.');
+        return;
+      }
+    }
     const activeDays = DAYS_OF_WEEK.filter(
       (d) =>
         Array.isArray(form.hallSchedule?.[d]) && form.hallSchedule[d].length > 0
     );
     onSave({
       ...form,
+      pin: newPin ? newPin : currentUser.pin || '1234',
       phone: normalizeWhatsAppPhone(form.phone),
       typicalHallDays: activeDays,
       hallSchedule: form.hallSchedule || {},
     });
+    setNewPin('');
+    setNewPinConfirm('');
     setIsEditing(false);
   };
 
@@ -5711,20 +6394,20 @@ function PlayerProfileModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/75 p-3 sm:items-center">
-      <div className="w-full max-w-md space-y-3.5 rounded-2xl border border-[#2E323B] bg-[#181A1E] p-4 shadow-2xl">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
+    <div className="fixed inset-0 z-50 flex items-end justify-center overflow-x-hidden bg-black/75 p-2.5 sm:items-center sm:p-4">
+      <div className="flex max-h-[88dvh] w-full max-w-md flex-col overflow-hidden rounded-2xl border border-[#2E323B] bg-[#181A1E] shadow-2xl">
+        <div className="flex shrink-0 items-center justify-between border-b border-[#24272D] px-4 py-3">
+          <div className="flex min-w-0 items-center gap-2.5">
             <PlayerAvatar
               player={isEditing ? form : currentUser}
-              sizeClass="h-10 w-10 text-xs"
+              sizeClass="h-9 w-9 text-xs"
               isConnectAccent={currentUser.connectOnly}
             />
-            <div>
-              <h3 className="text-sm font-black text-[#F3F4F6]">
+            <div className="min-w-0">
+              <h3 className="truncate text-sm font-black text-[#F3F4F6]">
                 {currentUser.nickname}
               </h3>
-              <div className="text-[11px] text-[#8E95A2]">
+              <div className="truncate text-[11px] text-[#8E95A2]">
                 {currentUser.firstName} {currentUser.lastName}
               </div>
             </div>
@@ -5732,283 +6415,310 @@ function PlayerProfileModal({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg bg-[#24272D] px-2.5 py-1 text-xs font-bold text-[#9CA3AF] hover:text-[#F3F4F6]"
+            className="shrink-0 rounded-lg bg-[#24272D] px-2.5 py-1 text-xs font-bold text-[#9CA3AF] hover:text-[#F3F4F6]"
           >
             ✕
           </button>
         </div>
 
-        {!isEditing ? (
-          <div className="space-y-3">
-            <div className="space-y-2 rounded-xl border border-[#24272D] bg-[#131417] p-3 text-xs">
-              <div className="flex items-center justify-between">
-                <span className="text-[#8E95A2]">Modus</span>
-                <span className="font-bold text-[#E6C79C]">
-                  {currentUser.connectOnly ? 'Nur CLUB' : 'CLUB & LEAGUE'}
-                </span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-[#8E95A2]">Spielstärke / Klassierung</span>
-                <span className="font-bold text-[#F3F4F6]">
-                  {currentUser.sttClass || 'Hobby'}
-                </span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-[#8E95A2]">Spielstil</span>
-                <span className="font-bold text-[#F4ECC2]">
-                  {currentUser.playstyle || 'Allround'}
-                </span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-[#8E95A2]">Sprache</span>
-                <span className="font-bold text-[#A8D0B1]">
-                  {currentUser.language || 'Deutsch'}
-                </span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-[#8E95A2]">WhatsApp</span>
-                <span className="font-semibold text-[#D1D5DB]">
-                  {currentUser.phone || '–'}
-                </span>
-              </div>
-              <div className="flex items-start justify-between gap-3">
-                <span className="shrink-0 text-[#8E95A2]">Hallentage</span>
-                <span className="text-right font-bold text-[#A8D0B1]">
-                  {formatHallScheduleSummary(currentUser) || 'Keine gewählt'}
-                </span>
-              </div>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => {
-                setForm({
-                  ...currentUser,
-                  language: currentUser.language || 'Deutsch',
-                  playstyle: currentUser.playstyle || 'Allround',
-                  typicalHallDays: currentUser.typicalHallDays || [],
-                  hallSchedule: getNormalizedHallSchedule(currentUser),
-                });
-                setIsEditing(true);
-              }}
-              className="w-full rounded-xl bg-[#6FB3A2] py-2.5 text-xs font-black text-[#060708] transition hover:bg-[#82C1B1]"
-            >
-              Profil bearbeiten
-            </button>
-          </div>
-        ) : (
-          <form onSubmit={handleSubmit} className="space-y-3">
-            <div className="flex items-center gap-3 rounded-xl border border-[#24272D] bg-[#131417] p-2.5">
-              <PlayerAvatar
-                player={form}
-                sizeClass="h-12 w-12 text-sm"
-                isConnectAccent={form.connectOnly}
-              />
-              <div className="min-w-0 flex-1">
-                <div className="text-xs font-bold text-[#F3F4F6]">Profilfoto</div>
-                <div className="mt-1 flex flex-wrap gap-1.5">
-                  <label className="cursor-pointer rounded-lg bg-[#252830] px-2.5 py-1 text-[11px] font-bold text-[#E6C79C]">
-                    Foto hochladen
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={handlePhotoUpload}
-                      className="hidden"
-                    />
-                  </label>
-                  {form.avatarUrl && (
-                    <button
-                      type="button"
-                      onClick={() => setForm({ ...form, avatarUrl: '' })}
-                      className="rounded-lg bg-[#1C1E24] px-2 py-1 text-[11px] text-[#9CA3AF]"
-                    >
-                      Entfernen
-                    </button>
-                  )}
+        <div className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain p-3.5 sm:p-4">
+          {!isEditing ? (
+            <div className="space-y-3">
+              <div className="space-y-2 rounded-xl border border-[#24272D] bg-[#131417] p-3 text-xs">
+                <div className="flex items-center justify-between">
+                  <span className="text-[#8E95A2]">Modus</span>
+                  <span className="font-bold text-[#E6C79C]">
+                    {currentUser.connectOnly ? 'Nur CLUB' : 'CLUB & LEAGUE'}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-[#8E95A2]">Spielstärke / Klassierung</span>
+                  <span className="font-bold text-[#F3F4F6]">
+                    {currentUser.sttClass || 'Hobby'}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-[#8E95A2]">Spielstil</span>
+                  <span className="font-bold text-[#F4ECC2]">
+                    {currentUser.playstyle || 'Allround'}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-[#8E95A2]">Sprache</span>
+                  <span className="font-bold text-[#A8D0B1]">
+                    {currentUser.language || 'Deutsch'}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-[#8E95A2]">WhatsApp</span>
+                  <span className="font-semibold text-[#D1D5DB]">
+                    {currentUser.phone || '–'}
+                  </span>
+                </div>
+                <div className="flex items-start justify-between gap-3">
+                  <span className="shrink-0 text-[#8E95A2]">Hallentage</span>
+                  <span className="text-right font-bold text-[#A8D0B1]">
+                    {formatHallScheduleSummary(currentUser) || 'Keine gewählt'}
+                  </span>
                 </div>
               </div>
-            </div>
 
-            <div className="grid grid-cols-2 gap-2">
-              <input
-                type="text"
-                value={form.firstName}
-                onChange={(e) => setForm({ ...form, firstName: e.target.value })}
-                placeholder="Vorname"
-                className="rounded-xl border border-[#2E323B] bg-[#131417] px-3 py-2 text-xs text-[#F3F4F6]"
-              />
-              <input
-                type="text"
-                value={form.lastName}
-                onChange={(e) => setForm({ ...form, lastName: e.target.value })}
-                placeholder="Nachname"
-                className="rounded-xl border border-[#2E323B] bg-[#131417] px-3 py-2 text-xs text-[#F3F4F6]"
-              />
-            </div>
-
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={form.nickname}
-                onChange={(e) => setForm({ ...form, nickname: e.target.value })}
-                placeholder="Nickname"
-                className="flex-1 rounded-xl border border-[#2E323B] bg-[#131417] px-3 py-2 text-xs font-bold text-[#F3F4F6]"
-              />
               <button
                 type="button"
-                onClick={() =>
-                  setForm((prev) => ({
-                    ...prev,
-                    nickname: generateFunnyNickname(
-                      prev.firstName,
-                      prev.nickname
-                    ),
-                  }))
-                }
-                className="inline-flex shrink-0 items-center justify-center gap-1 rounded-xl border border-[#C8A26E]/35 bg-[#1B1813] px-3 py-2 text-[11px] font-bold text-[#E6C79C] transition hover:border-[#C8A26E] hover:bg-[#252018]"
+                onClick={() => {
+                  setForm({
+                    ...currentUser,
+                    language: currentUser.language || 'Deutsch',
+                    playstyle: currentUser.playstyle || 'Allround',
+                    typicalHallDays: currentUser.typicalHallDays || [],
+                    hallSchedule: getNormalizedHallSchedule(currentUser),
+                  });
+                  setIsEditing(true);
+                }}
+                className="w-full rounded-xl bg-[#6FB3A2] py-2.5 text-xs font-black text-[#060708] transition hover:bg-[#82C1B1]"
               >
-                <span>🎲</span>
-                <span>Lustiger Vorschlag</span>
+                Profil bearbeiten
               </button>
             </div>
-
-            <WhatsAppPhoneField
-              value={form.phone}
-              onChange={(val) => setForm({ ...form, phone: val })}
-              placeholder="+41 79 123 45 67 / +49 170 1234567"
-            />
-
-            <div>
-              <label className="mb-1 block text-[11px] font-semibold text-[#8E95A2]">
-                Spielstärke / Klassierung
-              </label>
-              <select
-                value={form.sttClass || 'Hobby'}
-                onChange={(e) => setForm({ ...form, sttClass: e.target.value })}
-                className="w-full rounded-xl border border-[#2E323B] bg-[#131417] px-2.5 py-2 text-xs font-bold text-[#F3F4F6]"
-              >
-                {STT_LEVEL_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="mb-1 block text-[11px] font-semibold text-[#8E95A2]">
-                Spielstil
-              </label>
-              <div className="grid grid-cols-3 gap-1.5">
-                {PLAYSTYLE_OPTIONS.map((opt) => (
-                  <button
-                    key={opt.value}
-                    type="button"
-                    onClick={() => setForm({ ...form, playstyle: opt.value })}
-                    className={`rounded-xl py-2 text-[11px] font-black transition ${
-                      form.playstyle === opt.value
-                        ? 'bg-[#6FB3A2] text-[#060708]'
-                        : 'border border-[#2E323B] bg-[#131417] text-[#9CA3AF] hover:text-[#F3F4F6]'
-                    }`}
-                  >
-                    {opt.label}
-                  </button>
-                ))}
+          ) : (
+            <form onSubmit={handleSubmit} className="space-y-2.5">
+              <div className="flex items-center gap-3 rounded-xl border border-[#24272D] bg-[#131417] p-2.5">
+                <PlayerAvatar
+                  player={form}
+                  sizeClass="h-11 w-11 text-sm"
+                  isConnectAccent={form.connectOnly}
+                />
+                <div className="min-w-0 flex-1">
+                  <div className="text-xs font-bold text-[#F3F4F6]">Profilfoto</div>
+                  <div className="mt-1 flex flex-wrap gap-1.5">
+                    <label className="cursor-pointer rounded-lg bg-[#252830] px-2.5 py-1 text-[11px] font-bold text-[#E6C79C]">
+                      Foto hochladen
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handlePhotoUpload}
+                        className="hidden"
+                      />
+                    </label>
+                    {form.avatarUrl && (
+                      <button
+                        type="button"
+                        onClick={() => setForm({ ...form, avatarUrl: '' })}
+                        className="rounded-lg bg-[#1C1E24] px-2 py-1 text-[11px] text-[#9CA3AF]"
+                      >
+                        Entfernen
+                      </button>
+                    )}
+                  </div>
+                </div>
               </div>
-            </div>
 
-            <div>
-              <label className="mb-1 block text-[11px] font-semibold text-[#8E95A2]">
-                Sprache
-              </label>
-              <div className="grid grid-cols-3 gap-1.5">
-                {LANGUAGE_OPTIONS.map((opt) => (
-                  <button
-                    key={opt.value}
-                    type="button"
-                    onClick={() => setForm({ ...form, language: opt.value })}
-                    className={`rounded-xl py-2 text-[11px] font-black transition ${
-                      form.language === opt.value
-                        ? 'bg-[#6FB3A2] text-[#060708]'
-                        : 'border border-[#2E323B] bg-[#131417] text-[#9CA3AF] hover:text-[#F3F4F6]'
-                    }`}
-                  >
-                    {opt.label}
-                  </button>
-                ))}
+              <div className="grid grid-cols-2 gap-2">
+                <input
+                  type="text"
+                  value={form.firstName}
+                  onChange={(e) => setForm({ ...form, firstName: e.target.value })}
+                  placeholder="Vorname"
+                  className="w-full min-w-0 rounded-xl border border-[#2E323B] bg-[#131417] px-3 py-2 text-base sm:text-xs text-[#F3F4F6]"
+                />
+                <input
+                  type="text"
+                  value={form.lastName}
+                  onChange={(e) => setForm({ ...form, lastName: e.target.value })}
+                  placeholder="Nachname"
+                  className="w-full min-w-0 rounded-xl border border-[#2E323B] bg-[#131417] px-3 py-2 text-base sm:text-xs text-[#F3F4F6]"
+                />
               </div>
-            </div>
 
-            <div>
-              <label className="mb-1 block text-[11px] font-semibold text-[#8E95A2]">
-                Meine typischen Hallentage &amp; Tageszeit
-              </label>
-              <HallSchedulePicker
-                schedule={form.hallSchedule || {}}
-                onChange={(nextSchedule) =>
-                  setForm((prev) => ({
-                    ...prev,
-                    hallSchedule: nextSchedule,
-                  }))
-                }
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={form.nickname}
+                  onChange={(e) => setForm({ ...form, nickname: e.target.value })}
+                  placeholder="Nickname"
+                  className="min-w-0 flex-1 rounded-xl border border-[#2E323B] bg-[#131417] px-3 py-2 text-base sm:text-xs font-bold text-[#F3F4F6]"
+                />
+                <button
+                  type="button"
+                  onClick={() =>
+                    setForm((prev) => ({
+                      ...prev,
+                      nickname: generateFunnyNickname(
+                        prev.firstName,
+                        prev.nickname
+                      ),
+                    }))
+                  }
+                  className="inline-flex shrink-0 items-center justify-center gap-1 rounded-xl border border-[#C8A26E]/35 bg-[#1B1813] px-2.5 py-2 text-[11px] font-bold text-[#E6C79C] transition hover:border-[#C8A26E] hover:bg-[#252018]"
+                >
+                  <span>🎲</span>
+                  <span>Vorschlag</span>
+                </button>
+              </div>
+
+              <WhatsAppPhoneField
+                value={form.phone}
+                onChange={(val) => setForm({ ...form, phone: val })}
+                placeholder="+41 79 123 45 67"
               />
-            </div>
 
-            <label className="flex items-center justify-between rounded-xl border border-[#24272D] bg-[#131417] px-3 py-2 text-xs text-[#D1D5DB]">
-              <span>Im Tab «Neu im Club» anzeigen</span>
-              <input
-                type="checkbox"
-                checked={Boolean(form.isNewMember)}
-                onChange={(e) =>
-                  setForm({ ...form, isNewMember: e.target.checked })
-                }
-              />
-            </label>
-
-            {profileError && (
-              <div className="rounded-xl border border-rose-500/40 bg-rose-950/30 px-3 py-2 text-[11px] font-bold text-rose-300">
-                {profileError}
+              <div>
+                <label className="mb-1 block text-[11px] font-semibold text-[#8E95A2]">
+                  Spielstärke / Klassierung
+                </label>
+                <select
+                  value={form.sttClass || 'Hobby'}
+                  onChange={(e) => setForm({ ...form, sttClass: e.target.value })}
+                  className="w-full min-w-0 rounded-xl border border-[#2E323B] bg-[#131417] px-2.5 py-2 text-base sm:text-xs font-bold text-[#F3F4F6]"
+                >
+                  {STT_LEVEL_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
               </div>
-            )}
 
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => setIsEditing(false)}
-                className="rounded-xl border border-[#2E323B] bg-[#131417] py-2.5 text-xs font-bold text-[#9CA3AF] hover:text-[#F3F4F6]"
-              >
-                Abbrechen
-              </button>
-              <button
-                type="submit"
-                className="rounded-xl bg-[#6FB3A2] py-2.5 text-xs font-black text-[#060708]"
-              >
-                Speichern ✓
-              </button>
-            </div>
-          </form>
-        )}
+              <div>
+                <label className="mb-1 block text-[11px] font-semibold text-[#8E95A2]">
+                  Spielstil
+                </label>
+                <div className="grid grid-cols-3 gap-1.5">
+                  {PLAYSTYLE_OPTIONS.map((opt) => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => setForm({ ...form, playstyle: opt.value })}
+                      className={`rounded-xl py-2 text-[11px] font-black transition ${
+                        form.playstyle === opt.value
+                          ? 'bg-[#6FB3A2] text-[#060708]'
+                          : 'border border-[#2E323B] bg-[#131417] text-[#9CA3AF] hover:text-[#F3F4F6]'
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
 
-        <button
-          type="button"
-          onClick={onLogout}
-          className="flex w-full items-center justify-center gap-2 rounded-xl border border-rose-500/30 bg-rose-950/20 py-2.5 text-xs font-bold text-rose-300 transition hover:bg-rose-950/35"
-        >
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2.2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className="h-4 w-4"
+              <div>
+                <label className="mb-1 block text-[11px] font-semibold text-[#8E95A2]">
+                  Sprache
+                </label>
+                <div className="grid grid-cols-3 gap-1.5">
+                  {LANGUAGE_OPTIONS.map((opt) => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => setForm({ ...form, language: opt.value })}
+                      className={`rounded-xl py-2 text-[11px] font-black transition ${
+                        form.language === opt.value
+                          ? 'bg-[#6FB3A2] text-[#060708]'
+                          : 'border border-[#2E323B] bg-[#131417] text-[#9CA3AF] hover:text-[#F3F4F6]'
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="mb-1 block text-[11px] font-semibold text-[#8E95A2]">
+                  Meine typischen Hallentage &amp; Tageszeit
+                </label>
+                <HallSchedulePicker
+                  schedule={form.hallSchedule || {}}
+                  onChange={(nextSchedule) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      hallSchedule: nextSchedule,
+                    }))
+                  }
+                />
+              </div>
+
+              <div className="rounded-xl border border-[#DE754B]/40 bg-[#131417] p-2.5">
+                <label className="mb-1.5 block text-[11px] font-bold text-[#F4ECC2]">
+                  4-stelligen Profil-PIN anpassen (optional)
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="pk-mobile-nozoom-wrap w-full overflow-hidden rounded-xl border border-[#2E323B] bg-[#181A1E]">
+                    <input
+                      type="password"
+                      inputMode="numeric"
+                      maxLength={4}
+                      value={newPin}
+                      onChange={(e) =>
+                        setNewPin(e.target.value.replace(/\D/g, '').slice(0, 4))
+                      }
+                      placeholder="Neuer PIN"
+                      className="pk-mobile-pin-input w-full bg-transparent px-2.5 py-2 text-center text-xs font-black tracking-[0.2em] placeholder:font-semibold placeholder:tracking-normal text-[#F4ECC2] focus:outline-none"
+                    />
+                  </div>
+                  <div className="pk-mobile-nozoom-wrap w-full overflow-hidden rounded-xl border border-[#2E323B] bg-[#181A1E]">
+                    <input
+                      type="password"
+                      inputMode="numeric"
+                      maxLength={4}
+                      value={newPinConfirm}
+                      onChange={(e) =>
+                        setNewPinConfirm(
+                          e.target.value.replace(/\D/g, '').slice(0, 4)
+                        )
+                      }
+                      placeholder="PIN bestätigen"
+                      className="pk-mobile-pin-input w-full bg-transparent px-2.5 py-2 text-center text-xs font-black tracking-[0.2em] placeholder:font-semibold placeholder:tracking-normal text-[#F4ECC2] focus:outline-none"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {profileError && (
+                <div className="rounded-xl border border-rose-500/40 bg-rose-950/30 px-3 py-2 text-[11px] font-bold text-rose-300">
+                  {profileError}
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setIsEditing(false)}
+                  className="rounded-xl border border-[#2E323B] bg-[#131417] py-2.5 text-xs font-bold text-[#9CA3AF] hover:text-[#F3F4F6]"
+                >
+                  Abbrechen
+                </button>
+                <button
+                  type="submit"
+                  className="rounded-xl bg-[#6FB3A2] py-2.5 text-xs font-black text-[#060708]"
+                >
+                  Speichern ✓
+                </button>
+              </div>
+            </form>
+          )}
+
+          <button
+            type="button"
+            onClick={onLogout}
+            className="flex w-full items-center justify-center gap-2 rounded-xl border border-rose-500/30 bg-rose-950/20 py-2.5 text-xs font-bold text-rose-300 transition hover:bg-rose-950/35"
           >
-            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-            <polyline points="16 17 21 12 16 7" />
-            <line x1="21" y1="12" x2="9" y2="12" />
-          </svg>
-          <span>Abmelden &amp; zur Startseite zurück</span>
-        </button>
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="h-4 w-4"
+            >
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+              <polyline points="16 17 21 12 16 7" />
+              <line x1="21" y1="12" x2="9" y2="12" />
+            </svg>
+            <span>Abmelden &amp; zur Startseite zurück</span>
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -6054,7 +6764,6 @@ function AddMemberModal({ activeSeason, onAdd, onClose }) {
         connectOnly,
         isNewMember: true,
         joinedLabel: 'Nov 2026',
-        bio: 'Neu im Verein – freue mich auf gemeinsame Bälle in der Halle!',
         typicalHallDays: ['Mi'],
       },
       connectOnly ? '' : leagueId
@@ -6131,7 +6840,7 @@ function AddMemberModal({ activeSeason, onAdd, onClose }) {
         <WhatsAppPhoneField
           value={phone}
           onChange={setPhone}
-          placeholder="+41 79 123 45 67 / +49 170 1234567"
+          placeholder="+41 79 123 45 67"
         />
 
         <div>
@@ -6233,71 +6942,6 @@ function AddMemberModal({ activeSeason, onAdd, onClose }) {
           className="w-full rounded-xl bg-[#6FB3A2] py-2.5 text-xs font-black text-[#060708]"
         >
           Mitglied hinzufügen
-        </button>
-      </form>
-    </div>
-  );
-}
-
-function CheckInModal({ onSubmit, onClose }) {
-  const [tableInfo, setTableInfo] = useState('Tisch 1');
-  const [untilTime, setUntilTime] = useState('21:00');
-  const [note, setNote] = useState('Offen für Einspielen oder ein paar Sätze!');
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    onSubmit({ tableInfo, untilTime, note });
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/75 p-3 sm:items-center">
-      <form
-        onSubmit={handleSubmit}
-        className="w-full max-w-md space-y-3 rounded-2xl border border-[#2E323B] bg-[#181A1E] p-4 shadow-2xl"
-      >
-        <div className="flex items-center justify-between">
-          <h3 className="text-sm font-black text-[#F3F4F6]">
-            LIVE in der Halle einchecken
-          </h3>
-          <button
-            type="button"
-            onClick={onClose}
-            className="text-xs font-bold text-[#8E95A2]"
-          >
-            ✕
-          </button>
-        </div>
-
-        <div className="grid grid-cols-2 gap-2">
-          <input
-            type="text"
-            value={tableInfo}
-            onChange={(e) => setTableInfo(e.target.value)}
-            placeholder="Tisch (z. B. Tisch 2)"
-            className="rounded-xl border border-[#2E323B] bg-[#131417] px-3 py-2 text-xs text-[#F3F4F6]"
-          />
-          <input
-            type="text"
-            value={untilTime}
-            onChange={(e) => setUntilTime(e.target.value)}
-            placeholder="Bis wann? (z. B. 21:00)"
-            className="rounded-xl border border-[#2E323B] bg-[#131417] px-3 py-2 text-xs text-[#F3F4F6]"
-          />
-        </div>
-
-        <input
-          type="text"
-          value={note}
-          onChange={(e) => setNote(e.target.value)}
-          placeholder="Kurze Notiz für andere Spieler..."
-          className="w-full rounded-xl border border-[#2E323B] bg-[#131417] px-3 py-2 text-xs text-[#F3F4F6]"
-        />
-
-        <button
-          type="submit"
-          className="w-full rounded-xl bg-[#6FB3A2] py-2.5 text-xs font-black text-[#060708]"
-        >
-          Jetzt LIVE schalten
         </button>
       </form>
     </div>
@@ -6524,7 +7168,6 @@ function AdminPanelTab({
   connectRatings,
   connectMatches,
   liveCheckins,
-  clubEvenings,
   sessions,
   challenges,
   adminPinCode,
@@ -6541,7 +7184,6 @@ function AdminPanelTab({
   onResetLeagueMatch,
   onDeleteConnectMatch,
   onRemoveLiveCheckin,
-  onDeleteClubEvening,
   onDeleteSession,
   onDeleteChallenge,
 }) {
@@ -6607,7 +7249,6 @@ function AdminPanelTab({
         connectOnly: true,
         isNewMember: bulkMarkNew,
         joinedLabel: '2026',
-        bio: 'Club-Mitglied · offen für Spiele in der Halle!',
         typicalHallDays: ['Mi'],
       });
     });
@@ -7094,7 +7735,7 @@ function AdminPanelTab({
 
           <div className="rounded-2xl border border-[#24272D] bg-[#181A1E] p-3.5">
             <div className="mb-2 text-xs font-black text-[#A8D0B1]">
-              CONNECT-Partien ({connectMatches.length})
+              CLUB-Partien ({connectMatches.length})
             </div>
             <div className="space-y-2">
               {connectMatches.map((cm) => (
@@ -7172,7 +7813,7 @@ function AdminPanelTab({
                   >
                     <span>
                       <strong>{playersById[c.playerId]?.nickname}</strong> ·{' '}
-                      {c.tableInfo} (bis {c.untilTime})
+                      {c.durationLabel}
                     </span>
                     <button
                       type="button"
@@ -7185,31 +7826,6 @@ function AdminPanelTab({
                 ))}
               </div>
             )}
-          </div>
-
-          <div className="rounded-2xl border border-[#24272D] bg-[#181A1E] p-3.5">
-            <div className="mb-2 text-xs font-black text-[#A8D0B1]">
-              Club-Abende ({clubEvenings.length})
-            </div>
-            <div className="space-y-1.5">
-              {clubEvenings.map((ev) => (
-                <div
-                  key={ev.id}
-                  className="flex items-center justify-between rounded-xl bg-[#131417] px-3 py-2 text-xs"
-                >
-                  <span className="truncate pr-2 font-bold text-[#F3F4F6]">
-                    {ev.title}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => onDeleteClubEvening(ev.id)}
-                    className="shrink-0 rounded-lg bg-rose-950/50 px-2.5 py-1 text-[11px] font-bold text-rose-300"
-                  >
-                    Löschen
-                  </button>
-                </div>
-              ))}
-            </div>
           </div>
 
           <div className="rounded-2xl border border-[#24272D] bg-[#181A1E] p-3.5">
