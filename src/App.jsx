@@ -14,6 +14,83 @@ const STORAGE_KEYS = {
   rankingFilters: 'pingkong_connect_ranking_filters_v1',
 };
 
+const SPONTANEOUS_TODAY_TIME_CHIPS = [
+  'Heute · Jetzt',
+  'Heute · 17:30',
+  'Heute · 18:30',
+  'Heute · 19:30',
+  'Heute · 20:30',
+];
+
+const SPONTANEOUS_TODAY_FOCUS_CHIPS = [
+  'Einspielen & Bälle schlagen',
+  'Freie Sätze / Match',
+  'Aufschlag & Rückschlag',
+  'Lockeres Training',
+];
+
+const SUPABASE_SETUP_SQL = `create table if not exists public.club_state (
+  id text primary key,
+  payload jsonb not null default '{}'::jsonb,
+  updated_at timestamptz not null default now()
+);
+
+insert into public.club_state (id, payload)
+values ('main', '{}'::jsonb)
+on conflict (id) do nothing;
+
+alter table public.club_state enable row level security;
+
+drop policy if exists "club_state_public_all" on public.club_state;
+create policy "club_state_public_all"
+  on public.club_state
+  for all
+  to anon, authenticated
+  using (true)
+  with check (true);
+
+alter publication supabase_realtime add table public.club_state;`;
+
+const DEFAULT_SUPABASE_CONFIG = {
+  url: 'https://oasmdkxuxqhxunktcsui.supabase.co',
+  anonKey: 'sb_publishable_jXcGDePnhJxfbbhxE_q5hQ_owXv-KAg',
+  table: 'club_state',
+  rowId: 'main',
+};
+
+function normalizeSupabaseBaseUrl(rawUrl = '') {
+  return String(rawUrl || '')
+    .trim()
+    .replace(/\/rest\/v1\/?$/i, '')
+    .replace(/\/+$/, '');
+}
+
+function getEffectiveSupabaseConfig() {
+  if (typeof window === 'undefined') return null;
+
+  const existing =
+    window.__SUPABASE_CONFIG__ && typeof window.__SUPABASE_CONFIG__ === 'object'
+      ? window.__SUPABASE_CONFIG__
+      : {};
+
+  const merged = {
+    ...DEFAULT_SUPABASE_CONFIG,
+    ...existing,
+    url: normalizeSupabaseBaseUrl(existing.url || DEFAULT_SUPABASE_CONFIG.url),
+    anonKey: String(existing.anonKey ?? DEFAULT_SUPABASE_CONFIG.anonKey).trim(),
+    table: String(existing.table || DEFAULT_SUPABASE_CONFIG.table).trim() || 'club_state',
+    rowId: String(existing.rowId || DEFAULT_SUPABASE_CONFIG.rowId).trim() || 'main',
+  };
+
+  window.__SUPABASE_CONFIG__ = merged;
+
+  if (!merged.url || !merged.anonKey) {
+    return null;
+  }
+
+  return merged;
+}
+
 const STT_LEVEL_OPTIONS = [
   { value: 'Hobby', label: 'Hobby (ohne Klassierung)', rank: 10 },
   { value: '≈ D-Niveau', label: '≈ D-Niveau (Selbsteinschätzung)', rank: 22 },
@@ -47,12 +124,6 @@ const PLAYSTYLE_OPTIONS = [
   { value: 'Offensiv', label: 'Offensiv' },
   { value: 'Allround', label: 'Allround' },
   { value: 'Abwehr / Noppen', label: 'Abwehr / Noppen' },
-];
-
-const LIVE_STATUS_OPTIONS = [
-  { id: 'buddy_wanted', label: 'Spielbuddy gesucht', badgeClass: 'border-emerald-500/40 bg-emerald-950/35 text-emerald-300' },
-  { id: 'hall_empty', label: 'Halle leer', badgeClass: 'border-[#6FB3A2]/40 bg-[#152622] text-[#A8D0B1]' },
-  { id: 'has_buddy', label: 'Habe bereits einen Buddy', badgeClass: 'border-[#2E323B] bg-[#181A1E] text-[#D1D5DB]' },
 ];
 
 const LIVE_DURATION_CHIPS = [
@@ -2917,6 +2988,7 @@ export default function App() {
   const [selectedMemberId, setSelectedMemberId] = useState(null);
   const [showAddMemberModal, setShowAddMemberModal] = useState(false);
   const [showLiveCheckInModal, setShowLiveCheckInModal] = useState(false);
+  const [showSpontaneousSessionModal, setShowSpontaneousSessionModal] = useState(false);
   const [recordingLeagueMatch, setRecordingLeagueMatch] = useState(null);
   const [logMatchTargetId, setLogMatchTargetId] = useState(null);
   const [clubQuickSearch, setClubQuickSearch] = useState('');
@@ -2931,26 +3003,45 @@ export default function App() {
   const [adminPinError, setAdminPinError] = useState('');
   const [adminTab, setAdminTab] = useState('members');
   const [cloudSyncStatus, setCloudSyncStatus] = useState('local');
+  const [supabaseIssue, setSupabaseIssue] = useState(null);
+  const [showSupabaseSetupModal, setShowSupabaseSetupModal] = useState(false);
   const lastActiveTimestampRef = useRef(Date.now());
   const broadcastChannelRef = useRef(null);
   const supabaseRealtimeRef = useRef(null);
   const isApplyingRemoteSnapshotRef = useRef(false);
 
-  // Unterstützt wahlweise `window.__SUPABASE_CONFIG__ = { url, anonKey, table }`
-  // oder den bestehenden `window.__PINGKONG_SYNC_URL__`-Endpunkt als Fallback.
-  const supabaseConfig = useMemo(() => {
-    if (typeof window === 'undefined') return null;
-    const cfg = window.__SUPABASE_CONFIG__;
-    if (cfg && typeof cfg === 'object' && cfg.url && cfg.anonKey) {
+  const supabaseConfig = useMemo(() => getEffectiveSupabaseConfig(), []);
+
+  const classifySupabaseHttpError = useCallback((status, statusText = '') => {
+    if (status === 404) {
       return {
-        url: String(cfg.url).replace(/\/+$/, ''),
-        anonKey: String(cfg.anonKey),
-        table: cfg.table ? String(cfg.table) : 'club_state',
-        rowId: cfg.rowId ? String(cfg.rowId) : 'main',
+        code: 404,
+        title: 'Tabelle «club_state» nicht gefunden (404)',
+        summary:
+          'Die Tabelle «club_state» existiert in deinem Supabase-Projekt noch nicht. Lokaler Browser-Sync (localStorage & BroadcastChannel) läuft normal weiter.',
       };
     }
-    return null;
+    if (status === 401 || status === 403) {
+      return {
+        code: status,
+        title: `Supabase-Zugriff blockiert (${status})`,
+        summary: `Prüfe den Publishable/Anon-Key sowie die RLS-Policies für die Tabelle «club_state» (${
+          statusText || `HTTP ${status}`
+        }). Lokaler Sync bleibt aktiv.`,
+      };
+    }
+    return {
+      code: status,
+      title: `Supabase-Sync Hinweis (HTTP ${status})`,
+      summary: `${statusText || 'Verbindung unterbrochen'}. Lokaler Browser-Sync bleibt aktiv.`,
+    };
   }, []);
+
+  const hasSupabaseUrlWithoutKey = useMemo(() => {
+    if (typeof window === 'undefined') return false;
+    const cfg = window.__SUPABASE_CONFIG__ || DEFAULT_SUPABASE_CONFIG;
+    return Boolean(normalizeSupabaseBaseUrl(cfg.url) && !String(cfg.anonKey || '').trim());
+  }, [supabaseConfig]);
 
   const cloudEndpoint =
     typeof window !== 'undefined' && window.__PINGKONG_SYNC_URL__
@@ -3007,7 +3098,8 @@ export default function App() {
             cache: 'no-store',
           });
           if (!res.ok) {
-            setCloudSyncStatus('local');
+            setCloudSyncStatus('error');
+            setSupabaseIssue(classifySupabaseHttpError(res.status, res.statusText));
             return;
           }
           const rows = await res.json();
@@ -3015,10 +3107,17 @@ export default function App() {
           if (row?.payload) {
             applySharedSnapshot(row.payload, referenceNow);
           }
+          setSupabaseIssue(null);
           setCloudSyncStatus('live');
           return;
         } catch {
-          setCloudSyncStatus('local');
+          setCloudSyncStatus('error');
+          setSupabaseIssue({
+            code: 'network',
+            title: 'Supabase nicht erreichbar',
+            summary:
+              'Netzwerk- oder CORS-Fehler beim Lesen von «club_state». Lokaler Sync bleibt aktiv.',
+          });
           return;
         }
       }
@@ -3027,27 +3126,7 @@ export default function App() {
         setCloudSyncStatus('local');
         return;
       }
-      try {
-        setCloudSyncStatus('syncing');
-        const res = await fetch(cloudEndpoint, {
-          method: 'GET',
-          headers: { Accept: 'application/json' },
-          cache: 'no-store',
-        });
-        if (!res.ok) {
-          setCloudSyncStatus('local');
-          return;
-        }
-        const data = await res.json();
-        const payload = data?.record || data?.data || data;
-        applySharedSnapshot(payload, referenceNow);
-        setCloudSyncStatus('live');
-      } catch {
-        setCloudSyncStatus('local');
-      }
-    },
-    [supabaseConfig, cloudEndpoint, applySharedSnapshot]
-  );
+  }, [supabaseConfig, cloudEndpoint, applySharedSnapshot]);
 
   const pushSharedState = useCallback(async () => {
     const snapshot = {
@@ -3079,9 +3158,21 @@ export default function App() {
             },
           ]),
         });
-        setCloudSyncStatus(res.ok ? 'live' : 'local');
+        if (!res.ok) {
+          setCloudSyncStatus('error');
+          setSupabaseIssue(classifySupabaseHttpError(res.status, res.statusText));
+          return;
+        }
+        setSupabaseIssue(null);
+        setCloudSyncStatus('live');
       } catch {
-        setCloudSyncStatus('local');
+        setCloudSyncStatus('error');
+        setSupabaseIssue({
+          code: 'network',
+          title: 'Supabase-Schreibvorgang fehlgeschlagen',
+          summary:
+            'Änderungen wurden lokal gespeichert, konnten aber noch nicht zu «club_state» gesendet werden.',
+        });
       }
       return;
     }
@@ -3100,7 +3191,6 @@ export default function App() {
     }
   }, [supabaseConfig, cloudEndpoint, players, seasons, liveCheckins, sessions, connectMatches]);
 
-  // Supabase Realtime WebSocket-Verbindung für sofortige Updates auf anderen Geräten
   useEffect(() => {
     if (!supabaseConfig || typeof window === 'undefined' || typeof WebSocket !== 'function') {
       return;
@@ -3207,7 +3297,6 @@ export default function App() {
     };
   }, [supabaseConfig, applySharedSnapshot]);
 
-  // localStorage-Synchronisation für Kernzustände
   useEffect(() => {
     writeStorageJson(STORAGE_KEYS.players, players);
   }, [players]);
@@ -3232,7 +3321,6 @@ export default function App() {
     writeStorageJson(STORAGE_KEYS.connectMatches, connectMatches);
   }, [connectMatches]);
 
-  // Sofortiger Abgleich zwischen mehreren offenen Tabs/Fenstern desselben Browsers
   useEffect(() => {
     if (typeof window === 'undefined' || typeof window.BroadcastChannel !== 'function') {
       return;
@@ -3269,7 +3357,7 @@ export default function App() {
       // Ignorieren falls Kanal bereits geschlossen
     }
   }, [players, seasons, liveCheckins, sessions, connectMatches]);
-  // Gemeinsamen Cloud-Stand bei Änderungen speichern, sofern Supabase oder Sync-Endpoint aktiv ist
+
   useEffect(() => {
     if (!supabaseConfig && !cloudEndpoint) return;
     if (isApplyingRemoteSnapshotRef.current) return;
@@ -3279,7 +3367,6 @@ export default function App() {
     return () => clearTimeout(timer);
   }, [supabaseConfig, cloudEndpoint, isApplyingRemoteSnapshotRef, pushSharedState]);
 
-  // Seitentitel & Home-Bildschirm App-Icon ("PINGKONG") registrieren
   useEffect(() => {
     if (typeof document === 'undefined') return;
     document.title = 'PINGKONG';
@@ -3400,7 +3487,6 @@ export default function App() {
     [pruneExpiredItems, pullSharedState, showToast]
   );
 
-  // Automatischer 30-Sekunden-Cleanup-Zyklus für `expiresAt` & Restlaufzeiten
   useEffect(() => {
     const runCycle = () => {
       const currentNow = Date.now();
@@ -3412,7 +3498,6 @@ export default function App() {
     return () => clearInterval(interval);
   }, [pruneExpiredItems]);
 
-  // Periodisches Live-Refresh im Hintergrund bei sichtbarem Tab (ergänzend zu Realtime)
   useEffect(() => {
     const livePollInterval = setInterval(() => {
       if (typeof document !== 'undefined' && document.visibilityState === 'hidden') {
@@ -3424,7 +3509,6 @@ export default function App() {
     return () => clearInterval(livePollInterval);
   }, [syncLiveAndAppState, supabaseConfig]);
 
-  // Auto-Sync bei Rückkehr in die App / Startbildschirm-Resume
   useEffect(() => {
     const handleAppResume = () => {
       if (document.visibilityState === 'hidden') {
@@ -3469,7 +3553,6 @@ export default function App() {
     };
   }, [syncLiveAndAppState]);
 
-  // Pull-to-Refresh auf Dokumentebene deaktivieren, damit Runterwischen keinen Browser-Reload auslöst
   useEffect(() => {
     if (typeof document === 'undefined') return;
     const prevHtmlOverscroll = document.documentElement.style.overscrollBehaviorY;
@@ -3969,20 +4052,22 @@ export default function App() {
     showToast(`🟢 LIVE (${durationLabel}) – ${formatRemainingDuration(expiresAt, Date.now())} übrig`);
   };
 
-  const handleToggleComingToo = (checkinId) => {
-    setLiveCheckins((prev) =>
-      prev.map((item) => {
-        if (item.id !== checkinId) return item;
-        const list = item.comingTooIds || [];
-        const exists = list.includes(currentUser.id);
-        return {
-          ...item,
-          comingTooIds: exists
-            ? list.filter((id) => id !== currentUser.id)
-            : [...list, currentUser.id],
-        };
-      })
-    );
+  const handleCreateSpontaneousSession = ({ type, dateLabel, note, expiresAt }) => {
+    setSessions((prev) => [
+      {
+        id: `s-${Date.now()}`,
+        type: type || 'spontaneous',
+        authorId: currentUser.id,
+        dateLabel,
+        note,
+        expiresAt,
+        joinedIds: [currentUser.id],
+        createdAt: 'Gerade eben',
+      },
+      ...prev,
+    ]);
+    setShowSpontaneousSessionModal(false);
+    showToast('Spontan-Session für heute gepostet');
   };
 
   const handleCheckOut = () => {
@@ -4433,7 +4518,11 @@ export default function App() {
                       ? 'Supabase Realtime aktiv'
                       : cloudSyncStatus === 'syncing'
                       ? 'Supabase synchronisiert...'
-                      : 'Supabase lokal gepuffert'
+                      : cloudSyncStatus === 'error'
+                      ? 'Supabase Setup-Hinweis · Lokal aktiv'
+                      : 'Supabase verbunden'
+                    : hasSupabaseUrlWithoutKey
+                    ? 'Supabase URL gesetzt · anonKey fehlt (lokal)'
                     : cloudSyncStatus === 'live'
                     ? 'Cloud-Sync aktiv (alle ~15s)'
                     : cloudSyncStatus === 'syncing'
@@ -4441,6 +4530,26 @@ export default function App() {
                     : 'Nur lokaler Browser (kein Cloud-Endpunkt)'}
                 </span>
               </div>
+
+              {supabaseIssue && (
+                <div className="mb-2.5 flex items-start justify-between gap-2 rounded-xl border border-amber-500/40 bg-amber-950/25 px-3 py-2 text-[11px] text-amber-100">
+                  <div className="min-w-0">
+                    <div className="font-black text-amber-300">
+                      {supabaseIssue.title}
+                    </div>
+                    <p className="mt-0.5 text-[10px] leading-snug text-[#D1D5DB]">
+                      {supabaseIssue.summary}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowSupabaseSetupModal(true)}
+                    className="shrink-0 rounded-lg bg-amber-400 px-2.5 py-1 text-[10px] font-black text-[#060708] transition hover:bg-amber-300"
+                  >
+                    SQL-Setup
+                  </button>
+                </div>
+              )}
 
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                 <button
@@ -4609,6 +4718,76 @@ export default function App() {
         <PlatformInfoModal onClose={() => setShowPlatformInfo(false)} />
       )}
 
+      {showSupabaseSetupModal && (
+        <div
+          onClick={() => setShowSupabaseSetupModal(false)}
+          className="fixed inset-0 z-50 flex items-end justify-center bg-black/80 p-3 backdrop-blur-xs sm:items-center"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="max-h-[88dvh] w-full max-w-lg space-y-3 overflow-y-auto rounded-2xl border border-amber-400/45 bg-[#14161A] p-4 shadow-2xl"
+          >
+            <div className="flex items-center justify-between gap-2">
+              <div>
+                <div className="text-[10px] font-black uppercase tracking-wider text-amber-300">
+                  Supabase Einrichtungshilfe
+                </div>
+                <h3 className="text-sm font-black text-[#F3F4F6]">
+                  {supabaseIssue?.title || 'Tabelle «club_state» anlegen'}
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowSupabaseSetupModal(false)}
+                className="rounded-lg bg-[#202329] px-2.5 py-1 text-xs font-bold text-[#9CA3AF] hover:text-[#F4ECC2]"
+              >
+                ✕
+              </button>
+            </div>
+
+            <p className="text-xs leading-relaxed text-[#D1D5DB]">
+              Führe dieses SQL einmal im Supabase <strong className="text-[#F4ECC2]">SQL Editor</strong> aus, um die Tabelle <code className="rounded bg-[#0F1114] px-1.5 py-0.5 text-[#A8D0B1]">club_state</code>, die Zeile <code className="rounded bg-[#0F1114] px-1.5 py-0.5 text-[#A8D0B1]">main</code>, die RLS-Policies und Realtime zu aktivieren:
+            </p>
+
+            <pre className="pk-dark-scroll overflow-x-auto rounded-xl border border-[#2B2F37] bg-[#0B0D10] p-3 font-mono text-[11px] leading-relaxed text-[#A8D0B1]">
+              {SUPABASE_SETUP_SQL}
+            </pre>
+
+            <div className="flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  try {
+                    const ta = document.createElement('textarea');
+                    ta.value = SUPABASE_SETUP_SQL;
+                    document.body.appendChild(ta);
+                    ta.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(ta);
+                    showToast('✓ SQL-Setup kopiert');
+                  } catch {
+                    showToast('Kopieren nicht möglich – bitte manuell markieren');
+                  }
+                }}
+                className="rounded-xl border border-[#2B2F37] bg-[#0F1114] px-3.5 py-2 text-xs font-bold text-[#F4ECC2] hover:border-[#6FB3A2]"
+              >
+                SQL kopieren
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowSupabaseSetupModal(false);
+                  syncLiveAndAppState(true);
+                }}
+                className="rounded-xl bg-[#6FB3A2] px-4 py-2 text-xs font-black text-[#060708]"
+              >
+                Erneut prüfen ✓
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {selectedMemberId && playersById[selectedMemberId] && (
         <MemberDetailModal
           player={playersById[selectedMemberId]}
@@ -4652,6 +4831,13 @@ export default function App() {
           onSave={handleSaveLiveCheckIn}
           onCheckOut={handleCheckOut}
           onClose={() => setShowLiveCheckInModal(false)}
+        />
+      )}
+
+      {showSpontaneousSessionModal && (
+        <CreateSpontaneousSessionModal
+          onSubmit={handleCreateSpontaneousSession}
+          onClose={() => setShowSpontaneousSessionModal(false)}
         />
       )}
 
@@ -4737,7 +4923,6 @@ function ClubQuickPlayerSearch({
 }) {
   const trimmedQuery = search.trim().toLowerCase();
 
-  // Durchsucht gezielt Nachname (lastName), Vorname (firstName) sowie Spielername (nickname)
   const matches = useMemo(() => {
     if (!trimmedQuery) return [];
     const tokens = trimmedQuery.split(/\s+/).filter(Boolean);
@@ -4847,7 +5032,6 @@ function ClubQuickPlayerSearch({
 
 function ConnectOverviewTab({
   currentUser,
-  activeSeason,
   players,
   playersById,
   liveCheckins,
@@ -4861,11 +5045,6 @@ function ConnectOverviewTab({
   onOpenEditProfile,
   onSelectMember,
 }) {
-  const myLiveCheckin = useMemo(
-    () => liveCheckins.find((c) => c.playerId === currentUser.id),
-    [liveCheckins, currentUser.id]
-  );
-
   const visibleLiveCheckins = liveCheckins;
 
   const newMembers = useMemo(
@@ -4884,7 +5063,6 @@ function ConnectOverviewTab({
 
   return (
     <div className="space-y-4">
-      {/* Kennzahlen-Zeile */}
       <div className="grid grid-cols-3 gap-2">
         <a
           href="#club-live-section"
@@ -4924,7 +5102,6 @@ function ConnectOverviewTab({
         </a>
       </div>
 
-      {/* 1. LIVE in der Halle mit Dauer & Restlaufzeit */}
       <div
         id="club-live-section"
         className="space-y-2.5 rounded-2xl border border-[#24272D] bg-[#181A1E] p-3.5"
@@ -4999,7 +5176,6 @@ function ConnectOverviewTab({
         )}
       </div>
 
-      {/* 2. Top-10 CLUB-Rating Vorschau */}
       <div className="rounded-2xl border border-[#24272D] bg-[#181A1E] p-3.5">
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-1.5">
@@ -5120,7 +5296,6 @@ function ConnectOverviewTab({
         )}
       </div>
 
-      {/* 4. Neu im Club als striktes 3er-Grid */}
       {newMembers.length > 0 && (
         <div
           id="club-newbies-section"
@@ -5369,7 +5544,6 @@ function ClubPlayersTab({
         className="w-full rounded-lg border border-[#2B2F37] bg-[#181A1E] px-2.5 py-1.5 text-xs text-[#F3F4F6]"
       />
 
-      {/* Kombinierbares Filter-Raster ohne horizontales Scrollen */}
       <div className="space-y-1.5 rounded-xl border border-[#24272D] bg-[#14161A] p-2">
         <div className="grid grid-cols-3 gap-1.5">
           <button
@@ -5765,7 +5939,6 @@ function LeagueOverviewTab({
 
   return (
     <div className="space-y-3.5">
-      {/* Kompakte Kennzahlen */}
       <div className="grid grid-cols-3 gap-2">
         <div className="rounded-xl border border-[#24272D] bg-[#181A1E] p-2.5 text-center">
           <div className="text-sm font-black text-[#F4ECC2]">
@@ -5799,7 +5972,6 @@ function LeagueOverviewTab({
         </div>
       </div>
 
-      {/* Eigene Gruppe kompakt */}
       {myLeague && (
         <div className="rounded-2xl border border-[#24272D] bg-[#181A1E] p-3.5">
           <div className="flex items-center justify-between gap-2">
@@ -5841,7 +6013,6 @@ function LeagueOverviewTab({
         </div>
       )}
 
-      {/* Offene Spiele der aktuellen Nutzerin / des Nutzers */}
       {myOpenMatches.length > 0 && (
         <div className="rounded-2xl border border-[#24272D] bg-[#181A1E] p-3.5">
           <div className="mb-2 flex items-center justify-between">
@@ -5882,7 +6053,6 @@ function LeagueOverviewTab({
         </div>
       )}
 
-      {/* Letzte gespielte Resultate */}
       {recentPlayedMatches.length > 0 && (
         <div className="rounded-2xl border border-[#24272D] bg-[#181A1E] p-3.5">
           <div className="mb-2 text-xs font-black tracking-wide text-[#9CA3AF] uppercase">
@@ -6022,7 +6192,6 @@ function LeagueStandingsTab({
               })}
             </div>
 
-            {/* Partien der Gruppe: klar getrennt in offen & bereits gespielt */}
             <div className="space-y-2.5 border-t border-[#24272D] bg-[#14161A] p-3">
               <div>
                 <div className="mb-1.5 flex items-center justify-between text-[10px] font-black tracking-wider text-[#DE754B] uppercase">
