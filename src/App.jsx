@@ -56,26 +56,10 @@ const LIVE_STATUS_OPTIONS = [
 ];
 
 const LIVE_DURATION_CHIPS = [
-  { id: '30m', label: '30 Min.', minutes: 30 },
-  { id: '1h', label: '1 Std.', minutes: 60 },
-  { id: '1.5h', label: '1,5 Std.', minutes: 90 },
-  { id: '2h', label: '2 Std.', minutes: 120 },
-  { id: 'until22', label: 'bis 22:00', minutes: 'until22' },
-];
-
-const SPONTANEOUS_TODAY_TIME_CHIPS = [
-  'Jetzt sofort',
-  'Heute · 17:30',
-  'Heute · 18:30',
-  'Heute · 19:30',
-  'Heute · 20:30',
-];
-
-const SPONTANEOUS_TODAY_FOCUS_CHIPS = [
-  'Lockeres Einspielen',
-  'Sätze & Matchpraxis',
-  'Aufschlag & Rückschlag',
-  'Balleimer / Topspin',
+  { id: '1h', label: '1h', minutes: 60 },
+  { id: '2h', label: '2h', minutes: 120 },
+  { id: '3h', label: '3h', minutes: 180 },
+  { id: '4h', label: '4h', minutes: 240 },
 ];
 
 /**
@@ -108,17 +92,15 @@ function formatExpiryClockLabel(expiresAt) {
 }
 
 /**
- * Formatiert die verbleibende Restlaufzeit ab `nowMs` für Live-Badges.
+ * Formatiert die verbleibende Restlaufzeit ab `nowMs` stets in Stunden und Minuten (z. B. "1 Std. 15 Min." oder "0 Std. 45 Min.").
  */
 function formatRemainingDuration(expiresAt, nowMs = Date.now()) {
-  if (!expiresAt) return 'Aktiv';
+  if (!expiresAt) return '0 Std. 0 Min.';
   const diffMs = Math.max(0, expiresAt - nowMs);
   const totalMinutes = Math.ceil(diffMs / 60000);
-  if (totalMinutes <= 0) return '0 Min.';
-  if (totalMinutes < 60) return `${totalMinutes} Min.`;
   const hours = Math.floor(totalMinutes / 60);
   const mins = totalMinutes % 60;
-  return mins > 0 ? `${hours} Std. ${mins} Min.` : `${hours} Std.`;
+  return `${hours} Std. ${mins} Min.`;
 }
 
 function readStorageJson(key, fallback) {
@@ -1233,10 +1215,9 @@ function PlatformInfoModal({ onClose }) {
         </div>
 
         <p className="text-xs leading-relaxed text-[#D1D5DB]">
-          <strong className="text-[#F4ECC2]">CONNECT</strong> verbindet unseren
-          ganzen Tischtennis-Club in einer einzigen App – egal ob du einfach
-          spontan Bälle schlagen willst oder zusätzlich in der monatlichen
-          Club-Liga mitspielst.
+          <strong className="text-[#F4ECC2]">CONNECT</strong> verbindet PINGKONG in
+          einer einzigen App – egal ob du einfach spontan Bälle schlagen willst
+          oder zusätzlich in unserer monatlichen Liga mitspielst.
         </p>
 
         <div className="space-y-2.5">
@@ -1581,9 +1562,9 @@ function AuthGateScreen({
               CONNECT
             </h1>
 
-            <p className="mt-1 max-w-[270px] text-[11px] leading-snug text-[#9CA3AF] sm:mt-2 sm:text-xs sm:leading-relaxed">
-              Wähle dein PINGKONG Club Profil aus oder registriere dich neu.
-            </p>
+            <div className="mt-0.5 text-center text-[11px] font-medium tracking-[0.18em] text-[#9CA3AF] sm:mt-1 sm:text-xs">
+              by <span className="font-semibold text-[#C8B99A]">pingkong</span>
+            </div>
 
             <button
               type="button"
@@ -1784,16 +1765,6 @@ function AuthGateScreen({
             onSubmit={handleRegisterSubmit}
             className="w-full max-w-full space-y-3 overflow-x-hidden rounded-2xl border border-[#24272E] bg-[#14161A] p-4"
           >
-            <div className="flex items-start gap-2.5 rounded-2xl border border-[#6FB3A2]/40 bg-[#152622]/70 px-3.5 py-2.5 text-left">
-              <span className="mt-0.5 text-sm">⚡</span>
-              <p className="text-[11px] leading-relaxed text-[#F4ECC2]">
-                <strong className="font-black text-[#A8D0B1]">
-                  In 1 Minute startklar – ganz ohne E-Mail:
-                </strong>{' '}
-                Du teilst dir nur deinen 4-stelligen PIN zu.
-              </p>
-            </div>
-
             <div className="space-y-2 rounded-2xl border border-[#2B2F37] bg-[#0F1114] p-3">
               <div className="flex items-center justify-between">
                 <span className="text-[11px] font-black uppercase tracking-wider text-[#F4ECC2]">
@@ -2124,6 +2095,7 @@ function MemberDetailModal({
     );
     const recentConnectGames = playerConnectGames.slice(0, 3);
 
+    const recentLeagueGames = [];
     let streakType = null;
     let streakCount = 0;
     for (const m of playerConnectGames) {
@@ -2139,10 +2111,6 @@ function MemberDetailModal({
       }
     }
 
-    const formBadges = playerConnectGames
-      .slice(0, 5)
-      .map((m) => (m.winnerId === player.id ? 'S' : 'N'));
-
     let myWins = 0;
     let theirWins = 0;
     connectMatches.forEach((m) => {
@@ -2156,16 +2124,32 @@ function MemberDetailModal({
 
     let leagueWins = 0;
     let leagueLosses = 0;
-    (seasons || []).forEach((s) => {
-      (s.matches || []).forEach((m) => {
+    const chronologicalSeasons = [...(seasons || [])].reverse();
+    chronologicalSeasons.forEach((s) => {
+      const seasonMatches = [...(s.matches || [])].reverse();
+      seasonMatches.forEach((m) => {
         if (m.score1 === null || m.score2 === null) return;
         const p1Won = m.score1 > m.score2;
         if (m.player1Id === player.id) {
           if (p1Won) leagueWins += 1;
           else leagueLosses += 1;
+          recentLeagueGames.push({
+            id: `${s.id}-${m.id}`,
+            opponentId: m.player2Id,
+            seasonLabel: s.shortLabel || s.label || '',
+            won: p1Won,
+            score: `${m.score1}:${m.score2}`,
+          });
         } else if (m.player2Id === player.id) {
           if (!p1Won) leagueWins += 1;
           else leagueLosses += 1;
+          recentLeagueGames.push({
+            id: `${s.id}-${m.id}`,
+            opponentId: m.player1Id,
+            seasonLabel: s.shortLabel || s.label || '',
+            won: !p1Won,
+            score: `${m.score2}:${m.score1}`,
+          });
         }
 
         const involvesBoth =
@@ -2194,7 +2178,6 @@ function MemberDetailModal({
       recentConnectGames,
       streakType,
       streakCount,
-      formBadges,
       myWins,
       theirWins,
       h2hTotal: myWins + theirWins,
@@ -2203,6 +2186,7 @@ function MemberDetailModal({
       sharedDays,
       totalGames,
       winRate,
+      recentLeagueGames: recentLeagueGames.slice(0, 3),
     };
   }, [connectMatches, seasons, currentUser, player, ratingInfo]);
 
@@ -2326,18 +2310,6 @@ function MemberDetailModal({
 
         <div className="space-y-1.5 rounded-xl border border-[#24272E] bg-[#0F1114] p-3 text-xs">
           <div className="flex items-center justify-between gap-2">
-            <span className="text-[#8E95A2]">Spielstärke &amp; Stil</span>
-            <span className="font-bold text-[#F3F4F6]">
-              {player.sttClass || 'Hobby'} · {player.playstyle || 'Allround'}
-            </span>
-          </div>
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-[#8E95A2]">Sprache</span>
-            <span className="font-bold text-[#A8D0B1]">
-              {player.language || 'Deutsch'}
-            </span>
-          </div>
-          <div className="flex items-center justify-between gap-2">
             <span className="text-[#8E95A2]">Liga-Status</span>
             <span className="font-bold text-[#F4ECC2]">
               {league
@@ -2351,26 +2323,6 @@ function MemberDetailModal({
               {scheduleSummary || 'Keine festen Tage hinterlegt'}
             </span>
           </div>
-
-          {memberMetrics.formBadges.length > 0 && (
-            <div className="flex items-center justify-between gap-2 border-t border-[#1D2026] pt-1.5">
-              <span className="text-[#8E95A2]">Letzte Form</span>
-              <div className="flex items-center gap-1">
-                {memberMetrics.formBadges.map((res, idx) => (
-                  <span
-                    key={idx}
-                    className={`flex h-5 w-5 items-center justify-center rounded text-[10px] font-black ${
-                      res === 'S'
-                        ? 'bg-emerald-500/20 text-emerald-300 ring-1 ring-emerald-500/35'
-                        : 'bg-rose-500/20 text-rose-300 ring-1 ring-rose-500/35'
-                    }`}
-                  >
-                    {res}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
 
         {memberMetrics.recentConnectGames.length > 0 && (
@@ -2400,6 +2352,43 @@ function MemberDetailModal({
                       }`}
                     >
                       {won ? 'Sieg' : 'Nied.'} · {m.score}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {memberMetrics.recentLeagueGames.length > 0 && (
+          <div className="space-y-1.5 rounded-xl border border-[#DE754B]/25 bg-[#0F1114] p-3">
+            <div className="text-[10px] font-black uppercase tracking-wider text-[#DE754B]">
+              Letzte Liga-Spiele
+            </div>
+            <div className="space-y-1">
+              {memberMetrics.recentLeagueGames.map((m) => {
+                const opp = playersById?.[m.opponentId];
+                return (
+                  <div
+                    key={m.id}
+                    className="flex items-center justify-between text-[11px]"
+                  >
+                    <span className="truncate text-[#D1D5DB]">
+                      vs. <strong className="text-[#F3F4F6]">{opp?.nickname || 'Spieler'}</strong>
+                      {m.seasonLabel && (
+                        <span className="ml-1 text-[10px] text-[#6B7280]">
+                          ({m.seasonLabel})
+                        </span>
+                      )}
+                    </span>
+                    <span
+                      className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] font-black ${
+                        m.won
+                          ? 'bg-emerald-500/15 text-emerald-300'
+                          : 'bg-rose-500/15 text-rose-300'
+                      }`}
+                    >
+                      {m.won ? 'Sieg' : 'Nied.'} · {m.score}
                     </span>
                   </div>
                 );
@@ -2450,27 +2439,20 @@ function LiveCheckInModal({
   onCheckOut,
   onClose,
 }) {
-  const [selectedDurationId, setSelectedDurationId] = useState('1.5h');
-  const [hallStatus, setHallStatus] = useState(
-    existingCheckin?.hallStatus || 'buddy_wanted'
-  );
-  const [note, setNote] = useState(existingCheckin?.note || '');
+  const [selectedDurationId, setSelectedDurationId] = useState('1h');
 
   const chosenDuration =
     LIVE_DURATION_CHIPS.find((d) => d.id === selectedDurationId) ||
-    LIVE_DURATION_CHIPS[2];
+    LIVE_DURATION_CHIPS[0];
 
   const handleSubmit = (e) => {
     e.preventDefault();
     const expiresAt = computeExpiresAt(chosenDuration.minutes);
-    const statusObj =
-      LIVE_STATUS_OPTIONS.find((s) => s.id === hallStatus) || LIVE_STATUS_OPTIONS[0];
-
     onSave({
       durationLabel: chosenDuration.label,
-      hallStatus,
+      hallStatus: 'buddy_wanted',
       expiresAt,
-      note: note.trim() || statusObj.label,
+      note: `${currentUser.nickname} ist LIVE (${chosenDuration.label})`,
     });
   };
 
@@ -2502,9 +2484,9 @@ function LiveCheckInModal({
 
         <div>
           <label className="mb-1.5 block text-[11px] font-semibold text-[#8E95A2]">
-            1. Für wie lange bist du in der Halle?
+            Wie lange bist du in der Halle?
           </label>
-          <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-5">
+          <div className="grid grid-cols-4 gap-2">
             {LIVE_DURATION_CHIPS.map((dur) => {
               const active = selectedDurationId === dur.id;
               return (
@@ -2512,7 +2494,7 @@ function LiveCheckInModal({
                   key={dur.id}
                   type="button"
                   onClick={() => setSelectedDurationId(dur.id)}
-                  className={`rounded-xl py-2 text-[11px] font-black transition ${
+                  className={`rounded-xl py-2.5 text-xs font-black transition ${
                     active
                       ? 'bg-[#6FB3A2] text-[#060708] shadow-sm'
                       : 'border border-[#2B2F37] bg-[#0F1114] text-[#D1D5DB] hover:border-[#6FB3A2]/50'
@@ -2523,50 +2505,12 @@ function LiveCheckInModal({
               );
             })}
           </div>
-          <div className="mt-1 text-[10px] text-[#8E95A2]">
+          <div className="mt-1.5 text-[10px] text-[#8E95A2]">
             Automatischer Check-out um{' '}
             <span className="font-bold text-[#A8D0B1]">
               {formatExpiryClockLabel(computeExpiresAt(chosenDuration.minutes))}
             </span>
           </div>
-        </div>
-
-        <div>
-          <label className="mb-1.5 block text-[11px] font-semibold text-[#8E95A2]">
-            2. Hallen- &amp; Buddy-Status
-          </label>
-          <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-3">
-            {LIVE_STATUS_OPTIONS.map((st) => {
-              const active = hallStatus === st.id;
-              return (
-                <button
-                  key={st.id}
-                  type="button"
-                  onClick={() => setHallStatus(st.id)}
-                  className={`rounded-xl border px-2.5 py-2 text-left text-[11px] font-bold transition ${
-                    active
-                      ? 'border-[#6FB3A2] bg-[#152622] text-[#F3F4F6] ring-1 ring-[#6FB3A2]/50'
-                      : 'border-[#262A32] bg-[#0F1114] text-[#9CA3AF] hover:text-[#F3F4F6]'
-                  }`}
-                >
-                  <span className="block truncate">{st.label}</span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        <div>
-          <label className="mb-1 block text-[11px] font-semibold text-[#8E95A2]">
-            3. Kurze Notiz (optional)
-          </label>
-          <input
-            type="text"
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
-            placeholder={`z. B. Tisch 2 frei, ${currentUser.nickname} spielt ein...`}
-            className="w-full rounded-xl border border-[#2B2F37] bg-[#0F1114] px-3 py-2 text-xs text-[#F3F4F6] focus:border-[#6FB3A2] focus:outline-none"
-          />
         </div>
 
         <div className="flex items-center gap-2 pt-0.5">
@@ -2586,7 +2530,7 @@ function LiveCheckInModal({
             type="submit"
             className="flex-1 rounded-xl bg-[#6FB3A2] py-2.5 text-xs font-black text-[#060708] transition hover:bg-[#82C1B1]"
           >
-            {existingCheckin ? 'Status speichern ✓' : 'Jetzt LIVE gehen ✓'}
+            Jetzt LIVE gehen ✓
           </button>
         </div>
       </form>
@@ -2669,86 +2613,144 @@ function LogMatchModal({
           <label className="block text-[11px] font-semibold text-[#8E95A2]">
             1. Mitspieler suchen &amp; wählen
           </label>
-          <input
-            type="text"
-            value={opponentSearch}
-            onChange={(e) => setOpponentSearch(e.target.value)}
-            placeholder="Name oder Nickname suchen..."
-            className="w-full rounded-xl border border-[#2B2F37] bg-[#0F1114] px-3 py-2 text-base sm:text-xs text-[#F3F4F6] placeholder:text-[#6B7280] focus:border-[#6FB3A2] focus:outline-none"
-          />
-          {filteredOpponents.length === 0 ? (
-            <div className="rounded-xl border border-[#2B2F37] bg-[#0F1114] px-3 py-2 text-xs text-[#8E95A2]">
-              Kein Spieler gefunden.
+          <div className="overflow-hidden rounded-xl border border-[#24272E] bg-[#101216] focus-within:border-[#6FB3A2]">
+            <div className="flex items-center gap-2 border-b border-[#20232A] px-3 py-1.5">
+              <input
+                type="text"
+                value={opponentSearch}
+                onChange={(e) => setOpponentSearch(e.target.value)}
+                placeholder="Name oder Nickname tippen..."
+                className="min-w-0 flex-1 bg-transparent py-1 text-base sm:text-xs text-[#F3F4F6] placeholder:text-[#6B7280] focus:outline-none"
+              />
+              {opponentSearch && (
+                <button
+                  type="button"
+                  onClick={() => setOpponentSearch('')}
+                  className="rounded px-1.5 py-0.5 text-[10px] font-bold text-[#8E95A2] hover:text-[#F3F4F6]"
+                >
+                  ✕
+                </button>
+              )}
             </div>
-          ) : (
-            <select
-              value={effectiveOpponentId}
-              onChange={(e) => setOpponentId(e.target.value)}
-              className="w-full rounded-xl border border-[#2B2F37] bg-[#0F1114] px-3 py-2 text-base sm:text-xs font-bold text-[#F3F4F6]"
-            >
-              {filteredOpponents.map((p) => {
-                const r = connectRatings[p.id];
-                return (
-                  <option key={p.id} value={p.id}>
-                    {p.nickname} ({p.firstName} {p.lastName}) · {r?.tier?.symbol}{' '}
-                    {r?.elo}
-                  </option>
-                );
-              })}
-            </select>
-          )}
-        </div>
 
-        <div>
-          <label className="mb-1 block text-[11px] font-semibold text-[#8E95A2]">
-            2. Gewinner antippen
-          </label>
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              type="button"
-              onClick={() => setWinnerSide('me')}
-              className={`rounded-xl py-2.5 text-xs font-black transition ${
-                winnerSide === 'me'
-                  ? 'bg-emerald-500 text-[#060708]'
-                  : 'border border-[#2B2F37] bg-[#0F1114] text-[#9CA3AF]'
-              }`}
-            >
-              {currentUser.nickname}
-            </button>
-            <button
-              type="button"
-              disabled={!opponent}
-              onClick={() => setWinnerSide('opponent')}
-              className={`rounded-xl py-2.5 text-xs font-black transition disabled:opacity-40 ${
-                winnerSide === 'opponent'
-                  ? 'bg-emerald-500 text-[#060708]'
-                  : 'border border-[#2B2F37] bg-[#0F1114] text-[#9CA3AF]'
-              }`}
-            >
-              {opponent?.nickname || 'Mitspieler'}
-            </button>
+            {filteredOpponents.length === 0 ? (
+              <div className="px-3 py-2.5 text-xs text-[#8E95A2]">
+                Kein Mitspieler gefunden.
+              </div>
+            ) : (
+              <div
+                role="listbox"
+                aria-label="Mitspieler-Trefferliste"
+                className="pk-dark-scroll max-h-40 divide-y divide-[#1A1D23] overflow-y-auto"
+              >
+                {filteredOpponents.map((p) => {
+                  const r = connectRatings[p.id];
+                  const isSelected = p.id === effectiveOpponentId;
+                  return (
+                    <button
+                      key={p.id}
+                      type="button"
+                      role="option"
+                      aria-selected={isSelected}
+                      onClick={() => setOpponentId(p.id)}
+                      className={`flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-xs transition ${
+                        isSelected
+                          ? 'bg-[#152622] text-[#F3F4F6]'
+                          : 'text-[#D1D5DB] hover:bg-[#171A20]'
+                      }`}
+                    >
+                      <div className="flex min-w-0 items-center gap-2">
+                        <PlayerAvatar
+                          player={p}
+                          sizeClass="h-6 w-6 text-[10px]"
+                          isConnectAccent={p.connectOnly}
+                        />
+                        <div className="min-w-0">
+                          <div className="truncate font-bold text-[#F3F4F6]">
+                            {p.nickname}
+                          </div>
+                          <div className="truncate text-[10px] text-[#8E95A2]">
+                            {p.firstName} {p.lastName}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex shrink-0 items-center gap-1.5">
+                        {r?.tier && (
+                          <span
+                            className={`rounded border px-1.5 py-0.5 text-[10px] font-bold leading-none ${r.tier.badgeClass}`}
+                          >
+                            {r.tier.symbol} {r.elo}
+                          </span>
+                        )}
+                        <span
+                          className={`text-xs font-black ${
+                            isSelected ? 'text-[#6FB3A2]' : 'text-transparent'
+                          }`}
+                        >
+                          ✓
+                        </span>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </div>
 
-        <div>
-          <label className="mb-1 block text-[11px] font-semibold text-[#8E95A2]">
-            3. Satzergebnis wählen
-          </label>
-          <div className="grid grid-cols-5 gap-1.5">
-            {['3:0', '3:1', '3:2', '2:0', '2:1'].map((preset) => (
+        <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-12 sm:items-end">
+          <div className="sm:col-span-6">
+            <label className="mb-1 block text-[11px] font-semibold text-[#8E95A2]">
+              2. Gewinner
+            </label>
+            <div className="grid grid-cols-2 gap-1.5">
               <button
-                key={preset}
                 type="button"
-                onClick={() => setScore(preset)}
-                className={`rounded-xl py-2 text-xs font-black transition ${
-                  score === preset
-                    ? 'bg-[#6FB3A2] text-[#060708]'
-                    : 'border border-[#2B2F37] bg-[#0F1114] text-[#9CA3AF]'
+                onClick={() => setWinnerSide('me')}
+                className={`truncate rounded-xl px-2 py-2 text-xs font-black transition ${
+                  winnerSide === 'me'
+                    ? 'bg-emerald-500 text-[#060708]'
+                    : 'border border-[#24272E] bg-[#101216] text-[#9CA3AF]'
                 }`}
               >
-                {preset}
+                {currentUser.nickname}
               </button>
-            ))}
+              <button
+                type="button"
+                disabled={!opponent}
+                onClick={() => setWinnerSide('opponent')}
+                className={`truncate rounded-xl px-2 py-2 text-xs font-black transition disabled:opacity-40 ${
+                  winnerSide === 'opponent'
+                    ? 'bg-emerald-500 text-[#060708]'
+                    : 'border border-[#24272E] bg-[#101216] text-[#9CA3AF]'
+                }`}
+              >
+                {opponent?.nickname || 'Gegner'}
+              </button>
+            </div>
+          </div>
+
+          <div className="sm:col-span-6">
+            <label className="mb-1 block text-[11px] font-semibold text-[#8E95A2]">
+              3. Satzergebnis
+            </label>
+            <div className="grid grid-cols-5 gap-1">
+              {['3:0', '3:1', '3:2', '2:0', '2:1'].map((preset) => (
+                <button
+                  key={preset}
+                  type="button"
+                  onClick={() => setScore(preset)}
+                  className={`rounded-lg py-2 text-[11px] font-black transition ${
+                    score === preset
+                      ? 'bg-[#6FB3A2] text-[#060708]'
+                      : 'border border-[#24272E] bg-[#101216] text-[#9CA3AF]'
+                  }`}
+                >
+                  {preset}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 
@@ -2915,10 +2917,11 @@ export default function App() {
   const [selectedMemberId, setSelectedMemberId] = useState(null);
   const [showAddMemberModal, setShowAddMemberModal] = useState(false);
   const [showLiveCheckInModal, setShowLiveCheckInModal] = useState(false);
-  const [showSpontaneousSessionModal, setShowSpontaneousSessionModal] = useState(false);
   const [recordingLeagueMatch, setRecordingLeagueMatch] = useState(null);
   const [logMatchTargetId, setLogMatchTargetId] = useState(null);
+  const [clubQuickSearch, setClubQuickSearch] = useState('');
   const [toastMessage, setToastMessage] = useState('');
+  const toastTimeoutRef = useRef(null);
   const customLogoUrl = '';
 
   const [adminPinCode, setAdminPinCode] = useState('9999');
@@ -3349,8 +3352,22 @@ export default function App() {
   }, []);
 
   const showToast = useCallback((msg) => {
+    if (toastTimeoutRef.current) {
+      clearTimeout(toastTimeoutRef.current);
+    }
     setToastMessage(msg);
-    setTimeout(() => setToastMessage(''), 2600);
+    toastTimeoutRef.current = setTimeout(() => {
+      setToastMessage('');
+      toastTimeoutRef.current = null;
+    }, 2600);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (toastTimeoutRef.current) {
+        clearTimeout(toastTimeoutRef.current);
+      }
+    };
   }, []);
 
   const pruneExpiredItems = useCallback((referenceNow = Date.now()) => {
@@ -3938,14 +3955,15 @@ export default function App() {
         id: `lc-${Date.now()}`,
         playerId: currentUser.id,
         durationLabel,
-        hallStatus,
+        hallStatus: hallStatus || 'buddy_wanted',
         expiresAt,
-        note,
+        note: note || `${currentUser.nickname} ist LIVE (${durationLabel})`,
         checkedInAt: 'Gerade eben',
         comingTooIds: [],
       },
       ...prev.filter((item) => item.playerId !== currentUser.id),
     ]);
+    setShowLiveCheckInModal(false);
     setWorld('connect');
     setConnectTab('overview');
     showToast(`🟢 LIVE (${durationLabel}) – ${formatRemainingDuration(expiresAt, Date.now())} übrig`);
@@ -3972,47 +3990,19 @@ export default function App() {
     showToast('Aus der Halle ausgecheckt');
   };
 
-  const handleCreateSpontaneousSession = ({ dateLabel, note, expiresAt }) => {
-    setNowMs(Date.now());
-    setSessions((prev) => [
-      {
-        id: `s-${Date.now()}`,
-        type: 'spontaneous',
-        authorId: currentUser.id,
-        dateLabel,
-        expiresAt,
-        note,
-        joinedIds: [currentUser.id],
-        createdAt: 'Gerade eben',
-      },
-      ...prev,
-    ]);
-    setShowSpontaneousSessionModal(false);
-    setWorld('connect');
-    setConnectTab('overview');
-    showToast('Spontan-Session gepostet');
-  };
-
-  const handleToggleJoinSession = (sessionId) => {
-    setSessions((prev) =>
-      prev.map((s) => {
-        if (s.id !== sessionId) return s;
-        const joined = s.joinedIds.includes(currentUser.id);
-        return {
-          ...s,
-          joinedIds: joined
-            ? s.joinedIds.filter((id) => id !== currentUser.id)
-            : [...s.joinedIds, currentUser.id],
-        };
-      })
-    );
-  };
-
-  const handleDeleteOwnSession = (sessionId) => {
-    setSessions((prev) =>
-      prev.filter((s) => !(s.id === sessionId && s.authorId === currentUser.id))
-    );
-    showToast('Spontan-Session entfernt');
+  const handleRecordConnectMatch = (opponentId, winnerId, score) => {
+    if (!currentUser || !opponentId) return;
+    const newMatch = {
+      id: `cm-${Date.now()}`,
+      player1Id: currentUser.id,
+      player2Id: opponentId,
+      winnerId,
+      score,
+      dateLabel: 'Gerade eben',
+    };
+    setConnectMatches((prev) => [newMatch, ...prev]);
+    setLogMatchTargetId(null);
+    showToast(`Spontane Partie (${score}) gespeichert`);
   };
 
   return (
@@ -4155,7 +4145,7 @@ export default function App() {
                     : 'bg-[#152622] text-[#A8D0B1]'
                 }`}
               >
-                Halle
+                COMMUNITY
               </span>
             </button>
 
@@ -4203,7 +4193,7 @@ export default function App() {
                       : 'bg-[#2C1912] text-[#DE754B]'
                   }`}
                 >
-                  Liga
+                  COMPETITION
                 </span>
               )}
             </button>
@@ -4329,7 +4319,7 @@ export default function App() {
                   className="flex items-center justify-between gap-2 rounded-xl border border-[#2B2F37] bg-[#0F1114] px-3.5 py-3 text-left text-xs font-black text-[#F3F4F6] transition hover:border-[#DE754B] hover:bg-[#191C21]"
                 >
                   <div className="min-w-0">
-                    <div className="truncate">Tabelle &amp; Aufstieg</div>
+                    <div className="truncate">Tabelle</div>
                     <div className="mt-0.5 truncate text-[10px] font-medium text-[#8E95A2]">
                       {currentUserLeague
                         ? `${currentUserLeague.name} · Gruppen & Ränge`
@@ -4364,7 +4354,7 @@ export default function App() {
               {[
                 { id: 'overview', label: 'Übersicht' },
                 { id: 'matches', label: 'Meine Spiele' },
-                { id: 'standings', label: 'Tabelle & Aufstieg' },
+                { id: 'standings', label: 'Tabelle' },
                 { id: 'status', label: 'Monats-Status' },
               ].map((t) => (
                 <button
@@ -4411,7 +4401,8 @@ export default function App() {
                 season={activeSeason}
                 playersById={playersById}
                 currentUser={currentUser}
-                connectRatings={ratingsByPlayer}
+                onSelectMatchToRecord={(m) => setRecordingLeagueMatch(m)}
+                onSelectMember={(memberId) => setSelectedMemberId(memberId)}
               />
             )}
 
@@ -4431,7 +4422,6 @@ export default function App() {
 
         {world === 'connect' && (
           <div className="space-y-4">
-            {/* Fokus-Schnellaktionen im CLUB-Bereich: nur LIVE Check-in & Spontan Partie eintragen */}
             <div className="rounded-2xl border border-[#6FB3A2]/35 bg-[#14161A] p-3 shadow-lg shadow-black/25">
               <div className="mb-2.5 flex items-center justify-between px-0.5">
                 <span className="text-[10px] font-black uppercase tracking-[0.14em] text-[#6FB3A2]">
@@ -4491,13 +4481,25 @@ export default function App() {
                   <span className="shrink-0 text-sm font-black text-[#6FB3A2]">+</span>
                 </button>
               </div>
+
+              <ClubQuickPlayerSearch
+                players={players}
+                search={clubQuickSearch}
+                onSearchChange={setClubQuickSearch}
+                activeSeason={activeSeason}
+                connectRatings={ratingsByPlayer}
+                onSelectMember={(memberId) => {
+                  setClubQuickSearch('');
+                  setSelectedMemberId(memberId);
+                }}
+              />
             </div>
 
             <div className="border-t border-[#22252B] pt-3.5">
               <div className="grid grid-cols-4 gap-1 rounded-xl bg-[#14161A] p-1 ring-1 ring-[#6FB3A2]/25">
                 {[
                   { id: 'overview', label: 'Übersicht' },
-                  { id: 'ranking', label: 'Rangliste' },
+                  { id: 'ranking', label: 'Buddy suchen' },
                   { id: 'matches', label: 'Partien' },
                   { id: 'halldays', label: 'Hallentage' },
                 ].map((t) => (
@@ -4524,19 +4526,13 @@ export default function App() {
                 players={players}
                 playersById={playersById}
                 liveCheckins={liveCheckins}
-                sessions={sessions}
                 connectMatches={connectMatches}
                 connectRatings={ratingsByPlayer}
                 matchDeltas={matchDeltas}
                 nowMs={nowMs}
                 onNavigateTab={(tab) => setConnectTab(tab)}
-                onToggleJoinSession={handleToggleJoinSession}
-                onDeleteOwnSession={handleDeleteOwnSession}
-                onOpenCreateSpontaneous={() => setShowSpontaneousSessionModal(true)}
                 onOpenLiveCheckIn={() => setShowLiveCheckInModal(true)}
                 onOpenLogMatch={(opponentId = '') => setLogMatchTargetId(opponentId)}
-                onToggleComingToo={handleToggleComingToo}
-                onCheckOut={handleCheckOut}
                 onOpenEditProfile={() => setShowProfileModal(true)}
                 onSelectMember={(memberId) => setSelectedMemberId(memberId)}
               />
@@ -4659,13 +4655,6 @@ export default function App() {
         />
       )}
 
-      {showSpontaneousSessionModal && (
-        <CreateSpontaneousSessionModal
-          onSubmit={handleCreateSpontaneousSession}
-          onClose={() => setShowSpontaneousSessionModal(false)}
-        />
-      )}
-
       {recordingLeagueMatch && (
         <RecordLeagueMatchModal
           match={recordingLeagueMatch}
@@ -4738,73 +4727,160 @@ export default function App() {
 // CLUB ÜBERSICHT (LIVE CHECK-IN, SPONTAN-PINNWAND, RATING & 3ER-GRID NEUE)
 // ============================================================================
 
+function ClubQuickPlayerSearch({
+  players,
+  search,
+  onSearchChange,
+  activeSeason,
+  connectRatings,
+  onSelectMember,
+}) {
+  const trimmedQuery = search.trim().toLowerCase();
+
+  // Durchsucht gezielt Nachname (lastName), Vorname (firstName) sowie Spielername (nickname)
+  const matches = useMemo(() => {
+    if (!trimmedQuery) return [];
+    const tokens = trimmedQuery.split(/\s+/).filter(Boolean);
+    return players
+      .filter((p) => {
+        const lastName = (p.lastName || '').toLowerCase();
+        const firstName = (p.firstName || '').toLowerCase();
+        const playerName = (p.nickname || '').toLowerCase();
+        return tokens.every(
+          (token) =>
+            lastName.includes(token) ||
+            firstName.includes(token) ||
+            playerName.includes(token)
+        );
+      })
+      .slice(0, 5);
+  }, [players, trimmedQuery]);
+
+  return (
+    <div className="mt-2.5 space-y-1.5 border-t border-[#22252B] pt-2.5">
+      <div className="group flex items-center gap-2.5 rounded-2xl border border-[#2B2F37] bg-[#0D0F12]/95 px-3.5 py-2 shadow-inner shadow-black/40 ring-1 ring-white/[0.03] transition focus-within:border-[#6FB3A2] focus-within:bg-[#101317] focus-within:ring-2 focus-within:ring-[#6FB3A2]/25">
+        <span
+          className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-[#161B20] text-xs text-[#6FB3A2] transition group-focus-within:bg-[#152622]"
+          aria-hidden="true"
+        >
+          🔍
+        </span>
+        <input
+          type="text"
+          value={search}
+          onChange={(e) => onSearchChange(e.target.value)}
+          placeholder="Spielersuche nach Name, Vorname oder Spielername"
+          aria-label="Spielersuche nach Name, Vorname oder Spielername"
+          className="min-w-0 flex-1 bg-transparent py-1 text-base sm:text-xs font-medium text-[#F3F4F6] placeholder:text-[#7E8594] focus:outline-none"
+        />
+        {search && (
+          <button
+            type="button"
+            onClick={() => onSearchChange('')}
+            aria-label="Spielersuche leeren"
+            className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#1A1D24] text-[10px] font-bold text-[#9CA3AF] transition hover:bg-[#252932] hover:text-[#F3F4F6]"
+          >
+            ✕
+          </button>
+        )}
+      </div>
+
+      {trimmedQuery && (
+        <div className="overflow-hidden rounded-2xl border border-[#272B34] bg-[#0E1014] shadow-xl shadow-black/40">
+          {matches.length === 0 ? (
+            <div className="px-3.5 py-2.5 text-[11px] text-[#8E95A2]">
+              Kein Spieler für «{search.trim()}» gefunden.
+            </div>
+          ) : (
+            <div className="divide-y divide-[#1B1E25]">
+              {matches.map((p) => {
+                const ratingInfo = connectRatings?.[p.id];
+                const league = activeSeason?.leagues?.find((l) =>
+                  l.playerIds.includes(p.id)
+                );
+                return (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => onSelectMember?.(p.id)}
+                    className="flex w-full items-center justify-between gap-2 px-3.5 py-2.5 text-left transition hover:bg-[#152622]/75"
+                  >
+                    <div className="flex min-w-0 items-center gap-2.5">
+                      <PlayerAvatar
+                        player={p}
+                        sizeClass="h-7 w-7 text-[10px]"
+                        isConnectAccent={p.connectOnly}
+                      />
+                      <div className="min-w-0">
+                        <div className="truncate text-xs font-extrabold text-[#F3F4F6]">
+                          {p.nickname}
+                        </div>
+                        <div className="truncate text-[10px] text-[#8E95A2]">
+                          {p.firstName} {p.lastName}
+                          {league ? ` · ${league.name}` : p.sttClass ? ` · ${p.sttClass}` : ''}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex shrink-0 items-center gap-1.5">
+                      {ratingInfo?.tier && (
+                        <span
+                          className={`rounded-md border px-1.5 py-0.5 text-[9px] font-bold leading-none ${ratingInfo.tier.badgeClass}`}
+                        >
+                          {ratingInfo.tier.symbol} {ratingInfo.elo}
+                        </span>
+                      )}
+                      <span className="rounded-md bg-[#152622] px-2 py-1 text-[10px] font-black text-[#A8D0B1]">
+                        Karte →
+                      </span>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function ConnectOverviewTab({
   currentUser,
   activeSeason,
   players,
   playersById,
   liveCheckins,
-  sessions,
   connectMatches,
   connectRatings,
   matchDeltas,
   nowMs,
   onNavigateTab,
-  onToggleJoinSession,
-  onDeleteOwnSession,
-  onOpenCreateSpontaneous,
   onOpenLiveCheckIn,
   onOpenLogMatch,
-  onToggleComingToo,
-  onCheckOut,
   onOpenEditProfile,
   onSelectMember,
 }) {
-  const [onlyMatchingLevel, setOnlyMatchingLevel] = useState(false);
-  const [onlyBuddyWanted, setOnlyBuddyWanted] = useState(false);
-
   const myLiveCheckin = useMemo(
     () => liveCheckins.find((c) => c.playerId === currentUser.id),
     [liveCheckins, currentUser.id]
   );
 
-  const buddySearchCount = useMemo(
-    () => liveCheckins.filter((c) => c.hallStatus === 'buddy_wanted').length,
-    [liveCheckins]
-  );
-
-  const visibleLiveCheckins = useMemo(() => {
-    return liveCheckins.filter((item) => {
-      if (onlyBuddyWanted && item.hallStatus !== 'buddy_wanted') return false;
-      if (!onlyMatchingLevel) return true;
-      const p = playersById[item.playerId];
-      if (!p || p.id === currentUser.id) return true;
-      return isMatchingLevel(currentUser, p, activeSeason);
-    });
-  }, [liveCheckins, onlyBuddyWanted, onlyMatchingLevel, playersById, currentUser, activeSeason]);
+  const visibleLiveCheckins = liveCheckins;
 
   const newMembers = useMemo(
     () => players.filter((p) => p.isNewMember),
     [players]
   );
 
-  const visibleSpontaneousSessions = useMemo(() => {
-    const spontaneousOnly = sessions.filter((s) => s.type === 'spontaneous');
-    if (!onlyMatchingLevel) return spontaneousOnly;
-    return spontaneousOnly.filter((s) => {
-      const author = playersById[s.authorId];
-      if (!author || author.id === currentUser.id) return true;
-      return isMatchingLevel(currentUser, author, activeSeason);
-    });
-  }, [sessions, onlyMatchingLevel, playersById, currentUser, activeSeason]);
-
   const topRatedPlayers = useMemo(() => {
     return [...players]
       .sort((a, b) => (connectRatings[b.id]?.elo || 0) - (connectRatings[a.id]?.elo || 0))
-      .slice(0, 3);
+      .slice(0, 10);
   }, [players, connectRatings]);
 
   const myRating = connectRatings[currentUser.id];
+  const [showRatingInfo, setShowRatingInfo] = useState(false);
 
   return (
     <div className="space-y-4">
@@ -4848,54 +4924,21 @@ function ConnectOverviewTab({
         </a>
       </div>
 
-      {/* 1. LIVE in der Halle mit Dauer, Restlaufzeit, Status-Chips & Buddy-Suche */}
+      {/* 1. LIVE in der Halle mit Dauer & Restlaufzeit */}
       <div
         id="club-live-section"
         className="space-y-2.5 rounded-2xl border border-[#24272D] bg-[#181A1E] p-3.5"
       >
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
-            <span className="h-2 w-2 rounded-full bg-emerald-400" />
-            <span className="text-xs font-black uppercase tracking-wide text-[#F3F4F6]">
-              LIVE in der Halle ({visibleLiveCheckins.length})
-            </span>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-1.5">
-            {buddySearchCount > 0 && (
-              <button
-                type="button"
-                onClick={() => setOnlyBuddyWanted((v) => !v)}
-                className={`rounded-full px-2.5 py-1 text-[10px] font-bold transition ${
-                  onlyBuddyWanted
-                    ? 'bg-emerald-400 text-[#060708]'
-                    : 'border border-emerald-500/35 bg-emerald-950/30 text-emerald-300'
-                }`}
-              >
-                Buddy gesucht ({buddySearchCount})
-              </button>
-            )}
-            <button
-              type="button"
-              onClick={() => setOnlyMatchingLevel((v) => !v)}
-              className={`rounded-full px-2.5 py-1 text-[10px] font-bold transition ${
-                onlyMatchingLevel
-                  ? 'bg-[#6FB3A2] text-[#060708]'
-                  : 'bg-[#131417] text-[#9CA3AF] ring-1 ring-[#272A30]'
-              }`}
-            >
-              {onlyMatchingLevel ? '✓ Mein Niveau' : 'Mein Niveau'}
-            </button>
-          </div>
+        <div className="flex items-center gap-2">
+          <span className="h-2 w-2 rounded-full bg-emerald-400" />
+          <span className="text-xs font-black uppercase tracking-wide text-[#F3F4F6]">
+            LIVE in der Halle ({visibleLiveCheckins.length})
+          </span>
         </div>
 
         {visibleLiveCheckins.length === 0 ? (
           <div className="flex items-center justify-between gap-2 rounded-xl border border-[#22252B] bg-[#131417] p-3 text-xs text-[#8E95A2]">
-            <span>
-              {onlyBuddyWanted
-                ? 'Aktuell sucht niemand mit diesem Filter einen Spielbuddy.'
-                : 'Momentan ist noch niemand LIVE eingecheckt.'}
-            </span>
+            <span>Momentan ist noch niemand LIVE eingecheckt.</span>
             <button
               type="button"
               onClick={onOpenLiveCheckIn}
@@ -4910,128 +4953,45 @@ function ConnectOverviewTab({
               const p = playersById[item.playerId];
               if (!p) return null;
               const isMe = p.id === currentUser.id;
-              const comingTooIds = item.comingTooIds || [];
-              const iAmComingToo = comingTooIds.includes(currentUser.id);
-              const comingNames = comingTooIds
-                .map((id) => playersById[id]?.nickname)
-                .filter(Boolean);
-
-              const statusMeta =
-                LIVE_STATUS_OPTIONS.find((s) => s.id === item.hallStatus) ||
-                LIVE_STATUS_OPTIONS[0];
               const remainingText = formatRemainingDuration(item.expiresAt, nowMs);
 
               const waMsg = getContextWhatsAppMessage('live_hall', currentUser, p, {
-                durationLabel: `${item.durationLabel} · noch ${remainingText}`,
+                durationLabel: remainingText,
               });
 
               return (
                 <div
                   key={item.id}
-                  className={`rounded-xl border p-3 transition ${
-                    item.hallStatus === 'buddy_wanted'
-                      ? 'border-emerald-500/35 bg-[#131A18]'
-                      : 'border-[#22252B] bg-[#131417]'
-                  }`}
+                  className="flex items-center justify-between gap-3 rounded-xl border border-[#22252B] bg-[#131417] px-3 py-2.5"
                 >
-                  <div className="flex items-start justify-between gap-2">
-                    <button
-                      type="button"
-                      onClick={() => onSelectMember?.(p.id)}
-                      className="flex min-w-0 items-center gap-2.5 text-left transition hover:opacity-85"
-                    >
-                      <PlayerAvatar
-                        player={p}
-                        sizeClass="h-8 w-8 text-[10px]"
-                        isConnectAccent
-                      />
-                      <div className="min-w-0">
-                        <div className="flex flex-wrap items-center gap-1.5">
-                          <span className="truncate text-xs font-bold text-[#F3F4F6]">
-                            {p.nickname}
-                          </span>
-                          {isMe && (
-                            <span className="rounded bg-[#1F2927] px-1.5 py-0.5 text-[9px] font-bold text-[#A8D0B1]">
-                              Du
-                            </span>
-                          )}
-                          <span
-                            className={`rounded border px-1.5 py-0.5 text-[9px] font-bold ${statusMeta.badgeClass}`}
-                          >
-                            {statusMeta.label}
-                          </span>
-                        </div>
-                        <div className="mt-0.5 text-[10px] text-[#8E95A2]">
-                          {p.sttClass || 'CLUB'} · {item.checkedInAt} ·{' '}
-                          <span className="font-semibold text-[#A8D0B1]">
-                            noch {remainingText}
-                          </span>
-                        </div>
+                  <button
+                    type="button"
+                    onClick={() => onSelectMember?.(p.id)}
+                    className="flex min-w-0 flex-1 items-center gap-3 text-left transition hover:opacity-85"
+                  >
+                    <PlayerAvatar
+                      player={p}
+                      sizeClass="h-9 w-9 text-xs"
+                      isConnectAccent
+                    />
+                    <div className="min-w-0">
+                      <div className="truncate text-xs font-bold text-[#F3F4F6] underline decoration-[#6FB3A2]/50 underline-offset-2">
+                        {p.nickname}
                       </div>
-                    </button>
-
-                    <span className="shrink-0 rounded-md border border-[#282C34] bg-[#181A1E] px-2 py-0.5 text-[10px] font-semibold text-[#E6C79C]">
-                      {item.durationLabel}
-                    </span>
-                  </div>
-
-                  {item.note && (
-                    <div className="mt-2 text-[11px] text-[#D1D5DB]">{item.note}</div>
-                  )}
-
-                  {comingNames.length > 0 && (
-                    <div className="mt-1.5 text-[10px] font-medium text-[#8E95A2]">
-                      Kommt auch:{' '}
-                      <span className="text-[#A8D0B1]">{comingNames.join(', ')}</span>
+                      <div className="mt-0.5 text-[11px] font-semibold text-[#A8D0B1]">
+                        Noch {remainingText}
+                      </div>
                     </div>
+                  </button>
+
+                  {!isMe && (
+                    <WhatsAppActionButton
+                      phone={p.phone}
+                      message={waMsg}
+                      label="WhatsApp"
+                      compact
+                    />
                   )}
-
-                  <div className="mt-2.5 flex items-center justify-between gap-2 border-t border-[#1E2128] pt-2">
-                    <span className="text-[10px] text-[#6B7280]">
-                      {formatExpiryClockLabel(item.expiresAt)}
-                    </span>
-
-                    <div className="flex items-center gap-1.5">
-                      {!isMe ? (
-                        <>
-                          <WhatsAppActionButton
-                            phone={p.phone}
-                            message={waMsg}
-                            label=""
-                            compact
-                          />
-                          <button
-                            type="button"
-                            onClick={() => onToggleComingToo(item.id)}
-                            className={`rounded-lg px-2.5 py-1 text-[10px] font-bold transition ${
-                              iAmComingToo
-                                ? 'bg-[#6FB3A2] text-[#060708]'
-                                : 'bg-[#252830] text-[#F3F4F6] hover:bg-[#313540]'
-                            }`}
-                          >
-                            {iAmComingToo ? 'Komme ✓' : 'Komme auch'}
-                          </button>
-                        </>
-                      ) : (
-                        <>
-                          <button
-                            type="button"
-                            onClick={onOpenLiveCheckIn}
-                            className="rounded-lg bg-[#252830] px-2.5 py-1 text-[10px] font-bold text-[#E6C79C] hover:bg-[#313540]"
-                          >
-                            Ändern
-                          </button>
-                          <button
-                            type="button"
-                            onClick={onCheckOut}
-                            className="rounded-lg border border-rose-500/35 bg-rose-950/30 px-2.5 py-1 text-[10px] font-bold text-rose-300 hover:bg-rose-950/50"
-                          >
-                            Auschecken
-                          </button>
-                        </>
-                      )}
-                    </div>
-                  </div>
                 </div>
               );
             })}
@@ -5039,130 +4999,28 @@ function ConnectOverviewTab({
         )}
       </div>
 
-      {/* 2. Pinnwand: Nur Spontan-Sessions für heute */}
-      <div className="space-y-2.5 rounded-2xl border border-[#24272D] bg-[#181A1E] p-3.5">
-        <div className="flex items-center justify-between gap-2">
-          <span className="text-xs font-black uppercase tracking-wide text-[#F3F4F6]">
-            Spontan heute ({visibleSpontaneousSessions.length})
-          </span>
-
-          <button
-            type="button"
-            onClick={onOpenCreateSpontaneous}
-            className="rounded-lg bg-[#6FB3A2] px-2.5 py-1 text-[10px] font-black text-[#060708] transition hover:bg-[#82C1B1]"
-          >
-            + Spontan-Session
-          </button>
-        </div>
-
-        {visibleSpontaneousSessions.length === 0 ? (
-          <div className="rounded-xl bg-[#131417] p-3 text-center text-xs text-[#8E95A2]">
-            Aktuell keine Spontan-Sessions für heute eingetragen.
-          </div>
-        ) : (
-          <div className="space-y-2">
-            {visibleSpontaneousSessions.map((s) => {
-              const author = playersById[s.authorId];
-              if (!author) return null;
-              const isJoined = s.joinedIds.includes(currentUser.id);
-              const isAuthor = author.id === currentUser.id;
-              const waMsg = getContextWhatsAppMessage('session_join', currentUser, author, {
-                dateLabel: s.dateLabel,
-              });
-
-              return (
-                <div
-                  key={s.id}
-                  className="rounded-xl border border-[#22262E] bg-[#131417] p-2.5"
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <button
-                      type="button"
-                      onClick={() => onSelectMember?.(author.id)}
-                      className="flex min-w-0 items-center gap-2 text-left transition hover:opacity-85"
-                    >
-                      <PlayerAvatar
-                        player={author}
-                        sizeClass="h-6 w-6 text-[9px]"
-                        isConnectAccent={author.connectOnly}
-                      />
-                      <span className="truncate text-xs font-black text-[#F3F4F6] underline decoration-[#6FB3A2]/50 underline-offset-2">
-                        {author.nickname}
-                      </span>
-                      <span className="shrink-0 rounded bg-[#2C2418] px-1.5 py-0.5 text-[9px] font-bold text-[#E6C79C]">
-                        Spontan
-                      </span>
-                    </button>
-
-                    <div className="flex shrink-0 items-center gap-1.5">
-                      <span className="text-[10px] text-[#8E95A2]">
-                        {s.expiresAt
-                          ? `noch ${formatRemainingDuration(s.expiresAt, nowMs)}`
-                          : s.createdAt}
-                      </span>
-                      {isAuthor && (
-                        <button
-                          type="button"
-                          onClick={() => onDeleteOwnSession(s.id)}
-                          title="Spontan-Session löschen"
-                          aria-label="Spontan-Session löschen"
-                          className="rounded-md bg-[#22252C] px-1.5 py-0.5 text-[10px] font-bold text-[#9CA3AF] transition hover:bg-rose-950/50 hover:text-rose-300"
-                        >
-                          ✕
-                        </button>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="mt-1.5 text-xs font-extrabold text-[#E6C79C]">
-                    {s.dateLabel}
-                  </div>
-                  <p className="mt-0.5 line-clamp-2 text-[11px] text-[#D1D5DB]">{s.note}</p>
-
-                  <div className="mt-2 flex items-center justify-between gap-2 border-t border-[#1D2027] pt-1.5">
-                    <div className="truncate text-[10px] text-[#9CA3AF]">
-                      Dabei ({s.joinedIds.length}):{' '}
-                      {s.joinedIds
-                        .map((id) => playersById[id]?.nickname)
-                        .filter(Boolean)
-                        .join(', ')}
-                    </div>
-
-                    <div className="flex shrink-0 items-center gap-1.5">
-                      {!isAuthor && (
-                        <WhatsAppActionButton
-                          phone={author.phone}
-                          message={waMsg}
-                          label=""
-                          compact
-                        />
-                      )}
-                      <button
-                        type="button"
-                        onClick={() => onToggleJoinSession(s.id)}
-                        className={`rounded-lg px-2.5 py-1 text-[10px] font-bold transition ${
-                          isJoined
-                            ? 'bg-[#6FB3A2] text-[#060708]'
-                            : 'bg-[#252830] text-[#F3F4F6] hover:bg-[#313540]'
-                        }`}
-                      >
-                        {isJoined ? 'Dabei ✓' : 'Bin dabei'}
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
-
-      {/* 3. Top-3 CLUB-Rating Vorschau */}
+      {/* 2. Top-10 CLUB-Rating Vorschau */}
       <div className="rounded-2xl border border-[#24272D] bg-[#181A1E] p-3.5">
-        <div className="flex items-center justify-between">
-          <span className="text-xs font-black uppercase tracking-wide text-[#E6C79C]">
-            Top-3 CLUB-Rating
-          </span>
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-1.5">
+            <span className="text-xs font-black uppercase tracking-wide text-[#E6C79C]">
+              Top-10 CLUB-Rating
+            </span>
+            <button
+              type="button"
+              onClick={() => setShowRatingInfo((prev) => !prev)}
+              aria-expanded={showRatingInfo}
+              aria-label="Info zum CLUB-Rating anzeigen"
+              title="Wie entsteht das CLUB-Rating?"
+              className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-black transition ${
+                showRatingInfo
+                  ? 'bg-[#E6C79C] text-[#060708]'
+                  : 'bg-[#131417] text-[#E6C79C] ring-1 ring-[#C8A26E]/40 hover:border-[#E6C79C]'
+              }`}
+            >
+              i
+            </button>
+          </div>
           <button
             type="button"
             onClick={() => onNavigateTab('ranking')}
@@ -5171,6 +5029,20 @@ function ConnectOverviewTab({
             Komplette Rangliste →
           </button>
         </div>
+
+        {showRatingInfo && (
+          <div className="mt-2.5 space-y-1.5 rounded-xl border border-[#C8A26E]/30 bg-[#131417] p-3 text-[11px] leading-relaxed text-[#D1D5DB]">
+            <div className="font-bold text-[#E6C79C]">
+              Wie das CLUB-Rating entsteht:
+            </div>
+            <p>
+              Jeder startet mit einem <strong className="text-[#F3F4F6]">Startwert anhand der Spielstärke bzw. Klassierung</strong> und verändert Punkte durch <strong className="text-[#F3F4F6]">freie CLUB-Partien</strong> (abhängig von Sieg/Niederlage und Rating-Differenz).
+            </p>
+            <p className="text-[#A8D0B1]">
+              <strong>Unabhängig von der LEAGUE:</strong> Das CLUB-Rating hat keinerlei Einfluss auf die Monatsliga (Auf-/Abstieg, Tabellen) – und Liga-Spiele verändern umgekehrt nicht das CLUB-Rating.
+            </p>
+          </div>
+        )}
 
         <div className="mt-2.5 space-y-1.5">
           {topRatedPlayers.map((p, idx) => {
@@ -5349,6 +5221,7 @@ function ClubPlayersTab({
   const [onlyLevel, setOnlyLevel] = useState(Boolean(savedFilters.onlyLevel));
   const [playstyleFilter, setPlaystyleFilter] = useState(savedFilters.playstyle || '');
   const [onlyEnglish, setOnlyEnglish] = useState(Boolean(savedFilters.onlyEnglish));
+  const [showRatingInfo, setShowRatingInfo] = useState(false);
 
   useEffect(() => {
     writeStorageJson(STORAGE_KEYS.rankingFilters, {
@@ -5431,9 +5304,25 @@ function ClubPlayersTab({
     <div className="space-y-2.5">
       <div className="flex items-center justify-between gap-2">
         <div>
-          <h2 className="text-xs font-black tracking-wide text-[#F3F4F6] uppercase">
-            CLUB-Rating ({sortedAndFilteredPlayers.length} Treffer)
-          </h2>
+          <div className="flex items-center gap-1.5">
+            <h2 className="text-xs font-black tracking-wide text-[#F3F4F6] uppercase">
+              CLUB-Rating ({sortedAndFilteredPlayers.length} Treffer)
+            </h2>
+            <button
+              type="button"
+              onClick={() => setShowRatingInfo((prev) => !prev)}
+              aria-expanded={showRatingInfo}
+              aria-label="Info zum CLUB-Rating anzeigen"
+              title="Wie entsteht das CLUB-Rating?"
+              className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-black transition ${
+                showRatingInfo
+                  ? 'bg-[#E6C79C] text-[#060708]'
+                  : 'bg-[#131417] text-[#E6C79C] ring-1 ring-[#C8A26E]/40 hover:border-[#E6C79C]'
+              }`}
+            >
+              i
+            </button>
+          </div>
           <p className="text-[10px] text-[#8E95A2]">
             Filter kombinierbar · {sortedAndFilteredPlayers.length} von {players.length}{' '}
             Spielern
@@ -5457,6 +5346,20 @@ function ClubPlayersTab({
           </button>
         </div>
       </div>
+
+      {showRatingInfo && (
+        <div className="space-y-1.5 rounded-xl border border-[#C8A26E]/30 bg-[#131417] p-3 text-[11px] leading-relaxed text-[#D1D5DB]">
+          <div className="font-bold text-[#E6C79C]">
+            Wie das CLUB-Rating entsteht:
+          </div>
+          <p>
+            Jeder startet mit einem <strong className="text-[#F3F4F6]">Startwert anhand der Spielstärke bzw. Klassierung</strong> und verändert Punkte durch <strong className="text-[#F3F4F6]">freie CLUB-Partien</strong> (abhängig von Sieg/Niederlage und Rating-Differenz).
+          </p>
+          <p className="text-[#A8D0B1]">
+            <strong>Unabhängig von der LEAGUE:</strong> Das CLUB-Rating hat keinerlei Einfluss auf die Monatsliga (Auf-/Abstieg, Tabellen) – und Liga-Spiele verändern umgekehrt nicht das CLUB-Rating.
+          </p>
+        </div>
+      )}
 
       <input
         type="text"
@@ -5930,17 +5833,7 @@ function LeagueOverviewTab({
                       {row.player?.nickname || 'Spieler'}
                     </span>
                   </div>
-                  <div className="flex shrink-0 items-center gap-3 text-[11px]">
-                    <span className="text-[#8E95A2]">
-                      {row.won}S / {row.lost}N
-                    </span>
-                    <span className="text-[#8E95A2]">
-                      {row.setsWon}:{row.setsLost}
-                    </span>
-                    <span className="w-9 rounded bg-[#181A1E] py-0.5 text-center font-black text-[#F4ECC2]">
-                      {row.points}
-                    </span>
-                  </div>
+                  <span className="font-black text-[#F4ECC2]">{row.points} Pkt.</span>
                 </div>
               );
             })}
@@ -5948,28 +5841,23 @@ function LeagueOverviewTab({
         </div>
       )}
 
-      {/* Nächste offene Spiele des aktuellen Nutzers */}
-      <div className="rounded-2xl border border-[#24272D] bg-[#181A1E] p-3.5">
-        <div className="flex items-center justify-between gap-2">
-          <span className="text-xs font-black tracking-wide text-[#F3F4F6] uppercase">
-            Offene Liga-Partien ({myOpenMatches.length})
-          </span>
-          <button
-            type="button"
-            onClick={() => onNavigateTab('matches')}
-            className="text-[11px] font-bold text-[#DE754B] underline"
-          >
-            Alle anzeigen →
-          </button>
-        </div>
-
-        {myOpenMatches.length === 0 ? (
-          <div className="mt-2.5 rounded-xl bg-[#131417] p-3 text-center text-xs text-[#A8D0B1]">
-            Keine offenen Spiele mehr für dich in {season.label}.
+      {/* Offene Spiele der aktuellen Nutzerin / des Nutzers */}
+      {myOpenMatches.length > 0 && (
+        <div className="rounded-2xl border border-[#24272D] bg-[#181A1E] p-3.5">
+          <div className="mb-2 flex items-center justify-between">
+            <span className="text-xs font-black tracking-wide text-[#DE754B] uppercase">
+              Offene Partien ({myOpenMatches.length})
+            </span>
+            <button
+              type="button"
+              onClick={() => onNavigateTab('matches')}
+              className="text-[11px] font-bold text-[#F4ECC2] underline"
+            >
+              Alle Spiele
+            </button>
           </div>
-        ) : (
-          <div className="mt-2.5 space-y-2">
-            {myOpenMatches.slice(0, 3).map((m) => {
+          <div className="space-y-1.5">
+            {myOpenMatches.map((m) => {
               const oppId = m.player1Id === currentUser.id ? m.player2Id : m.player1Id;
               const opp = playersById[oppId];
               return (
@@ -5978,11 +5866,11 @@ function LeagueOverviewTab({
                   className="flex items-center justify-between gap-2 rounded-xl bg-[#131417] px-3 py-2 text-xs"
                 >
                   <span className="truncate font-bold text-[#F3F4F6]">
-                    vs. {opp?.nickname || 'Mitspieler'}
+                    vs. {opp?.nickname || 'Gegner'}
                   </span>
                   <button
                     type="button"
-                    onClick={() => onSelectMatchToRecord(m)}
+                    onClick={() => onSelectMatchToRecord?.(m)}
                     className="shrink-0 rounded-lg bg-[#DE754B] px-2.5 py-1 text-[10px] font-black text-[#060708]"
                   >
                     Resultat
@@ -5991,34 +5879,29 @@ function LeagueOverviewTab({
               );
             })}
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
-      {/* Letzte Liga-Ergebnisse */}
+      {/* Letzte gespielte Resultate */}
       {recentPlayedMatches.length > 0 && (
         <div className="rounded-2xl border border-[#24272D] bg-[#181A1E] p-3.5">
-          <div className="text-xs font-black tracking-wide text-[#F3F4F6] uppercase">
-            Letzte Ergebnisse ({season.shortLabel})
+          <div className="mb-2 text-xs font-black tracking-wide text-[#9CA3AF] uppercase">
+            Aktuelle Resultate
           </div>
-          <div className="mt-2.5 space-y-1.5">
-            {recentPlayedMatches.map((m) => {
-              const p1 = playersById[m.player1Id];
-              const p2 = playersById[m.player2Id];
-              return (
-                <div
-                  key={m.id}
-                  className="flex items-center justify-between gap-2 rounded-xl bg-[#131417] px-3 py-2 text-xs"
-                >
-                  <span className="truncate text-[#D1D5DB]">
-                    <strong className="text-[#F3F4F6]">{p1?.nickname}</strong> vs.{' '}
-                    <strong className="text-[#F3F4F6]">{p2?.nickname}</strong>
-                  </span>
-                  <span className="shrink-0 rounded bg-[#181A1E] px-2 py-0.5 font-black text-[#F4ECC2]">
-                    {m.score1} : {m.score2}
-                  </span>
-                </div>
-              );
-            })}
+          <div className="space-y-1.5">
+            {recentPlayedMatches.map((m) => (
+              <div
+                key={m.id}
+                className="flex items-center justify-between gap-2 rounded-xl bg-[#131417] px-3 py-1.5 text-xs"
+              >
+                <span className="truncate text-[#D1D5DB]">
+                  {playersById[m.player1Id]?.nickname} vs. {playersById[m.player2Id]?.nickname}
+                </span>
+                <span className="shrink-0 font-black text-[#F4ECC2]">
+                  {m.score1} : {m.score2}
+                </span>
+              </div>
+            ))}
           </div>
         </div>
       )}
@@ -6026,7 +5909,13 @@ function LeagueOverviewTab({
   );
 }
 
-function LeagueStandingsTab({ season, playersById, currentUser, connectRatings }) {
+function LeagueStandingsTab({
+  season,
+  playersById,
+  currentUser,
+  onSelectMatchToRecord,
+  onSelectMember,
+}) {
   const sortedLeagues = [...season.leagues].sort((a, b) => a.tier - b.tier);
 
   return (
@@ -6035,6 +5924,16 @@ function LeagueStandingsTab({ season, playersById, currentUser, connectRatings }
         const rows = computeStandings(league, season.matches, playersById);
         const hasUpper = idx > 0;
         const hasLower = idx < sortedLeagues.length - 1;
+
+        const leagueMatches = (season.matches || []).filter(
+          (m) => m.leagueId === league.id
+        );
+        const playedMatches = leagueMatches.filter(
+          (m) => m.score1 !== null && m.score2 !== null
+        );
+        const openMatches = leagueMatches.filter(
+          (m) => m.score1 === null || m.score2 === null
+        );
 
         return (
           <div
@@ -6060,7 +5959,7 @@ function LeagueStandingsTab({ season, playersById, currentUser, connectRatings }
                 return (
                   <div
                     key={r.playerId}
-                    className={`flex items-center justify-between gap-2 px-3.5 py-2.5 ${
+                    className={`flex items-center justify-between gap-2 px-3.5 py-2 ${
                       isMe ? 'bg-[#291711]' : ''
                     }`}
                   >
@@ -6076,33 +5975,30 @@ function LeagueStandingsTab({ season, playersById, currentUser, connectRatings }
                       >
                         {pos + 1}
                       </span>
-                      <div className="min-w-0">
-                        <div className="truncate text-xs font-bold text-[#F3F4F6]">
-                          {r.player?.nickname}{' '}
-                          {isPromotion && (
-                            <span className="text-[10px] text-emerald-400">↑</span>
-                          )}
-                          {isRelegation && (
-                            <span className="text-[10px] text-rose-400">↓</span>
-                          )}
-                        </div>
-                        <div className="mt-0.5">
-                          <PlayerBadge
-                            player={r.player}
-                            season={season}
-                            ratingInfo={connectRatings[r.playerId]}
-                          />
-                        </div>
-                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => r.player && onSelectMember?.(r.player.id)}
+                        className="flex min-w-0 items-center gap-2 text-left transition hover:opacity-85"
+                      >
+                        <PlayerAvatar
+                          player={r.player}
+                          sizeClass="h-6 w-6 text-[10px]"
+                          isConnectAccent={r.player?.connectOnly}
+                        />
+                        <span className="truncate text-xs font-bold text-[#F3F4F6] underline decoration-[#DE754B]/50 underline-offset-2">
+                          {r.player?.nickname || 'Spieler'}
+                        </span>
+                        {isPromotion && (
+                          <span className="text-[10px] font-black text-emerald-400">↑</span>
+                        )}
+                        {isRelegation && (
+                          <span className="text-[10px] font-black text-rose-400">↓</span>
+                        )}
+                      </button>
                     </div>
 
                     <div className="flex shrink-0 items-center gap-2">
-                      <div className="text-right">
-                        <div className="text-[11px] font-semibold text-[#9CA3AF]">
-                          {r.setsWon}:{r.setsLost}
-                        </div>
-                        <div className="text-[10px] text-[#6B7280]">{r.played} Sp.</div>
-                      </div>
                       <div className="w-8 rounded-lg bg-[#111215] py-1 text-center text-xs font-black text-[#F4ECC2]">
                         {r.points}
                       </div>
@@ -6124,6 +6020,135 @@ function LeagueStandingsTab({ season, playersById, currentUser, connectRatings }
                   </div>
                 );
               })}
+            </div>
+
+            {/* Partien der Gruppe: klar getrennt in offen & bereits gespielt */}
+            <div className="space-y-2.5 border-t border-[#24272D] bg-[#14161A] p-3">
+              <div>
+                <div className="mb-1.5 flex items-center justify-between text-[10px] font-black tracking-wider text-[#DE754B] uppercase">
+                  <span>Offene Partien ({openMatches.length})</span>
+                </div>
+
+                {openMatches.length === 0 ? (
+                  <div className="rounded-xl bg-[#181A1E] px-3 py-2 text-[11px] text-[#A8D0B1]">
+                    Alle Partien dieser Gruppe sind gespielt.
+                  </div>
+                ) : (
+                  <div className="space-y-1.5">
+                    {openMatches.map((m) => {
+                      const p1 = playersById[m.player1Id];
+                      const p2 = playersById[m.player2Id];
+                      return (
+                        <div
+                          key={m.id}
+                          className="flex items-center justify-between gap-2 rounded-xl border border-[#22252B] bg-[#181A1E] px-3 py-2 text-xs"
+                        >
+                          <div className="flex min-w-0 items-center gap-1.5 font-bold text-[#F3F4F6]">
+                            <button
+                              type="button"
+                              onClick={() => p1 && onSelectMember?.(p1.id)}
+                              className="flex min-w-0 items-center gap-1.5 truncate text-left transition hover:opacity-85"
+                            >
+                              <PlayerAvatar
+                                player={p1}
+                                sizeClass="h-5 w-5 text-[9px]"
+                                isConnectAccent={p1?.connectOnly}
+                              />
+                              <span className="truncate underline decoration-[#DE754B]/45 underline-offset-2">
+                                {p1?.nickname || 'Spieler 1'}
+                              </span>
+                            </button>
+                            <span className="shrink-0 text-[10px] font-semibold text-[#6B7280]">
+                              vs.
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => p2 && onSelectMember?.(p2.id)}
+                              className="flex min-w-0 items-center gap-1.5 truncate text-left transition hover:opacity-85"
+                            >
+                              <PlayerAvatar
+                                player={p2}
+                                sizeClass="h-5 w-5 text-[9px]"
+                                isConnectAccent={p2?.connectOnly}
+                              />
+                              <span className="truncate underline decoration-[#DE754B]/45 underline-offset-2">
+                                {p2?.nickname || 'Spieler 2'}
+                              </span>
+                            </button>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => onSelectMatchToRecord?.(m)}
+                            className="shrink-0 rounded-lg bg-[#DE754B] px-2.5 py-1 text-[10px] font-black text-[#060708] transition hover:bg-[#E78760]"
+                          >
+                            Resultat
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <div className="mb-1.5 flex items-center justify-between text-[10px] font-black tracking-wider text-[#9CA3AF] uppercase">
+                  <span>Bereits gespielt ({playedMatches.length})</span>
+                </div>
+
+                {playedMatches.length === 0 ? (
+                  <div className="rounded-xl bg-[#181A1E] px-3 py-2 text-[11px] text-[#8E95A2]">
+                    Noch keine Partien eingetragen.
+                  </div>
+                ) : (
+                  <div className="space-y-1.5">
+                    {playedMatches.map((m) => {
+                      const p1 = playersById[m.player1Id];
+                      const p2 = playersById[m.player2Id];
+                      return (
+                        <div
+                          key={m.id}
+                          className="flex items-center justify-between gap-2 rounded-xl bg-[#181A1E] px-3 py-1.5 text-xs"
+                        >
+                          <div className="flex min-w-0 items-center gap-1.5 text-[#D1D5DB]">
+                            <button
+                              type="button"
+                              onClick={() => p1 && onSelectMember?.(p1.id)}
+                              className="flex min-w-0 items-center gap-1.5 truncate text-left font-bold text-[#F3F4F6] transition hover:opacity-85"
+                            >
+                              <PlayerAvatar
+                                player={p1}
+                                sizeClass="h-5 w-5 text-[9px]"
+                                isConnectAccent={p1?.connectOnly}
+                              />
+                              <span className="truncate underline decoration-[#DE754B]/45 underline-offset-2">
+                                {p1?.nickname || 'Spieler 1'}
+                              </span>
+                            </button>
+                            <span className="shrink-0 text-[10px] text-[#6B7280]">vs.</span>
+                            <button
+                              type="button"
+                              onClick={() => p2 && onSelectMember?.(p2.id)}
+                              className="flex min-w-0 items-center gap-1.5 truncate text-left font-bold text-[#F3F4F6] transition hover:opacity-85"
+                            >
+                              <PlayerAvatar
+                                player={p2}
+                                sizeClass="h-5 w-5 text-[9px]"
+                                isConnectAccent={p2?.connectOnly}
+                              />
+                              <span className="truncate underline decoration-[#DE754B]/45 underline-offset-2">
+                                {p2?.nickname || 'Spieler 2'}
+                              </span>
+                            </button>
+                          </div>
+                          <span className="shrink-0 rounded-lg bg-[#111215] px-2.5 py-0.5 text-[11px] font-black text-[#F4ECC2] ring-1 ring-[#2A2D35]">
+                            {m.score1} : {m.score2}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         );
@@ -6235,7 +6260,7 @@ function HallDaysTab({
   onOpenRecordConnectMatch,
   onSelectMember,
 }) {
-  const [selectedDay, setSelectedDay] = useState('Do');
+  const [selectedDay, setSelectedDay] = useState('Mi');
   const [selectedTimeSlot, setSelectedTimeSlot] = useState('Alle');
 
   const matchingPlayers = useMemo(() => {
